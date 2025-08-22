@@ -12,7 +12,7 @@ import { LogOut, User, DollarSign, FileText, Settings, Plus, Database, AlertCirc
 function App() {
   const [supabaseConfigured, setSupabaseConfigured] = useState(false);
   const [checkingConfig, setCheckingConfig] = useState(true);
-  const { user, loading, signOut, isAuthenticated } = useAuth();
+  const { user, loading, error: authError, signOut, isAuthenticated } = useAuth();
   const [currentView, setCurrentView] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const isClientMode = urlParams.get('client') === 'true';
@@ -39,13 +39,18 @@ function App() {
   // Verificar configuração do Supabase na inicialização
   useEffect(() => {
     const checkSupabaseConfig = () => {
+      console.log('Verificando configuração do Supabase...');
       const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      console.log('URL configurada:', !!supabaseUrl);
+      console.log('Key configurada:', !!supabaseKey);
       
       const isConfigured = supabaseUrl && supabaseKey && 
                           supabaseUrl.includes('supabase.co') && 
                           supabaseKey.length > 20;
       
+      console.log('Supabase configurado:', isConfigured);
       setSupabaseConfigured(isConfigured);
       setCheckingConfig(false);
     };
@@ -76,6 +81,14 @@ function App() {
           <p className="mt-4 text-gray-600">
             {checkingConfig ? 'Verificando configuração...' : 'Carregando...'}
           </p>
+          {authError && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm max-w-md mx-auto">
+              <div className="flex items-center">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                <span>Erro de autenticação: {authError}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

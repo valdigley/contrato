@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Lock, Mail, Eye, EyeOff, LogIn, UserPlus, Building2, Phone } from 'lucide-react';
+import { User, Lock, Mail, Eye, EyeOff, LogIn, UserPlus, Building2, Phone, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface LoginProps {
@@ -17,16 +17,21 @@ export default function Login({ onLogin }: LoginProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [debugInfo, setDebugInfo] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess('');
+    setDebugInfo('');
 
     try {
+      setDebugInfo('Iniciando processo de autenticação...');
+      
       if (isLogin) {
         // Login
+        setDebugInfo('Tentando fazer login...');
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -35,6 +40,7 @@ export default function Login({ onLogin }: LoginProps) {
         if (error) throw error;
 
         if (data.user) {
+          setDebugInfo('Login realizado com sucesso!');
           setSuccess('Login realizado com sucesso!');
           setTimeout(() => {
             onLogin();
@@ -42,6 +48,7 @@ export default function Login({ onLogin }: LoginProps) {
         }
       } else {
         // Cadastro
+        setDebugInfo('Tentando criar conta...');
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -53,9 +60,11 @@ export default function Login({ onLogin }: LoginProps) {
         });
 
         if (error) throw error;
+        setDebugInfo('Conta criada no Supabase Auth, criando perfil...');
 
         if (data.user) {
           // Inserir dados na tabela users e photographers
+          setDebugInfo('Inserindo dados na tabela users...');
           const { data: userData, error: userError } = await supabase
             .from('users')
             .insert([
@@ -71,9 +80,11 @@ export default function Login({ onLogin }: LoginProps) {
 
           if (userError) {
             console.error('Erro ao criar perfil do usuário:', userError);
+            setDebugInfo(`Erro na tabela users: ${userError.message}`);
             throw userError;
           }
 
+          setDebugInfo('Usuário criado, criando perfil de fotógrafo...');
           // Criar perfil de fotógrafo
           const { error: photographerError } = await supabase
             .from('photographers')
@@ -88,9 +99,11 @@ export default function Login({ onLogin }: LoginProps) {
 
           if (photographerError) {
             console.error('Erro ao criar perfil do fotógrafo:', photographerError);
+            setDebugInfo(`Erro na tabela photographers: ${photographerError.message}`);
             // Não fazer throw aqui para não bloquear o cadastro
           }
 
+          setDebugInfo('Cadastro concluído com sucesso!');
           setSuccess('Conta criada com sucesso! Você pode fazer login agora.');
           setIsLogin(true);
           setEmail('');
@@ -102,6 +115,7 @@ export default function Login({ onLogin }: LoginProps) {
       }
     } catch (error: any) {
       console.error('Erro de autenticação:', error);
+      setDebugInfo(`Erro: ${error.message}`);
       setError(error.message || 'Erro ao processar solicitação');
     } finally {
       setLoading(false);
@@ -134,7 +148,17 @@ export default function Login({ onLogin }: LoginProps) {
 
         {success && (
           <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4 text-green-700 text-sm">
+            <CheckCircle className="inline w-4 h-4 mr-2" />
             {success}
+          </div>
+        )}
+
+        {debugInfo && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-700 text-sm">
+            <div className="flex items-start">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2 mt-0.5"></div>
+              <span>{debugInfo}</span>
+            </div>
           </div>
         )}
 
