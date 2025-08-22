@@ -156,14 +156,16 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
         
         if (paymentSchedule.length > 0) {
           console.log('Usando cronograma personalizado');
-          // Cronograma personalizado
+          // Cronograma personalizado - verificar se tem porcentagens válidas
+          const hasValidPercentages = paymentSchedule.some(schedule => schedule.percentage > 0);
           let totalPercentage = 0;
+          
           paymentSchedule.forEach((schedule, index) => {
             let dueDate = new Date();
             
             if (index === 0) {
               // Primeira parcela: hoje
-            } else if (paymentSchedule.length === 2 && index === 1 && contract.data_evento) {
+            } else if (index === 1 && contract.data_evento) {
               // Segunda parcela: um dia antes do evento
               dueDate = new Date(contract.data_evento);
               dueDate.setDate(dueDate.getDate() - 1);
@@ -176,11 +178,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
             }
             
             let amount: number;
-            if (schedule.percentage > 0) {
+            if (hasValidPercentages && schedule.percentage > 0) {
               amount = (totalAmount * schedule.percentage / 100);
               totalPercentage += schedule.percentage;
               console.log(`Parcela ${index + 1}: ${schedule.percentage}% = R$ ${amount.toFixed(2)}`);
             } else {
+              // Se não tem porcentagens válidas, dividir igualmente
               amount = totalAmount / paymentSchedule.length;
               console.log(`Parcela ${index + 1}: Divisão igual = R$ ${amount.toFixed(2)}`);
             }
@@ -190,32 +193,43 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               amount: Math.round(amount * 100) / 100,
               due_date: dueDate.toISOString().split('T')[0],
               status: 'pending',
-              description: index === 0 
+              description: hasValidPercentages && schedule.description
+                ? schedule.description
+                : index === 0 
                 ? 'Entrada (no ato do contrato)'
-                : paymentSchedule.length === 2 && index === 1 
+                : index === 1 && contract.data_evento
                 ? 'Saldo final (um dia antes do evento)'
-                : schedule.description || `Parcela ${index + 1}/${paymentSchedule.length}`,
+                : `Parcela ${index + 1}/${paymentSchedule.length}`,
               payment_method: paymentMethod.name
             });
           });
           
-          console.log('Total de porcentagem:', totalPercentage);
-          if (totalPercentage > 100) {
+          if (hasValidPercentages && totalPercentage > 100) {
             alert(`Erro: Total de porcentagem (${totalPercentage}%) excede 100%`);
+            console.log('Total de porcentagem excede 100%, cancelando');
             return;
           }
         } else {
           console.log('Usando parcelas iguais');
-          // Parcelas iguais
+          // Parcelas iguais - forçar pelo menos 2 parcelas
           const installments = paymentMethod.installments || 1;
+          const minInstallments = Math.max(installments, 2); // Pelo menos 2 parcelas
           console.log('Número de parcelas:', installments);
-          const installmentAmount = totalAmount / installments;
+          console.log('Número mínimo de parcelas:', minInstallments);
+          const installmentAmount = totalAmount / minInstallments;
           console.log('Valor por parcela:', installmentAmount);
           
-          for (let i = 0; i < installments; i++) {
+          for (let i = 0; i < minInstallments; i++) {
             let dueDate = new Date();
             
-            if (i > 0) {
+            if (i === 0) {
+              // Primeira parcela: hoje
+            } else if (i === 1 && contract.data_evento) {
+              // Segunda parcela: um dia antes do evento
+              dueDate = new Date(contract.data_evento);
+              dueDate.setDate(dueDate.getDate() - 1);
+            } else {
+              // Outras parcelas: mensalmente
               dueDate.setMonth(dueDate.getMonth() + i);
               if (contract.preferred_payment_day >= 1 && contract.preferred_payment_day <= 28) {
                 dueDate.setDate(contract.preferred_payment_day);
@@ -229,7 +243,9 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               status: 'pending',
               description: i === 0 
                 ? 'Entrada (no ato do contrato)'
-                : `Parcela ${i + 1}/${installments}`,
+                : i === 1 && contract.data_evento
+                ? 'Saldo final (um dia antes do evento)'
+                : `Parcela ${i + 1}/${minInstallments}`,
               payment_method: paymentMethod.name
             });
           }
