@@ -211,15 +211,13 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
           }
         } else {
           console.log('Usando parcelas iguais');
-          // Parcelas iguais - forçar pelo menos 2 parcelas
-          const installments = paymentMethod.installments || 1;
-          const minInstallments = Math.max(installments, 2); // Pelo menos 2 parcelas
+          // Parcelas iguais - sempre dividir em pelo menos 2 parcelas
+          const installments = Math.max(paymentMethod.installments || 2, 2);
           console.log('Número de parcelas:', installments);
-          console.log('Número mínimo de parcelas:', minInstallments);
-          const installmentAmount = totalAmount / minInstallments;
+          const installmentAmount = totalAmount / installments;
           console.log('Valor por parcela:', installmentAmount);
           
-          for (let i = 0; i < minInstallments; i++) {
+          for (let i = 0; i < installments; i++) {
             let dueDate = new Date();
             
             if (i === 0) {
@@ -245,7 +243,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 ? 'Entrada (no ato do contrato)'
                 : i === 1 && contract.data_evento
                 ? 'Saldo final (um dia antes do evento)'
-                : `Parcela ${i + 1}/${minInstallments}`,
+                : `Parcela ${i + 1}/${installments}`,
               payment_method: paymentMethod.name
             });
           }
