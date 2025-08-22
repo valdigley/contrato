@@ -29,7 +29,7 @@ const supabaseAnonKey = getSupabaseAnonKey();
 let supabase;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Credenciais do Supabase não encontradas!');
+  console.log('Credenciais do Supabase não encontradas!');
   // Create a dummy client to prevent initialization errors
   supabase = createClient('https://dummy.supabase.co', 'dummy-key');
 } else {
