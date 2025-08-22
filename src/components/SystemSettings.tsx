@@ -13,7 +13,6 @@ interface SupabaseConfig {
 }
 
 export default function SystemSettings({ onBack }: SystemSettingsProps) {
-  const [activeTab, setActiveTab] = useState<'supabase' | 'event-types' | 'packages' | 'payment-methods' | 'templates'>('supabase');
   const [activeTab, setActiveTab] = useState<'supabase' | 'event-types' | 'packages' | 'payment-methods' | 'templates'>('event-types');
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>({
     url: '',
