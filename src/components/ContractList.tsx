@@ -29,6 +29,7 @@ interface ContractListProps {
   onFinancial: () => void;
 }
 
+export default function ContractList({ onNewContract, onFinancial }: ContractListProps) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
@@ -263,6 +264,7 @@ interface ContractListProps {
       alert('Erro ao imprimir. Tente novamente.');
     }
   };
+  
   const formatCPF = (cpf: string) => {
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
   };
