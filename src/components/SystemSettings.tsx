@@ -254,9 +254,6 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
       features: pkg.features.length > 0 ? pkg.features : ['']
     });
     setShowPackageForm(true);
-    
-    // Automatically create payment method associations for new packages
-    createPackagePaymentMethods(pkg.id, pkg.price);
   };
 
   const startEditTemplate = (template: ContractTemplate) => {
