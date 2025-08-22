@@ -152,9 +152,9 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         // Atualizar associações de pagamento para este pacote
         await createPackagePaymentMethods(editingPackage.id, parseFloat(newPackage.price));
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('packages')
-          .insert([packageData]);
+          .insert([packageData])
           .select()
           .single();
         
