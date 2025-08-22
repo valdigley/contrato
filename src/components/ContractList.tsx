@@ -46,6 +46,8 @@ export default function ContractList({ onNewContract }: ContractListProps) {
   const fetchContracts = async () => {
     try {
       console.log('Buscando contratos...');
+      console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+      console.log('Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
       
       const contractsResponse = await supabase
         .from('contratos')
@@ -53,8 +55,17 @@ export default function ContractList({ onNewContract }: ContractListProps) {
         .order('created_at', { ascending: false });
       
       console.log('Resposta dos contratos:', contractsResponse);
+      
+      if (contractsResponse.error) {
+        console.error('Erro na query de contratos:', contractsResponse.error);
+        console.error('Código do erro:', contractsResponse.error.code);
+        console.error('Mensagem do erro:', contractsResponse.error.message);
+      }
 
-      if (contractsResponse.error) throw contractsResponse.error;
+      if (contractsResponse.error) {
+        console.error('Erro ao buscar contratos:', contractsResponse.error);
+        // Não fazer throw para não quebrar a aplicação
+      }
 
       setContracts(contractsResponse.data || []);
       console.log('Contratos carregados:', contractsResponse.data?.length || 0);
