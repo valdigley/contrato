@@ -75,6 +75,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   const [filterStatus, setFilterStatus] = useState('all');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [showContractModal, setShowContractModal] = useState(false);
   const [newPayment, setNewPayment] = useState({
     amount: '',
     due_date: '',
@@ -784,6 +785,10 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                           <button
                             className="text-gray-600 hover:text-gray-900 p-1 rounded"
                             title="Ver detalhes"
+                           onClick={() => {
+                             setSelectedContract(contract);
+                             setShowContractModal(true);
+                           }}
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -1005,6 +1010,114 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 >
                   Cancelar
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Contract Details Modal */}
+        {showContractModal && selectedContract && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">Detalhes do Contrato</h2>
+                  <button
+                    onClick={() => setShowContractModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Dados Pessoais */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <Users className="w-5 h-5 mr-2" />
+                      Dados Pessoais
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Nome Completo</label>
+                        <p className="text-sm text-gray-900">{selectedContract.nome_completo}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">E-mail</label>
+                        <p className="text-sm text-gray-900">{selectedContract.email}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">WhatsApp</label>
+                        <p className="text-sm text-gray-900">{selectedContract.whatsapp}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Tipo de Evento</label>
+                        <p className="text-sm text-gray-900">{selectedContract.tipo_evento}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dados do Evento */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <Calendar className="w-5 h-5 mr-2" />
+                      Dados do Evento
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                      {selectedContract.data_evento && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Data do Evento</label>
+                          <p className="text-sm text-gray-900">{formatDate(selectedContract.data_evento)}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Dados Financeiros */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <DollarSign className="w-5 h-5 mr-2" />
+                      Dados Financeiros
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Valor do Contrato</label>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {formatCurrency(selectedContract.final_price || selectedContract.package_price || 0)}
+                        </p>
+                      </div>
+                      {selectedContract.preferred_payment_day && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Dia Preferido para Pagamento</label>
+                          <p className="text-sm text-gray-900">Dia {selectedContract.preferred_payment_day} de cada mês</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Data de Cadastro */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <Calendar className="w-5 h-5 mr-2" />
+                      Informações do Sistema
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Data de Cadastro</label>
+                        <p className="text-sm text-gray-900">{formatDate(selectedContract.created_at)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setShowContractModal(false)}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Fechar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
