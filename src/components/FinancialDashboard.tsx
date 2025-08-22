@@ -632,56 +632,107 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
             </select>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Revenue Chart */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Receita por Mês</h3>
-              <div className="space-y-3">
-                {monthlyData.map((month, index) => {
-                  const maxRevenue = Math.max(...monthlyData.map(m => m.revenue));
-                  const percentage = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
-                  
-                  return (
-                    <div key={index} className="flex items-center space-x-3">
-                      <div className="w-16 text-xs text-gray-600">{month.month}</div>
-                      <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
-                        <div 
-                          className="bg-blue-600 h-4 rounded-full transition-all duration-300"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                      <div className="w-24 text-xs text-gray-900 font-medium">
-                        {formatCurrency(month.revenue)}
-                      </div>
-                    </div>
-                  );
-                })}
+          {/* Combined Chart */}
+          <div className="space-y-6">
+            {/* Chart Header */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-blue-600 rounded"></div>
+                <span className="text-sm font-medium text-gray-700">Receita</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-green-600 rounded"></div>
+                <span className="text-sm font-medium text-gray-700">Contratos</span>
               </div>
             </div>
 
-            {/* Contracts Chart */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Contratos por Mês</h3>
-              <div className="space-y-3">
-                {monthlyData.map((month, index) => {
-                  const maxContracts = Math.max(...monthlyData.map(m => m.contracts));
-                  const percentage = maxContracts > 0 ? (month.contracts / maxContracts) * 100 : 0;
-                  
-                  return (
-                    <div key={index} className="flex items-center space-x-3">
-                      <div className="w-16 text-xs text-gray-600">{month.month}</div>
-                      <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
-                        <div 
-                          className="bg-green-600 h-4 rounded-full transition-all duration-300"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                      <div className="w-24 text-xs text-gray-900 font-medium">
-                        {month.contracts} contratos
+            {/* Chart Data */}
+            <div className="space-y-4">
+              {monthlyData.map((month, index) => {
+                const maxRevenue = Math.max(...monthlyData.map(m => m.revenue));
+                const maxContracts = Math.max(...monthlyData.map(m => m.contracts));
+                const revenuePercentage = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
+                const contractsPercentage = maxContracts > 0 ? (month.contracts / maxContracts) * 100 : 0;
+                
+                return (
+                  <div key={index} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-gray-900 capitalize">{month.month}</h4>
+                      <div className="flex items-center space-x-4 text-sm">
+                        <span className="text-blue-600 font-semibold">
+                          {formatCurrency(month.revenue)}
+                        </span>
+                        <span className="text-green-600 font-semibold">
+                          {month.contracts} contratos
+                        </span>
                       </div>
                     </div>
-                  );
-                })}
+                    
+                    {/* Revenue Bar */}
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                        <span>Receita</span>
+                        <span>{formatCurrency(month.revenue)}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+                          style={{ width: `${revenuePercentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    {/* Contracts Bar */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                        <span>Contratos</span>
+                        <span>{month.contracts} contratos</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500 ease-out"
+                          style={{ width: `${contractsPercentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    {/* Additional Stats */}
+                    {month.revenue > 0 && month.contracts > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>Valor médio por contrato:</span>
+                          <span className="font-medium">
+                            {formatCurrency(month.revenue / month.contracts)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Summary */}
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 border border-blue-100">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-sm text-gray-600">Total do Período</p>
+                  <p className="text-lg font-bold text-blue-600">
+                    {formatCurrency(monthlyData.reduce((sum, m) => sum + m.revenue, 0))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total de Contratos</p>
+                  <p className="text-lg font-bold text-green-600">
+                    {monthlyData.reduce((sum, m) => sum + m.contracts, 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Média Mensal</p>
+                  <p className="text-lg font-bold text-purple-600">
+                    {formatCurrency(monthlyData.reduce((sum, m) => sum + m.revenue, 0) / monthlyData.length)}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
