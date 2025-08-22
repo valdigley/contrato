@@ -168,15 +168,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       color: 'bg-green-500',
       hoverColor: 'hover:bg-green-600',
       count: null
-    },
-    {
-      id: 'settings',
-      title: 'Configurações',
-      description: 'Configurações do sistema',
-      icon: Settings,
-      color: 'bg-gray-500',
-      hoverColor: 'hover:bg-gray-600',
-      count: null
     }
   ];
 
@@ -201,13 +192,23 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <p className="text-gray-600">Bem-vindo, {user?.email}</p>
             </div>
-            <button
-              onClick={signOut}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-white/50 transition-all"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Sair</span>
-            </button>
+            <div className="flex items-center space-x-4">
+              {/* Settings access - requires double click */}
+              <button
+                onDoubleClick={() => onNavigate('settings')}
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/30 transition-all"
+                title="Duplo clique para configurações"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+              <button
+                onClick={signOut}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-white/50 transition-all"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sair</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -265,7 +266,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         </div>
 
         {/* Main Modules */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {modules.map((module) => {
             const IconComponent = module.icon;
             return (
