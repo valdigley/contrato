@@ -445,6 +445,8 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         if (insertError) throw insertError;
       }
 
+      // Refresh data
+      await fetchData();
     } catch (error) {
       console.error('Erro ao criar associações de pagamento:', error);
     }
