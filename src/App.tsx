@@ -4,9 +4,10 @@ import ContractForm from './components/ContractForm';
 import ContractList from './components/ContractList';
 import SystemSettings from './components/SystemSettings';
 import FinancialDashboard from './components/FinancialDashboard';
+import UserProfile from './components/UserProfile';
 import Login from './components/Login';
 import { useAuth } from './hooks/useAuth';
-import { LogOut, User, DollarSign, FileText, Settings, Plus, Database, AlertCircle } from 'lucide-react';
+import { LogOut, User, DollarSign, FileText, Settings, Plus, Database, AlertCircle, UserCircle } from 'lucide-react';
 
 function App() {
   const [supabaseConfigured, setSupabaseConfigured] = useState(false);
@@ -18,9 +19,13 @@ function App() {
     const editId = urlParams.get('edit');
     const isSettings = urlParams.get('settings') === 'true';
     const isContracts = urlParams.get('contracts') === 'true';
+    const isProfile = urlParams.get('profile') === 'true';
     
     if (isSettings) {
       return 'settings';
+    }
+    if (isProfile) {
+      return 'profile';
     }
     if (isContracts) {
       return 'contracts';
@@ -48,7 +53,7 @@ function App() {
     checkSupabaseConfig();
   }, []);
 
-  const handleViewChange = (view: 'dashboard' | 'contracts' | 'form' | 'settings') => {
+  const handleViewChange = (view: 'dashboard' | 'contracts' | 'form' | 'settings' | 'profile') => {
     setCurrentView(view);
     // Update URL without page reload
     if (view === 'dashboard') {
@@ -57,6 +62,8 @@ function App() {
       window.history.pushState({}, '', '?contracts=true');
     } else if (view === 'settings') {
       window.history.pushState({}, '', '?settings=true');
+    } else if (view === 'profile') {
+      window.history.pushState({}, '', '?profile=true');
     }
   };
 
@@ -174,6 +181,16 @@ function App() {
     );
   }
 
+  // Perfil do usuário
+  if (currentView === 'profile') {
+    return (
+      <div>
+        <UserHeader user={user} onSignOut={signOut} />
+        <UserProfile onBack={() => handleViewChange('dashboard')} />
+      </div>
+    );
+  }
+
   // Layout principal com guias
   return (
     <div className="min-h-screen bg-gray-50">
@@ -219,6 +236,18 @@ function App() {
               <span>Configurações</span>
             </button>
 
+            <button
+              onClick={() => handleViewChange('profile')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                currentView === 'profile'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <UserCircle className="h-4 w-4" />
+              <span>Perfil</span>
+            </button>
+
             <div className="flex-1"></div>
 
             <button
@@ -251,22 +280,37 @@ function App() {
 
 // Componente para mostrar informações do usuário logado
 function UserHeader({ user, onSignOut }: { user: any, onSignOut: () => void }) {
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
   return (
     <div className="bg-white border-b border-gray-200 px-4 py-3">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <User className="h-5 w-5 text-gray-600" />
-          <span className="text-sm text-gray-700">
-            Logado como: <span className="font-medium">{user?.email}</span>
-          </span>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
+            <User className="h-5 w-5 text-gray-600" />
+            <span className="text-sm text-gray-700">
+              Logado como: <span className="font-medium">{user?.email}</span>
+            </span>
+          </div>
         </div>
-        <button
-          onClick={onSignOut}
-          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Sair</span>
-        </button>
+        
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => window.location.href = '?profile=true'}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <UserCircle className="h-4 w-4" />
+            <span>Meu Perfil</span>
+          </button>
+          
+          <button
+            onClick={onSignOut}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sair</span>
+          </button>
+        </div>
       </div>
     </div>
   );

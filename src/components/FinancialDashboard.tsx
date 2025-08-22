@@ -121,10 +121,14 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       setError(null);
       setSupabaseConfigured(true);
 
-      // Buscar contratos
+      // Buscar contratos apenas do usuário logado
       const { data: contractsData, error: contractsError } = await supabase
         .from('contratos')
-        .select('*')
+        .select(`
+          *,
+          photographer:photographers!inner(user_id)
+        `)
+        .eq('photographers.user_id', (await supabase.auth.getUser()).data.user?.id)
         .order('created_at', { ascending: false });
 
       if (contractsError) {

@@ -49,12 +49,15 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
   const fetchContracts = async () => {
     try {
       console.log('Buscando contratos...');
-      console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-      console.log('Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
       
+      // Buscar contratos apenas do usuário logado
       const contractsResponse = await supabase
         .from('contratos')
-        .select('*')
+        .select(`
+          *,
+          photographer:photographers!inner(user_id)
+        `)
+        .eq('photographers.user_id', (await supabase.auth.getUser()).data.user?.id)
         .order('created_at', { ascending: false });
       
       console.log('Resposta dos contratos:', contractsResponse);

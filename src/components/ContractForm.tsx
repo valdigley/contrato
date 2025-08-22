@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, FileText, MapPin, Calendar, Camera, Send, CheckCircle, AlertCircle, ArrowLeft, CreditCard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { EventType, Package, PaymentMethod, PackagePaymentMethod } from '../types';
+import { useAuth } from '../hooks/useAuth';
 
 interface ContractFormProps {
   onBackToList?: () => void;
@@ -31,6 +32,7 @@ interface ContractData {
 }
 
 export default function ContractForm({ onBackToList }: ContractFormProps) {
+  const { user } = useAuth();
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [availablePackages, setAvailablePackages] = useState<Package[]>([]);
@@ -364,6 +366,18 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     setSubmitStatus('idle');
 
     try {
+      // Buscar o photographer_id do usuário logado
+      let photographer_id = null;
+      if (user) {
+        const { data: photographerData } = await supabase
+          .from('photographers')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        
+        photographer_id = photographerData?.id;
+      }
+
       // Debug: Log dos valores antes de salvar
       console.log('Valores do formulário:', {
         package_price: formData.package_price,
@@ -374,6 +388,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       const { data, error } = await supabase
         .from('contratos')
         .insert([{
+          photographer_id: photographer_id,
           nome_completo: formData.nome_completo,
           cpf: formData.cpf.replace(/\D/g, ''),
           email: formData.email,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Lock, Mail, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
+import { User, Lock, Mail, Eye, EyeOff, LogIn, UserPlus, Building2, Phone } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface LoginProps {
@@ -11,6 +11,8 @@ export default function Login({ onLogin }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [phone, setPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -53,8 +55,8 @@ export default function Login({ onLogin }: LoginProps) {
         if (error) throw error;
 
         if (data.user) {
-          // Inserir dados na tabela users
-          const { error: userError } = await supabase
+          // Inserir dados na tabela users e photographers
+          const { data: userData, error: userError } = await supabase
             .from('users')
             .insert([
               {
@@ -63,10 +65,30 @@ export default function Login({ onLogin }: LoginProps) {
                 name: name,
                 role: 'photographer'
               }
-            ]);
+            ])
+            .select()
+            .single();
 
           if (userError) {
             console.error('Erro ao criar perfil do usuário:', userError);
+            throw userError;
+          }
+
+          // Criar perfil de fotógrafo
+          const { error: photographerError } = await supabase
+            .from('photographers')
+            .insert([
+              {
+                user_id: data.user.id,
+                business_name: businessName,
+                phone: phone,
+                settings: {}
+              }
+            ]);
+
+          if (photographerError) {
+            console.error('Erro ao criar perfil do fotógrafo:', photographerError);
+            // Não fazer throw aqui para não bloquear o cadastro
           }
 
           setSuccess('Conta criada com sucesso! Você pode fazer login agora.');
@@ -74,6 +96,8 @@ export default function Login({ onLogin }: LoginProps) {
           setEmail('');
           setPassword('');
           setName('');
+          setBusinessName('');
+          setPhone('');
         }
       }
     } catch (error: any) {
@@ -129,6 +153,46 @@ export default function Login({ onLogin }: LoginProps) {
                   onChange={(e) => setName(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="Digite seu nome completo"
+                  required={!isLogin}
+                />
+              </div>
+            </div>
+          )}
+
+          {!isLogin && (
+            <div>
+              <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 mb-2">
+                Nome do Negócio/Empresa
+              </label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  type="text"
+                  id="businessName"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="Ex: João Silva Fotografia"
+                  required={!isLogin}
+                />
+              </div>
+            </div>
+          )}
+
+          {!isLogin && (
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                Telefone/WhatsApp
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  type="text"
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="(11) 99999-9999"
                   required={!isLogin}
                 />
               </div>
@@ -209,6 +273,8 @@ export default function Login({ onLogin }: LoginProps) {
               setEmail('');
               setPassword('');
               setName('');
+              setBusinessName('');
+              setPhone('');
             }}
             className="text-blue-600 hover:text-blue-800 text-sm font-medium"
           >
