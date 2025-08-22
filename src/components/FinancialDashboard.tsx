@@ -332,6 +332,28 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     }
   };
 
+  const unmarkAsPaid = async (paymentId: string) => {
+    if (!confirm('Tem certeza que deseja desmarcar este pagamento como pago?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({ 
+          status: 'pending',
+          paid_date: null
+        })
+        .eq('id', paymentId);
+
+      if (error) throw error;
+      await fetchFinancialData();
+    } catch (error) {
+      console.error('Erro ao desmarcar pagamento:', error);
+      alert('Erro ao atualizar pagamento');
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -842,6 +864,13 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                             className="text-green-600 hover:text-green-900"
                           >
                             Marcar como Pago
+                          </button>
+                        ) : payment.status === 'paid' ? (
+                          <button
+                            onClick={() => unmarkAsPaid(payment.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Desmarcar como Pago
                           </button>
                         ) : (
                           <span className="text-gray-400">-</span>
