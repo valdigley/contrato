@@ -288,33 +288,53 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   const calculateFinancialSummary = () => {
     const totalContracts = contracts.length;
     const totalValue = contracts.reduce((sum, contract) => {
-      // Debug: Log dos valores de cada contrato
-      console.log('Contrato:', contract.nome_completo, {
-        final_price: contract.final_price,
-        package_price: contract.package_price,
-        payment_method_id: contract.payment_method_id
-      });
-      
-      // Usar final_price se existir, senão usar package_price
       const value = Number(contract.final_price) || Number(contract.package_price) || 0;
       return sum + value;
     }, 0);
-    const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum, payment) => sum + payment.amount, 0);
-    const totalPending = payments.filter(p => p.status === 'pending').reduce((sum, payment) => sum + payment.amount, 0);
-    const totalOverdue = payments.filter(p => p.status === 'overdue').reduce((sum, payment) => sum + payment.amount, 0);
+    
+    // Calcular totais baseados nos pagamentos reais
+    const totalPaid = payments
+      .filter(p => p.status === 'paid')
+      .reduce((sum, payment) => sum + Number(payment.amount), 0);
+    
+    const totalPending = payments
+      .filter(p => p.status === 'pending')
+      .reduce((sum, payment) => sum + Number(payment.amount), 0);
+    
+    const totalOverdue = payments
+      .filter(p => {
+        if (p.status === 'paid') return false;
+        const dueDate = new Date(p.due_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return dueDate < today;
+      })
+      .reduce((sum, payment) => sum + Number(payment.amount), 0);
+    
+    // Ajustar pending para não incluir overdue
+    const adjustedPending = payments
+      .filter(p => {
+        if (p.status === 'paid') return false;
+        const dueDate = new Date(p.due_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return dueDate >= today;
+      })
+      .reduce((sum, payment) => sum + Number(payment.amount), 0);
 
-    console.log('Resumo financeiro:', {
+    console.log('Resumo financeiro calculado:', {
       totalContracts,
       totalValue,
       totalPaid,
-      totalPending,
+      totalPending: adjustedPending,
       totalOverdue
     });
+    
     return {
       totalContracts,
       totalValue,
       totalPaid,
-      totalPending,
+      totalPending: adjustedPending,
       totalOverdue,
       paidPercentage: totalValue > 0 ? (totalPaid / totalValue) * 100 : 0
     };
@@ -357,7 +377,6 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const markPaymentAsPaid = async (paymentId: string) => {
     try {
-      // Verificar se o pagamento existe e não está já pago
       const existingPayment = payments.find(p => p.id === paymentId);
       if (!existingPayment) {
         alert('Pagamento não encontrado');
@@ -382,12 +401,10 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
       if (error) throw error;
       
-      // Atualizar o estado local
       setPayments(prev => prev.map(payment => 
         payment.id === paymentId ? data : payment
       ));
       
-      // Mostrar confirmação
       alert('Pagamento marcado como pago com sucesso!');
     } catch (error) {
       console.error('Erro ao marcar pagamento como pago:', error);
