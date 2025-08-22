@@ -155,12 +155,16 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
       // Dados pessoais
       contractContent = contractContent.replace(/\{\{nome_completo\}\}/g, contract.nome_completo);
       contractContent = contractContent.replace(/\{\{cpf\}\}/g, formatCPF(contract.cpf));
+      contractContent = contractContent.replace(/\{\{email\}\}/g, contract.email);
+      contractContent = contractContent.replace(/\{\{whatsapp\}\}/g, formatWhatsApp(contract.whatsapp));
       contractContent = contractContent.replace(/\{\{endereco\}\}/g, contract.endereco);
       contractContent = contractContent.replace(/\{\{cidade\}\}/g, contract.cidade);
       contractContent = contractContent.replace(/\{\{data_nascimento\}\}/g, formatDate(contract.data_nascimento));
       
       // Dados do evento
       contractContent = contractContent.replace(/\{\{tipo_evento\}\}/g, contract.tipo_evento);
+      contractContent = contractContent.replace(/\{\{data_evento\}\}/g, contract.data_evento ? formatDate(contract.data_evento) : '');
+      contractContent = contractContent.replace(/\{\{horario_evento\}\}/g, contract.horario_evento || '');
       contractContent = contractContent.replace(/\{\{local_festa\}\}/g, contract.local_festa);
       
       // Dados opcionais
