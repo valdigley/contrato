@@ -27,7 +27,6 @@ interface Contract {
 interface ContractListProps {
   onNewContract: () => void;
   onFinancial: () => void;
-  onFinancial: () => void;
 }
 
 export default function ContractList({ onNewContract, onFinancial }: ContractListProps) {
