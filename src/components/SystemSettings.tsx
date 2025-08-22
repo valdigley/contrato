@@ -141,6 +141,11 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         }
       }, 1000);
 
+      
+      // Notify parent component that config was saved
+      if (onConfigSaved) {
+        onConfigSaved();
+      }
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
       setSaveStatus('error');
