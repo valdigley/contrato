@@ -196,7 +196,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    // Calcular totais dos contratos
+    // Calcular totais REAIS dos contratos
     const totalContractValue = contracts.reduce((sum, c) => sum + Number(c.final_price || c.package_price || 0), 0);
     const contractsThisMonth = contracts.filter(c => {
       const createdDate = new Date(c.created_at);
@@ -205,25 +205,17 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
     const averageContractValue = contracts.length > 0 ? totalContractValue / contracts.length : 0;
 
-    // Se não há pagamentos, usar dados dos contratos
+    // Se não há pagamentos, mostrar ZERO (não simular)
     if (payments.length === 0) {
-      // Simular dados baseados nos contratos
-      const monthlyRevenue = contracts
-        .filter(c => {
-          const eventDate = c.data_evento ? new Date(c.data_evento) : new Date(c.created_at);
-          return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
-        })
-        .reduce((sum, c) => sum + Number(c.final_price || c.package_price || 0), 0);
-
       setSummary({
-        totalReceived: totalContractValue * 0.3, // Assumir 30% já recebido
-        totalPending: totalContractValue * 0.5,  // 50% pendente
-        totalOverdue: totalContractValue * 0.2,  // 20% em atraso
-        monthlyRevenue,
+        totalReceived: 0, // ZERO se não há pagamentos
+        totalPending: 0,  // ZERO se não há pagamentos
+        totalOverdue: 0,  // ZERO se não há pagamentos
+        monthlyRevenue: 0, // ZERO se não há receita real
         contractsThisMonth,
         averageContractValue,
         totalContracts: contracts.length,
-        conversionRate: contracts.length > 0 ? (contracts.length / (contracts.length + 10)) * 100 : 0 // Simular taxa de conversão
+        conversionRate: 0 // ZERO se não há dados reais
       });
       return;
     }
@@ -288,12 +280,9 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
       const revenue = monthPayments.reduce((sum, p) => sum + Number(p.amount), 0);
       
-      // Se não há pagamentos, usar valor dos contratos
-      const contractRevenue = monthContracts.reduce((sum, c) => sum + Number(c.final_price || c.package_price || 0), 0);
-
       months.push({
         month: date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
-        revenue: revenue > 0 ? revenue : contractRevenue * 0.3, // 30% do valor do contrato se não há pagamentos
+        revenue: revenue, // APENAS receita real, não simular
         contracts: monthContracts.length,
         payments: monthPayments.length
       });

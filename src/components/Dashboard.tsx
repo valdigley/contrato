@@ -48,6 +48,15 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const loadDashboardData = async () => {
     try {
+      // Inicializar com zeros
+      setStats({
+        totalContracts: 0,
+        monthlyRevenue: 0,
+        pendingPayments: 0,
+        completedEvents: 0,
+        recentContracts: []
+      });
+
       // Get photographer profile
       const { data: photographerData } = await supabase
         .from('photographers')
@@ -63,11 +72,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           .eq('photographer_id', photographerData.id)
           .order('created_at', { ascending: false });
 
-        if (contracts) {
+        if (contracts && contracts.length > 0) {
           const now = new Date();
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
 
+          // Calcular receita mensal REAL (apenas contratos do mês atual)
           const monthlyRevenue = contracts
             .filter(c => {
               const createdDate = new Date(c.created_at);
@@ -76,17 +86,49 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             })
             .reduce((sum, c) => sum + Number(c.final_price || c.package_price || 0), 0);
 
+          // Buscar pagamentos REAIS
+          const { data: payments } = await supabase
+            .from('payments')
+            .select('*')
+            .in('contract_id', contracts.map(c => c.id));
+
+          const realPendingPayments = payments ? 
+            payments.filter(p => p.status === 'pending').length : 0;
+
+          const realCompletedEvents = payments ? 
+            payments.filter(p => p.status === 'paid').length : 0;
+
           setStats({
             totalContracts: contracts.length,
             monthlyRevenue,
-            pendingPayments: contracts.length * 0.3, // Simulated
-            completedEvents: contracts.length * 0.7, // Simulated
+            pendingPayments: realPendingPayments,
+            completedEvents: realCompletedEvents,
             recentContracts: contracts.slice(0, 5)
           });
+        } else {
+          // Se não há contratos, manter tudo zerado
+          setStats({
+            totalContracts: 0,
+            monthlyRevenue: 0,
+            pendingPayments: 0,
+            completedEvents: 0,
+            recentContracts: []
+          });
         }
+      } else {
+        // Se não há perfil de fotógrafo, manter tudo zerado
+        console.log('Perfil de fotógrafo não encontrado');
       }
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
+      // Em caso de erro, manter dados zerados
+      setStats({
+        totalContracts: 0,
+        monthlyRevenue: 0,
+        pendingPayments: 0,
+        completedEvents: 0,
+        recentContracts: []
+      });
     } finally {
       setLoading(false);
     }
