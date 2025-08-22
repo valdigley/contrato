@@ -152,9 +152,9 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         // Atualizar associações de pagamento para este pacote
         await createPackagePaymentMethods(editingPackage.id, parseFloat(newPackage.price));
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('packages')
-          .insert([packageData])
+          .insert([packageData]);
           .select()
           .single();
         
@@ -942,13 +942,23 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-lg font-semibold text-gray-900">Formas de Pagamento</h2>
-                  <button
-                    onClick={() => setShowPaymentMethodForm(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Nova Forma</span>
-                  </button>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={createPaymentMethodForAllPackages}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                      title="Aplicar todas as formas de pagamento para todos os pacotes"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Aplicar a Todos</span>
+                    </button>
+                    <button
+                      onClick={() => setShowPaymentMethodForm(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Nova Forma</span>
+                    </button>
+                  </div>
                 </div>
 
                 {showPaymentMethodForm && (
