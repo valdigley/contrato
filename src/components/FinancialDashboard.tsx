@@ -658,26 +658,26 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                       {month.month}
                     </div>
                     
-                    {/* Vertical Revenue Bar */}
+                    {/* Thin Vertical Revenue Bar */}
                     <div className="flex justify-center mb-3">
-                      <div className="w-6 bg-gray-200 rounded-full h-20 relative">
+                      <div className="w-3 bg-gray-100 rounded-full h-16 relative border border-gray-200">
                         <div 
-                          className="bg-gradient-to-t from-blue-500 to-blue-600 rounded-full w-full absolute bottom-0 transition-all duration-700 ease-out"
+                          className="bg-gradient-to-t from-blue-400 to-blue-500 rounded-full w-full absolute bottom-0 transition-all duration-500 ease-out shadow-sm"
                           style={{ height: `${revenuePercentage}%` }}
                         ></div>
                       </div>
                     </div>
                     
                     {/* Values */}
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-blue-600">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold text-blue-600">
                         {month.revenue >= 1000 
                           ? `R$ ${(month.revenue / 1000).toFixed(0)}k`
                           : formatCurrency(month.revenue).replace('R$ ', 'R$')
                         }
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {month.contracts} {month.contracts === 1 ? 'contrato' : 'contratos'}
+                      <div className="text-xs text-gray-400 font-medium">
+                        {month.contracts}c
                       </div>
                     </div>
                   </div>
