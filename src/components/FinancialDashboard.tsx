@@ -647,73 +647,46 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
             </div>
 
             {/* Chart Data */}
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {monthlyData.map((month, index) => {
                 const maxRevenue = Math.max(...monthlyData.map(m => m.revenue));
-                const maxContracts = Math.max(...monthlyData.map(m => m.contracts));
                 const revenuePercentage = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
-                const contractsPercentage = maxContracts > 0 ? (month.contracts / maxContracts) * 100 : 0;
                 
                 return (
-                  <div key={index} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-900 capitalize">{month.month}</h4>
-                      <div className="flex items-center space-x-4 text-sm">
-                        <span className="text-blue-600 font-semibold">
-                          {formatCurrency(month.revenue)}
-                        </span>
-                        <span className="text-green-600 font-semibold">
-                          {month.contracts} contratos
-                        </span>
-                      </div>
+                  <div key={index} className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                    <div className="text-xs font-medium text-gray-600 mb-2 capitalize">
+                      {month.month}
                     </div>
                     
-                    {/* Revenue Bar */}
-                    <div className="mb-2">
-                      <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                        <span>Receita</span>
-                        <span>{formatCurrency(month.revenue)}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
+                    {/* Vertical Revenue Bar */}
+                    <div className="flex justify-center mb-3">
+                      <div className="w-6 bg-gray-200 rounded-full h-20 relative">
                         <div 
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
-                          style={{ width: `${revenuePercentage}%` }}
+                          className="bg-gradient-to-t from-blue-500 to-blue-600 rounded-full w-full absolute bottom-0 transition-all duration-700 ease-out"
+                          style={{ height: `${revenuePercentage}%` }}
                         ></div>
                       </div>
                     </div>
                     
-                    {/* Contracts Bar */}
-                    <div>
-                      <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                        <span>Contratos</span>
-                        <span>{month.contracts} contratos</span>
+                    {/* Values */}
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold text-blue-600">
+                        {month.revenue >= 1000 
+                          ? `R$ ${(month.revenue / 1000).toFixed(0)}k`
+                          : formatCurrency(month.revenue).replace('R$ ', 'R$')
+                        }
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div 
-                          className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500 ease-out"
-                          style={{ width: `${contractsPercentage}%` }}
-                        ></div>
+                      <div className="text-xs text-gray-500">
+                        {month.contracts} {month.contracts === 1 ? 'contrato' : 'contratos'}
                       </div>
                     </div>
-                    
-                    {/* Additional Stats */}
-                    {month.revenue > 0 && month.contracts > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span>Valor médio por contrato:</span>
-                          <span className="font-medium">
-                            {formatCurrency(month.revenue / month.contracts)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
 
             {/* Summary */}
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 border border-blue-100">
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 border border-blue-100 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-sm text-gray-600">Total do Período</p>
