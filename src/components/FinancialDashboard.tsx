@@ -69,7 +69,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
       
-      if (!supabaseUrl || !supabaseKey) {
+      if (!supabaseUrl || !supabaseKey || supabaseUrl === 'undefined' || supabaseKey === 'undefined') {
         setSupabaseConfigured(false);
         setCredentialsError('Credenciais do Supabase não configuradas');
         setLoading(false);
@@ -83,6 +83,8 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
     if (checkSupabaseConfig()) {
       fetchFinancialData();
+    } else {
+      setLoading(false);
     }
   }, []);
 
@@ -93,11 +95,20 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   }, [supabaseConfigured]);
 
   const fetchFinancialData = async () => {
-    if (!supabaseConfigured) return;
+    const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey || supabaseUrl === 'undefined' || supabaseKey === 'undefined') {
+      setSupabaseConfigured(false);
+      setCredentialsError('Credenciais do Supabase não configuradas');
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
       setError(null);
+      setSupabaseConfigured(true);
 
       const [paymentsResponse, contractsResponse] = await Promise.all([
         supabase.from('payments').select('*').order('due_date', { ascending: true }),
@@ -175,8 +186,10 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       
       if (error.message?.includes('Failed to fetch')) {
         setError('Erro de conexão. Verifique sua internet e as configurações do Supabase.');
+        setSupabaseConfigured(false);
       } else if (error.message?.includes('Invalid API key')) {
         setError('Chave de API inválida. Acesse as Configurações para corrigir suas credenciais do Supabase.');
+        setSupabaseConfigured(false);
       } else {
         setError(error.message || 'Erro ao carregar dados financeiros');
       }
@@ -186,7 +199,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   };
 
   const updateOverduePayments = async () => {
-    if (!supabaseConfigured) return;
+    const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey || supabaseUrl === 'undefined' || supabaseKey === 'undefined') {
+      return;
+    }
     
     try {
       const today = new Date();
