@@ -1,33 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, Calendar, Filter, Eye, Edit2, Check, X, Plus, ArrowLeft, AlertCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Calendar, AlertTriangle, CheckCircle, Clock, Settings, Database } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-interface Contract {
-  id: string;
-  nome_completo: string;
-  email: string;
-  whatsapp: string;
-  tipo_evento: string;
-  package_price: number;
-  final_price: number;
-  payment_method_id: string;
-  preferred_payment_day: number;
-  created_at: string;
-  payment_status?: 'pending' | 'partial' | 'paid' | 'overdue';
-  next_payment_date?: string;
-  total_paid?: number;
-  data_evento?: string;
-}
-
-interface PaymentMethod {
-  id: string;
-  name: string;
-  description: string;
-  installments: number;
-  payment_schedule: Array<{
-    percentage: number;
-    description: string;
-  }>;
+interface FinancialDashboardProps {
+  onBack: () => void;
 }
 
 interface Payment {
@@ -35,401 +11,305 @@ interface Payment {
   contract_id: string;
   amount: number;
   due_date: string;
-  paid_date?: string;
-  status: 'pending' | 'paid' | 'overdue';
+  paid_date: string | null;
+  status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   description: string;
+  payment_method: string;
+  notes: string | null;
   created_at: string;
-  payment_method?: string;
-  notes?: string;
+  updated_at: string;
 }
 
-interface FinancialDashboardProps {
-  onBack?: () => void;
+interface Contract {
+  id: string;
+  nome_completo: string;
+  email: string;
+  whatsapp: string;
+  tipo_evento: string;
+  data_evento: string;
+  final_price: number;
+  created_at: string;
+}
+
+interface FinancialSummary {
+  totalReceived: number;
+  totalPending: number;
+  totalOverdue: number;
+  monthlyRevenue: number;
+  contractsThisMonth: number;
+  averageContractValue: number;
 }
 
 export default function FinancialDashboard({ onBack }: FinancialDashboardProps) {
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  // All useState hooks at the top level - NEVER conditional
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterMonth, setFilterMonth] = useState<string>('');
-  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
-  const [newPayment, setNewPayment] = useState({
-    amount: '',
-    due_date: '',
-    description: ''
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [summary, setSummary] = useState<FinancialSummary>({
+    totalReceived: 0,
+    totalPending: 0,
+    totalOverdue: 0,
+    monthlyRevenue: 0,
+    contractsThisMonth: 0,
+    averageContractValue: 0
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const [supabaseConfigured, setSupabaseConfigured] = useState(false);
+  const [credentialsError, setCredentialsError] = useState<string | null>(null);
 
+  // All useEffect hooks after useState - NEVER conditional
   useEffect(() => {
-    // Verificar se as credenciais do Supabase estão configuradas
-    const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    setSupabaseConfigured(!!(supabaseUrl && supabaseKey));
-  }, []);
-
-  const fetchFinancialData = async () => {
-    if (!supabaseConfigured) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const [contractsResponse, paymentMethodsResponse, paymentsResponse] = await Promise.all([
-        supabase
-          .from('contratos')
-          .select('*')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('payment_methods')
-          .select('*')
-          .eq('is_active', true),
-        supabase
-          .from('payments')
-          .select('*')
-          .order('due_date', { ascending: true })
-      ]);
-
-
-      if (contractsResponse.error) throw contractsResponse.error;
-      if (paymentMethodsResponse.error) throw paymentMethodsResponse.error;
-      if (paymentsResponse.error) throw paymentsResponse.error;
-
-      const contractsData = contractsResponse.data || [];
-      setContracts(contractsData);
-      setPaymentMethods(paymentMethodsResponse.data || []);
-      setPayments(paymentsResponse.data || []);
-
-    } catch (error) {
-      console.error('Erro ao carregar dados financeiros:', error);
+    // Check Supabase configuration
+    const checkSupabaseConfig = () => {
+      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
       
-      // Mostrar mensagem específica baseada no tipo de erro
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        alert('Erro de conexão com o Supabase. Verifique suas configurações de URL e chave API nas Configurações do Sistema.');
-      } else if (error.message.includes('Invalid API key')) {
-        alert('Chave API do Supabase inválida. Verifique suas credenciais nas Configurações do Sistema.');
-      } else if (error.message.includes('Credenciais do Supabase não configuradas')) {
-        alert(error.message);
-      } else {
-        alert(`Erro ao carregar dados: ${error.message}`);
+      if (!supabaseUrl || !supabaseKey) {
+        setSupabaseConfigured(false);
+        setCredentialsError('Credenciais do Supabase não configuradas');
+        setLoading(false);
+        return false;
       }
       
-      setContracts([]);
-      setPaymentMethods([]);
-      setPayments([]);
+      setSupabaseConfigured(true);
+      setCredentialsError(null);
+      return true;
+    };
+
+    if (checkSupabaseConfig()) {
+      fetchFinancialData();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (supabaseConfigured) {
+      updateOverduePayments();
+    }
+  }, [supabaseConfigured]);
+
+  const fetchFinancialData = async () => {
+    if (!supabaseConfigured) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [paymentsResponse, contractsResponse] = await Promise.all([
+        supabase.from('payments').select('*').order('due_date', { ascending: true }),
+        supabase.from('contratos').select('*').order('created_at', { ascending: false })
+      ]);
+
+      if (paymentsResponse.error) {
+        if (paymentsResponse.error.message.includes('Invalid API key')) {
+          throw new Error('Chave de API inválida. Verifique suas credenciais do Supabase nas configurações.');
+        }
+        throw paymentsResponse.error;
+      }
+      
+      if (contractsResponse.error) {
+        if (contractsResponse.error.message.includes('Invalid API key')) {
+          throw new Error('Chave de API inválida. Verifique suas credenciais do Supabase nas configurações.');
+        }
+        throw contractsResponse.error;
+      }
+
+      const paymentsData = paymentsResponse.data || [];
+      const contractsData = contractsResponse.data || [];
+
+      setPayments(paymentsData);
+      setContracts(contractsData);
+
+      // Calculate summary
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      const totalReceived = paymentsData
+        .filter(p => p.status === 'paid')
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const totalPending = paymentsData
+        .filter(p => p.status === 'pending')
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const totalOverdue = paymentsData
+        .filter(p => p.status === 'overdue')
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const monthlyRevenue = paymentsData
+        .filter(p => {
+          const paidDate = p.paid_date ? new Date(p.paid_date) : null;
+          return paidDate && 
+                 paidDate.getMonth() === currentMonth && 
+                 paidDate.getFullYear() === currentYear &&
+                 p.status === 'paid';
+        })
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const contractsThisMonth = contractsData.filter(c => {
+        const createdDate = new Date(c.created_at);
+        return createdDate.getMonth() === currentMonth && 
+               createdDate.getFullYear() === currentYear;
+      }).length;
+
+      const averageContractValue = contractsData.length > 0 
+        ? contractsData.reduce((sum, c) => sum + Number(c.final_price || 0), 0) / contractsData.length
+        : 0;
+
+      setSummary({
+        totalReceived,
+        totalPending,
+        totalOverdue,
+        monthlyRevenue,
+        contractsThisMonth,
+        averageContractValue
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao carregar dados financeiros:', error);
+      
+      if (error.message?.includes('Failed to fetch')) {
+        setError('Erro de conexão. Verifique sua internet e as configurações do Supabase.');
+      } else if (error.message?.includes('Invalid API key')) {
+        setError('Chave de API inválida. Acesse as Configurações para corrigir suas credenciais do Supabase.');
+      } else {
+        setError(error.message || 'Erro ao carregar dados financeiros');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const createPaymentsForContract = async (contract: Contract) => {
-    try {
-      console.log('=== CRIANDO PARCELAS PARA CONTRATO ===');
-      console.log('Cliente:', contract.nome_completo);
-      console.log('Contract ID:', contract.id);
-      
-      // Verificar se já existem pagamentos para este contrato
-      const { data: existingPayments, error: checkError } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('contract_id', contract.id);
-        
-      if (checkError) {
-        console.error('Erro ao verificar pagamentos existentes:', checkError);
-        throw checkError;
-      }
-      
-      console.log('Pagamentos existentes:', existingPayments?.length || 0);
-      
-      if (existingPayments.length > 0) {
-        alert('Este contrato já possui pagamentos cadastrados');
-        console.log('Parcelas já existem, cancelando criação');
-        return;
-      }
-
-      const totalAmount = Number(contract.final_price) || Number(contract.package_price) || 0;
-      console.log('Valor total do contrato:', totalAmount);
-      
-      if (totalAmount <= 0) {
-        alert('Contrato sem valor definido');
-        console.log('Valor inválido, cancelando');
-        return;
-      }
-
-      const paymentMethod = paymentMethods.find(pm => pm.id === contract.payment_method_id);
-      console.log('Método de pagamento encontrado:', paymentMethod?.name || 'Nenhum');
-      
-      const paymentsToCreate: Omit<Payment, 'id' | 'created_at'>[] = [];
-
-      if (!paymentMethod) {
-        console.log('Criando pagamento único');
-        // Pagamento único
-        paymentsToCreate.push({
-          contract_id: contract.id,
-          amount: totalAmount,
-          due_date: new Date().toISOString().split('T')[0],
-          status: 'pending',
-          description: 'Pagamento único',
-          payment_method: 'Pagamento único'
-        });
-      } else {
-        const paymentSchedule = paymentMethod.payment_schedule || [];
-        console.log('Cronograma de pagamento:', paymentSchedule);
-        
-        if (paymentSchedule.length > 0 && paymentSchedule.some(s => s.percentage > 0)) {
-          console.log('Usando cronograma personalizado');
-          let totalPercentage = 0;
-          
-          paymentSchedule.forEach((schedule, index) => {
-            let dueDate = new Date();
-            
-            if (index === 0) {
-              // Primeira parcela: hoje
-            } else if (index === 1 && contract.data_evento) {
-              // Segunda parcela: um dia antes do evento
-              dueDate = new Date(contract.data_evento);
-              dueDate.setDate(dueDate.getDate() - 1);
-            } else {
-              // Outras parcelas: mensalmente
-              dueDate.setMonth(dueDate.getMonth() + index);
-              if (contract.preferred_payment_day >= 1 && contract.preferred_payment_day <= 28) {
-                dueDate.setDate(contract.preferred_payment_day);
-              }
-            }
-            
-            let amount: number;
-            if (schedule.percentage > 0) {
-              amount = (totalAmount * schedule.percentage / 100);
-              totalPercentage += schedule.percentage;
-              console.log(`Parcela ${index + 1}: ${schedule.percentage}% = R$ ${amount.toFixed(2)}`);
-            } else {
-              // Se não tem porcentagem, dividir igualmente
-              amount = totalAmount / paymentSchedule.length;
-              console.log(`Parcela ${index + 1}: Divisão igual = R$ ${amount.toFixed(2)}`);
-            }
-            
-            paymentsToCreate.push({
-              contract_id: contract.id,
-              amount: Math.round(amount * 100) / 100,
-              due_date: dueDate.toISOString().split('T')[0],
-              status: 'pending',
-              description: schedule.percentage > 0 && schedule.description
-                ? schedule.description
-                : index === 0 
-                ? 'Entrada (no ato do contrato)'
-                : index === 1 && contract.data_evento
-                ? 'Saldo final (um dia antes do evento)'
-                : `Parcela ${index + 1}/${paymentSchedule.length}`,
-              payment_method: paymentMethod.name
-            });
-          });
-          
-          if (totalPercentage > 100) {
-            alert(`Erro: Total de porcentagem (${totalPercentage}%) excede 100%`);
-            console.log('Total de porcentagem excede 100%, cancelando');
-            return;
-          }
-        } else {
-          console.log('Usando parcelas iguais');
-          // Parcelas iguais - FORÇAR pelo menos 2 parcelas
-          const installments = Math.max(paymentMethod.installments || 1, 2);
-          console.log('Número de parcelas:', installments);
-          const installmentAmount = totalAmount / installments;
-          console.log('Valor por parcela:', installmentAmount);
-          
-          for (let i = 0; i < installments; i++) {
-            let dueDate = new Date();
-            
-            if (i === 0) {
-              // Primeira parcela: hoje
-            } else if (i === 1 && contract.data_evento) {
-              // Segunda parcela: um dia antes do evento
-              dueDate = new Date(contract.data_evento);
-              dueDate.setDate(dueDate.getDate() - 1);
-            } else {
-              // Outras parcelas: mensalmente
-              dueDate.setMonth(dueDate.getMonth() + i);
-              if (contract.preferred_payment_day >= 1 && contract.preferred_payment_day <= 28) {
-                dueDate.setDate(contract.preferred_payment_day);
-              }
-            }
-            
-            paymentsToCreate.push({
-              contract_id: contract.id,
-              amount: Math.round(installmentAmount * 100) / 100,
-              due_date: dueDate.toISOString().split('T')[0],
-              status: 'pending',
-              description: i === 0 
-                ? 'Entrada (no ato do contrato)'
-                : i === 1 && contract.data_evento
-                ? 'Saldo final (um dia antes do evento)'
-                : `Parcela ${i + 1}/${installments}`,
-              payment_method: paymentMethod.name
-            });
-          }
-        }
-      }
-
-      console.log('Parcelas a serem criadas:', paymentsToCreate.length);
-      const totalToCreate = paymentsToCreate.reduce((sum, p) => sum + p.amount, 0);
-      console.log('Valor total das parcelas:', totalToCreate);
-      console.log('Valor do contrato:', totalAmount);
-      
-      if (Math.abs(totalToCreate - totalAmount) > 0.01) {
-        alert(`Erro: Soma das parcelas (R$ ${totalToCreate.toFixed(2)}) não confere com o valor do contrato (R$ ${totalAmount.toFixed(2)})`);
-        console.error('Valores não conferem!');
-        return;
-      }
-      
-      if (paymentsToCreate.length > 0) {
-        console.log('Inserindo parcelas no banco...');
-        const { data, error } = await supabase
-          .from('payments')
-          .insert(paymentsToCreate)
-          .select();
-          
-        if (error) {
-          console.error('Erro ao inserir parcelas:', error);
-          throw error;
-        }
-        
-        console.log('Parcelas criadas com sucesso:', data?.length);
-        
-        // Recarregar todos os dados
-        await fetchFinancialData();
-        alert('Parcelas criadas com sucesso!');
-      }
-    } catch (error) {
-      console.error('Erro ao criar pagamentos automáticos:', error);
-      alert(`Erro ao criar parcelas: ${(error as Error).message}`);
-    }
-  };
-  
-  // Função para atualizar status de pagamentos vencidos
   const updateOverduePayments = async () => {
-    if (!supabaseConfigured) {
-      return;
-    }
-
+    if (!supabaseConfigured) return;
+    
     try {
       const today = new Date();
-      today.setHours(23, 59, 59, 999); // Set to end of day to be more lenient
+      today.setHours(23, 59, 59, 999); // End of today
       
-      const overduePayments = payments.filter(payment => {
-        if (payment.status === 'paid') return false;
-        const dueDate = new Date(payment.due_date);
-        dueDate.setHours(23, 59, 59, 999); // Set due date to end of day
-        return dueDate < today;
-      });
-      
-      if (overduePayments.length > 0) {
-        const { error } = await supabase
+      // Get all pending payments that are past due
+      const { data: overduePayments, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('status', 'pending')
+        .lt('due_date', today.toISOString().split('T')[0]);
+
+      if (error) throw error;
+
+      if (overduePayments && overduePayments.length > 0) {
+        // Update status to overdue
+        const { error: updateError } = await supabase
           .from('payments')
           .update({ status: 'overdue' })
           .in('id', overduePayments.map(p => p.id));
-          
-        if (!error) {
-          await fetchFinancialData(); // Recarregar dados
-        }
+
+        if (updateError) throw updateError;
+
+        // Refresh data after updating
+        await fetchFinancialData();
       }
     } catch (error) {
-      console.error('Erro ao atualizar pagamentos vencidos:', error);
+      console.error('Erro ao atualizar pagamentos em atraso:', error);
     }
   };
 
-  const calculateFinancialSummary = () => {
-    const totalContracts = contracts.length;
-    
-    // Calcular valor total baseado nos contratos
-    let totalValue = 0;
-    contracts.forEach(contract => {
-      const contractValue = Number(contract.final_price) || Number(contract.package_price) || 0;
-      totalValue += contractValue;
-    });
-    
-    const today = new Date();
-    today.setHours(23, 59, 59, 999); // Set to end of day
-    
-    // Calcular totais baseados nos pagamentos
-    let totalPaid = 0;
-    let totalOverdue = 0;
-    let totalPending = 0;
-    
-    payments.forEach(payment => {
-      const amount = Number(payment.amount) || 0;
-      
-      if (payment.status === 'paid') {
-        totalPaid += amount;
-      } else {
-        const dueDate = new Date(payment.due_date);
-        dueDate.setHours(23, 59, 59, 999); // Set due date to end of day
-        if (dueDate < today) {
-          totalOverdue += amount;
-        } else {
-          totalPending += amount;
-        }
-      }
-    });
-    
-    // Se não há pagamentos cadastrados, considerar tudo como pendente
-    if (payments.length === 0 && totalValue > 0) {
-      totalPending = totalValue;
-    }
+  const markAsPaid = async (paymentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({ 
+          status: 'paid',
+          paid_date: new Date().toISOString().split('T')[0]
+        })
+        .eq('id', paymentId);
 
-    const summary = {
-      totalContracts,
-      totalValue,
-      totalPaid,
-      totalPending,
-      totalOverdue,
-      paidPercentage: totalValue > 0 ? (totalPaid / totalValue) * 100 : 0
-    };
-    
-    console.log('Resumo financeiro calculado:', summary);
-    
-    return summary;
+      if (error) throw error;
+
+      // Refresh data
+      await fetchFinancialData();
+    } catch (error) {
+      console.error('Erro ao marcar pagamento como pago:', error);
+      alert('Erro ao atualizar pagamento');
+    }
   };
 
-  // Executar atualização de status ao carregar
-  React.useEffect(() => {
-    if (payments.length > 0 && !loading) {
-      // Verificar se as credenciais estão configuradas antes de tentar atualizar
-      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (supabaseUrl && supabaseKey) {
-        updateOverduePayments();
-      }
-    }
-  }, [payments, loading]);
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
-  useEffect(() => {
-    if (supabaseConfigured) {
-      fetchFinancialData();
-      updateOverduePayments();
-    }
-  }, [supabaseConfigured]);
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'overdue':
+        return 'bg-red-100 text-red-800';
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'pending':
+        return <Clock className="w-4 h-4" />;
+      case 'overdue':
+        return <AlertTriangle className="w-4 h-4" />;
+      default:
+        return <Clock className="w-4 h-4" />;
+    }
+  };
+
+  const filteredPayments = payments.filter(payment => {
+    if (showOverdueOnly) {
+      return payment.status === 'overdue';
+    }
+    
+    if (selectedMonth) {
+      const paymentDate = new Date(payment.due_date);
+      const [year, month] = selectedMonth.split('-');
+      return paymentDate.getFullYear() === parseInt(year) && 
+             paymentDate.getMonth() === parseInt(month) - 1;
+    }
+    
+    return true;
+  });
+
+  // Conditional rendering AFTER all hooks
   if (!supabaseConfigured) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md mx-auto text-center bg-white rounded-lg shadow-sm p-8">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-red-600" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Configuração Necessária</h2>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
+          <Database className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Configuração Necessária
+          </h2>
           <p className="text-gray-600 mb-6">
-            As credenciais do Supabase não estão configuradas. É necessário configurar a URL do projeto e a chave API para acessar os dados financeiros.
+            {credentialsError || 'Configure suas credenciais do Supabase para acessar o dashboard financeiro.'}
           </p>
           <button
-            onClick={() => window.location.href = '/?settings=true'}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium"
+            onClick={() => window.location.href = '?settings=true'}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center space-x-2 mx-auto"
           >
-            Ir para Configurações
+            <Settings className="w-4 h-4" />
+            <span>Ir para Configurações</span>
           </button>
         </div>
       </div>
@@ -446,282 +326,126 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       </div>
     );
   }
-  
-  // Debug: Log dos dados carregados
-  React.useEffect(() => {
-    console.log('=== DEBUG DASHBOARD ===');
-    console.log('Contratos carregados:', contracts.length);
-    console.log('Pagamentos carregados:', payments.length);
-    console.log('Contratos:', contracts.map(c => ({
-      nome: c.nome_completo,
-      valor_final: c.final_price,
-      valor_pacote: c.package_price,
-      id: c.id
-    })));
-    console.log('Pagamentos:', payments.map(p => ({
-      contract_id: p.contract_id,
-      amount: p.amount,
-      status: p.status,
-      due_date: p.due_date
-    })));
-  }, [contracts, payments]);
 
-  const getContractPayments = (contractId: string) => {
-    return payments.filter(p => p.contract_id === contractId);
-  };
-
-  const getPaymentStatus = (contract: Contract): 'pending' | 'partial' | 'paid' | 'overdue' => {
-    const contractPayments = getContractPayments(contract.id);
-    if (contractPayments.length === 0) return 'pending';
-    
-    const paidPayments = contractPayments.filter(p => p.status === 'paid');
-    const today = new Date();
-    today.setHours(23, 59, 59, 999); // Set to end of day
-    
-    const overduePayments = contractPayments.filter(p => {
-      if (p.status === 'paid') return false;
-      const dueDate = new Date(p.due_date);
-      dueDate.setHours(23, 59, 59, 999); // Set due date to end of day
-      return dueDate < today;
-    });
-
-    if (overduePayments.length > 0) return 'overdue';
-    if (paidPayments.length === contractPayments.length && contractPayments.length > 0) return 'paid';
-    if (paidPayments.length > 0) return 'partial';
-    return 'pending';
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors = {
-      'pending': 'bg-yellow-100 text-yellow-800',
-      'partial': 'bg-blue-100 text-blue-800',
-      'paid': 'bg-green-100 text-green-800',
-      'overdue': 'bg-red-100 text-red-800'
-    };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels = {
-      'pending': 'Pendente',
-      'partial': 'Parcial',
-      'paid': 'Pago',
-      'overdue': 'Vencido'
-    };
-    return labels[status as keyof typeof labels] || status;
-  };
-
-  const markPaymentAsPaid = async (paymentId: string) => {
-    try {
-      const existingPayment = payments.find(p => p.id === paymentId);
-      if (!existingPayment) {
-        alert('Pagamento não encontrado');
-        return;
-      }
-      
-      if (existingPayment.status === 'paid') {
-        alert('Este pagamento já foi marcado como pago');
-        return;
-      }
-
-      const today = new Date().toISOString().split('T')[0];
-
-      const { data, error } = await supabase
-        .from('payments')
-        .update({ 
-          status: 'paid',
-          paid_date: today,
-          notes: 'Marcado como pago manualmente'
-        })
-        .eq('id', paymentId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      // Atualizar estado local
-      setPayments(prev => prev.map(payment => 
-        payment.id === paymentId ? data : payment
-      ));
-      
-      alert('Pagamento marcado como pago com sucesso!');
-    } catch (error) {
-      console.error('Erro ao marcar pagamento como pago:', error);
-      alert(`Erro ao atualizar pagamento: ${(error as Error).message}`);
-    }
-  };
-
-  const markPaymentAsUnpaid = async (paymentId: string) => {
-    try {
-      const existingPayment = payments.find(p => p.id === paymentId);
-      if (!existingPayment) {
-        alert('Pagamento não encontrado');
-        return;
-      }
-      
-      if (existingPayment.status !== 'paid') {
-        alert('Este pagamento não está marcado como pago');
-        return;
-      }
-
-      if (!confirm('Tem certeza que deseja desmarcar este pagamento como pago?')) {
-        return;
-      }
-
-      // Determinar o status correto baseado na data de vencimento
-      const today = new Date();
-      today.setHours(23, 59, 59, 999); // Set to end of day
-      const dueDate = new Date(existingPayment.due_date);
-      dueDate.setHours(23, 59, 59, 999); // Set due date to end of day
-      const newStatus = dueDate < today ? 'overdue' : 'pending';
-
-      const { data, error } = await supabase
-        .from('payments')
-        .update({ 
-          status: newStatus,
-          paid_date: null,
-          notes: 'Desmarcado como pago manualmente'
-        })
-        .eq('id', paymentId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      // Atualizar estado local
-      setPayments(prev => prev.map(payment => 
-        payment.id === paymentId ? data : payment
-      ));
-      
-      alert('Pagamento desmarcado como pago com sucesso!');
-    } catch (error) {
-      console.error('Erro ao desmarcar pagamento como pago:', error);
-      alert(`Erro ao atualizar pagamento: ${(error as Error).message}`);
-    }
-  };
-
-  const addNewPayment = async () => {
-    if (!selectedContract || !newPayment.amount || !newPayment.due_date) {
-      alert('Preencha todos os campos obrigatórios');
-      return;
-    }
-
-    const amount = parseFloat(newPayment.amount);
-    if (isNaN(amount) || amount <= 0) {
-      alert('Valor deve ser um número positivo');
-      return;
-    }
-    
-    try {
-      const { data, error } = await supabase
-        .from('payments')
-        .insert([{
-          contract_id: selectedContract.id,
-          amount: amount,
-          due_date: newPayment.due_date,
-          status: 'pending',
-          description: newPayment.description || 'Pagamento adicional',
-          payment_method: 'Manual'
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      setPayments(prev => [...prev, data]);
-      setNewPayment({ amount: '', due_date: '', description: '' });
-      setShowAddPaymentModal(false);
-      alert('Pagamento adicionado com sucesso!');
-    } catch (error) {
-      console.error('Erro ao adicionar pagamento:', error);
-      alert(`Erro ao adicionar pagamento: ${(error as Error).message}`);
-    }
-  };
-
-  const filteredContracts = contracts.filter(contract => {
-    const status = getPaymentStatus(contract);
-    const matchesStatus = !filterStatus || status === filterStatus;
-    
-    const contractDate = new Date(contract.created_at);
-    const matchesMonth = !filterMonth || 
-      contractDate.toISOString().slice(0, 7) === filterMonth;
-    
-    return matchesStatus && matchesMonth;
-  });
-
-  const summary = calculateFinancialSummary();
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
+          <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Erro ao Carregar Dados
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="space-y-3">
+            <button
+              onClick={fetchFinancialData}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg"
+            >
+              Tentar Novamente
+            </button>
+            <button
+              onClick={() => window.location.href = '?settings=true'}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg flex items-center justify-center space-x-2"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Ir para Configurações</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center space-x-3">
-            <DollarSign className="h-8 w-8 text-green-600" />
+          <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Dashboard Financeiro</h1>
-              <p className="text-gray-600">Visão geral e controle financeiro dos contratos</p>
+              <p className="text-gray-600 mt-1">Acompanhe suas receitas e pagamentos</p>
             </div>
+            <button
+              onClick={fetchFinancialData}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>Atualizar</span>
+            </button>
           </div>
         </div>
 
-        {/* Financial Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-8 w-8 text-blue-600" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Recebido</p>
+                <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalReceived)}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Valor Total</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  R$ {summary.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
+              <div className="bg-green-100 rounded-full p-3">
+                <TrendingUp className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <TrendingUp className="h-8 w-8 text-green-600" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pendente</p>
+                <p className="text-2xl font-bold text-yellow-600">{formatCurrency(summary.totalPending)}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Recebido</p>
-                <p className="text-2xl font-semibold text-green-600">
-                  R$ {summary.totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {summary.paidPercentage.toFixed(1)}% do total
-                </p>
+              <div className="bg-yellow-100 rounded-full p-3">
+                <Clock className="w-6 h-6 text-yellow-600" />
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Calendar className="h-8 w-8 text-yellow-600" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Em Atraso</p>
+                <p className="text-2xl font-bold text-red-600">{formatCurrency(summary.totalOverdue)}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">A Receber</p>
-                <p className="text-2xl font-semibold text-yellow-600">
-                  R$ {summary.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
+              <div className="bg-red-100 rounded-full p-3">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <TrendingDown className="h-8 w-8 text-red-600" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Receita do Mês</p>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary.monthlyRevenue)}</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Em Atraso</p>
-                <p className="text-2xl font-semibold text-red-600">
-                  R$ {summary.totalOverdue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
+              <div className="bg-blue-100 rounded-full p-3">
+                <DollarSign className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Contratos do Mês</p>
+                <p className="text-2xl font-bold text-purple-600">{summary.contractsThisMonth}</p>
+              </div>
+              <div className="bg-purple-100 rounded-full p-3">
+                <Calendar className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Valor Médio</p>
+                <p className="text-2xl font-bold text-indigo-600">{formatCurrency(summary.averageContractValue)}</p>
+              </div>
+              <div className="bg-indigo-100 rounded-full p-3">
+                <TrendingUp className="w-6 h-6 text-indigo-600" />
               </div>
             </div>
           </div>
@@ -731,46 +455,49 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status do Pagamento
-              </label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Todos os status</option>
-                <option value="pending">Pendente</option>
-                <option value="partial">Parcial</option>
-                <option value="paid">Pago</option>
-                <option value="overdue">Vencido</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mês do Contrato
+              <label htmlFor="month-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                Filtrar por Mês
               </label>
               <input
                 type="month"
-                value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
+                id="month-filter"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+            </div>
+            <div className="flex items-end">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={showOverdueOnly}
+                  onChange={(e) => setShowOverdueOnly(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Apenas em atraso</span>
+              </label>
             </div>
           </div>
         </div>
 
-        {/* Contracts Table */}
+        {/* Payments Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Contratos ({filteredContracts.length})</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Pagamentos ({filteredPayments.length})
+            </h2>
           </div>
           
-          {filteredContracts.length === 0 ? (
+          {filteredPayments.length === 0 ? (
             <div className="text-center py-12">
               <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum contrato encontrado</h3>
-              <p className="text-gray-600">Tente ajustar os filtros de busca</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum pagamento encontrado</h3>
+              <p className="text-gray-600">
+                {showOverdueOnly 
+                  ? 'Não há pagamentos em atraso no momento'
+                  : 'Não há pagamentos para o período selecionado'
+                }
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -778,19 +505,19 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cliente
+                      Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Evento
+                      Descrição
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Valor
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      Vencimento
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Progresso
+                      Forma de Pagamento
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ações
@@ -798,383 +525,57 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredContracts.map((contract) => {
-                    const contractPayments = getContractPayments(contract.id);
-                    const paidPayments = contractPayments.filter(p => p.status === 'paid');
-                    const totalPaid = paidPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                    const totalValue = Number(contract.final_price) || Number(contract.package_price) || 0;
-                    const progress = totalValue > 0 ? (totalPaid / totalValue) * 100 : 0;
-                    const status = getPaymentStatus(contract);
-                    
-                    // Debug para este contrato específico
-                    if (contract.nome_completo === 'Jose Valdigley dos Santos') {
-                      console.log('Debug contrato Jose:', {
-                        contractPayments: contractPayments.length,
-                        totalValue,
-                        totalPaid,
-                        progress,
-                        status
-                      });
-                    }
-
-                    return (
-                      <tr key={contract.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {contract.nome_completo}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {contract.email}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{contract.tipo_evento}</div>
-                          <div className="text-sm text-gray-500">
-                            Contrato: {new Date(contract.created_at).toLocaleDateString('pt-BR')}
-                          </div>
-                          {contract.data_evento && (
-                            <div className="text-sm text-gray-500">
-                              Evento: {new Date(contract.data_evento).toLocaleDateString('pt-BR')}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            R$ {Number(totalValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Pago: R$ {Number(totalPaid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </div>
-                          {contractPayments.length > 0 && (
-                            <div className="text-xs text-gray-400">
-                              {contractPayments.length} parcela{contractPayments.length > 1 ? 's' : ''}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(status)}`}>
-                            {getStatusLabel(status)}
+                  {filteredPayments.map((payment) => (
+                    <tr key={payment.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(payment.status)}`}>
+                          {getStatusIcon(payment.status)}
+                          <span className="ml-1">
+                            {payment.status === 'paid' ? 'Pago' :
+                             payment.status === 'pending' ? 'Pendente' :
+                             payment.status === 'overdue' ? 'Atrasado' : 'Cancelado'}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                progress === 100 ? 'bg-green-600' : 
-                                progress > 0 ? 'bg-blue-600' : 'bg-gray-300'
-                              }`}
-                              style={{ width: `${Math.min(progress, 100)}%` }}
-                            ></div>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {progress.toFixed(1)}%
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">{payment.description}</div>
+                        {payment.notes && (
+                          <div className="text-sm text-gray-500">{payment.notes}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {formatCurrency(payment.amount)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{formatDate(payment.due_date)}</div>
+                        {payment.paid_date && (
+                          <div className="text-sm text-gray-500">Pago em: {formatDate(payment.paid_date)}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{payment.payment_method}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {payment.status === 'pending' || payment.status === 'overdue' ? (
                           <button
-                            onClick={() => {
-                              setSelectedContract(contract);
-                              setShowPaymentModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded mr-2"
-                            title="Ver pagamentos"
+                            onClick={() => markAsPaid(payment.id)}
+                            className="text-green-600 hover:text-green-900"
                           >
-                            <Eye className="w-4 h-4" />
+                            Marcar como Pago
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
         </div>
-
-        {/* Payment Details Modal */}
-        {showPaymentModal && selectedContract && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Pagamentos - {selectedContract.nome_completo}</h2>
-                    <div className="text-gray-600 space-y-1">
-                      <p>{selectedContract.tipo_evento}</p>
-                      {(() => {
-                        const paymentMethod = paymentMethods.find(pm => pm.id === selectedContract.payment_method_id);
-                        return paymentMethod ? (
-                          <p className="text-sm">
-                            <span className="font-medium">Forma de pagamento:</span> {paymentMethod.name}
-                            {paymentMethod.installments > 1 && (
-                              <span className="ml-2 text-blue-600">({paymentMethod.installments}x)</span>
-                            )}
-                          </p>
-                        ) : null;
-                      })()}
-                      <p className="text-sm">
-                        <span className="font-medium">Valor total:</span> R$ {Number(selectedContract.final_price || selectedContract.package_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setShowAddPaymentModal(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Adicionar</span>
-                    </button>
-                    <button
-                      onClick={() => setShowPaymentModal(false)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-
-                {/* Payment Summary */}
-                {(() => {
-                  const contractPayments = getContractPayments(selectedContract.id);
-                  const totalPaid = contractPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
-                  const totalPending = contractPayments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
-                  const totalOverdue = contractPayments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
-                  const totalValue = selectedContract.final_price || selectedContract.package_price || 0;
-                  
-                  return (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                      <div className="bg-blue-50 rounded-lg p-4">
-                        <div className="text-sm font-medium text-blue-700">Total do Contrato</div>
-                        <div className="text-lg font-semibold text-blue-900">
-                          R$ {Number(totalValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                      <div className="bg-green-50 rounded-lg p-4">
-                        <div className="text-sm font-medium text-green-700">Pago</div>
-                        <div className="text-lg font-semibold text-green-900">
-                          R$ {totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                      <div className="bg-yellow-50 rounded-lg p-4">
-                        <div className="text-sm font-medium text-yellow-700">Pendente</div>
-                        <div className="text-lg font-semibold text-yellow-900">
-                          R$ {totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                      <div className="bg-red-50 rounded-lg p-4">
-                        <div className="text-sm font-medium text-red-700">Em Atraso</div>
-                        <div className="text-lg font-semibold text-red-900">
-                          R$ {totalOverdue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-                <div className="space-y-4">
-                  {getContractPayments(selectedContract.id).map((payment) => (
-                    <div key={payment.id} className={`border rounded-lg p-4 ${
-                      payment.status === 'paid' ? 'border-green-200 bg-green-50' :
-                      payment.status === 'overdue' ? 'border-red-200 bg-red-50' :
-                      'border-gray-200 bg-white'
-                    }`}>
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="font-medium text-gray-900">{payment.description}</h4>
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
-                                {getStatusLabel(payment.status)}
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-semibold text-gray-900">
-                                R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex justify-between items-center text-sm text-gray-600">
-                            <div className="space-y-1">
-                              <p>
-                                <span className="font-medium">Vencimento:</span> {new Date(payment.due_date).toLocaleDateString('pt-BR')}
-                                {(() => {
-                                  const today = new Date();
-                                  today.setHours(23, 59, 59, 999);
-                                  const dueDate = new Date(payment.due_date);
-                                  dueDate.setHours(23, 59, 59, 999);
-                                  return dueDate < today && payment.status !== 'paid';
-                                })() && (
-                                  <span className="ml-2 text-red-600 font-medium">(Vencido)</span>
-                                )}
-                              </p>
-                              {payment.paid_date && (
-                                <p>
-                                  <span className="font-medium">Pago em:</span> {new Date(payment.paid_date).toLocaleDateString('pt-BR')}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              {payment.status !== 'paid' && (
-                                <button
-                                  onClick={() => markPaymentAsPaid(payment.id)}
-                                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center space-x-1 transition-colors"
-                                  title="Marcar como pago"
-                                >
-                                  <Check className="w-3 h-3" />
-                                  <span>Marcar como Pago</span>
-                                </button>
-                              )}
-                              {payment.status === 'paid' && (
-                                <div className="flex items-center space-x-2">
-                                  <div className="flex items-center space-x-1 text-green-600">
-                                    <Check className="w-4 h-4" />
-                                    <span className="text-sm font-medium">Pago</span>
-                                  </div>
-                                  <button
-                                    onClick={() => markPaymentAsUnpaid(payment.id)}
-                                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center space-x-1 transition-colors"
-                                    title="Desmarcar como pago"
-                                  >
-                                    <X className="w-3 h-3" />
-                                    <span>Desmarcar</span>
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {getContractPayments(selectedContract.id).length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum pagamento encontrado</h3>
-                      <p className="text-gray-600 mb-4">
-                        Este contrato ainda não possui parcelas de pagamento cadastradas.
-                      </p>
-                      <button
-                        onClick={() => createPaymentsForContract(selectedContract)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 mx-auto"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Criar Parcelas Automaticamente</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Progress Bar */}
-                {(() => {
-                  const contractPayments = getContractPayments(selectedContract.id);
-                  const totalPaid = contractPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
-                  const totalValue = selectedContract.final_price || selectedContract.package_price || 0;
-                  const progress = totalValue > 0 ? (totalPaid / totalValue) * 100 : 0;
-                  
-                  return contractPayments.length > 0 ? (
-                    <div className="mt-6 pt-6 border-t border-gray-200">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-700">Progresso do Pagamento</span>
-                        <span className="text-sm text-gray-600">{progress.toFixed(1)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div 
-                          className={`h-3 rounded-full transition-all duration-300 ${
-                            progress === 100 ? 'bg-green-600' : 
-                            progress > 0 ? 'bg-blue-600' : 'bg-gray-300'
-                          }`}
-                          style={{ width: `${Math.min(progress, 100)}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>R$ {totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} pago</span>
-                        <span>R$ {Number(totalValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} total</span>
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Add Payment Modal */}
-        {showAddPaymentModal && selectedContract && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full">
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">Adicionar Pagamento</h2>
-                  <button
-                    onClick={() => setShowAddPaymentModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Valor (R$) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={newPayment.amount}
-                      onChange={(e) => setNewPayment(prev => ({ ...prev, amount: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Data de Vencimento *
-                    </label>
-                    <input
-                      type="date"
-                      value={newPayment.due_date}
-                      onChange={(e) => setNewPayment(prev => ({ ...prev, due_date: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Descrição
-                    </label>
-                    <input
-                      type="text"
-                      value={newPayment.description}
-                      onChange={(e) => setNewPayment(prev => ({ ...prev, description: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Descrição do pagamento"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex space-x-4 mt-6">
-                  <button
-                    onClick={addNewPayment}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-                  >
-                    Adicionar
-                  </button>
-                  <button
-                    onClick={() => setShowAddPaymentModal(false)}
-                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
