@@ -4,7 +4,6 @@ import ContractForm from './components/ContractForm';
 import ContractList from './components/ContractList';
 import SystemSettings from './components/SystemSettings';
 import FinancialDashboard from './components/FinancialDashboard';
-import FinancialDashboard from './components/FinancialDashboard';
 import Login from './components/Login';
 import { useAuth } from './hooks/useAuth';
 import { LogOut, User } from 'lucide-react';
@@ -17,11 +16,7 @@ function App() {
     const editId = urlParams.get('edit');
     const isSettings = urlParams.get('settings') === 'true';
     const isFinancial = urlParams.get('financial') === 'true';
-    const isFinancial = urlParams.get('financial') === 'true';
     
-    if (isFinancial) {
-      return 'financial';
-    }
     if (isFinancial) {
       return 'financial';
     }
@@ -44,8 +39,6 @@ function App() {
     } else if (view === 'financial') {
       window.history.pushState({}, '', '?financial=true');
     } else if (view === 'financial') {
-      window.history.pushState({}, '', '?financial=true');
-    }
   };
 
   // Mostrar loading enquanto verifica autenticação
@@ -67,15 +60,6 @@ function App() {
   // Se não está autenticado e não é modo cliente, mostrar login
   if (!isAuthenticated && !isClientMode) {
     return <Login onLogin={() => handleViewChange('list')} />;
-  }
-
-  if (currentView === 'financial') {
-    return (
-      <div>
-        {isAuthenticated && <UserHeader user={user} onSignOut={signOut} />}
-        <FinancialDashboard onBack={() => handleViewChange('list')} />
-      </div>
-    );
   }
 
   if (currentView === 'financial') {
