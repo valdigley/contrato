@@ -149,22 +149,12 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
           .eq('id', editingPackage.id);
         
         if (error) throw error;
-        
-        // Atualizar associações de pagamento para este pacote
-        await createPackagePaymentMethods(editingPackage.id, parseFloat(newPackage.price));
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('packages')
-          .insert([packageData])
-          .select()
-          .single();
+          .insert([packageData]);
         
         if (error) throw error;
-        
-        // Criar associações de pagamento para o novo pacote
-        if (data) {
-          await createPackagePaymentMethods(data.id, parseFloat(newPackage.price));
-        }
       }
 
       await fetchData();
@@ -445,6 +435,8 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         if (insertError) throw insertError;
       }
 
+      // Refresh data
+      await fetchData();
     } catch (error) {
       console.error('Erro ao criar associações de pagamento:', error);
     }
