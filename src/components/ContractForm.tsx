@@ -126,13 +126,15 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
         setFormData(prev => ({ ...prev, package_price: selectedPackage.price }));
         
         // Filter payment methods for this package
-        
         const filtered = packagePaymentMethods.filter(ppm => {
           return ppm.package_id === formData.package_id;
         });
         
+        console.log('Formas de pagamento filtradas para o pacote:', filtered);
+        
         // Se não há formas de pagamento para este pacote, criar automaticamente
         if (filtered.length === 0) {
+          console.log('Criando formas de pagamento automaticamente...');
           createPackagePaymentMethods(formData.package_id, selectedPackage.price);
         } else {
           setAvailablePaymentMethods(filtered);
@@ -177,7 +179,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       if (activePaymentMethods && activePaymentMethods.length > 0) {
         // Create new associations with calculated prices
         const associations = activePaymentMethods.map(method => {
-          const discountMultiplier = 1 + (method.discount_percentage / 100);
+          const discountMultiplier = 1 + (Number(method.discount_percentage) / 100);
           const finalPrice = packagePrice * discountMultiplier;
           
           return {
@@ -735,25 +737,38 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             )}
 
             {/* Seleção de Forma de Pagamento */}
-            {formData.package_id && availablePaymentMethods.length > 0 && (
+            {formData.package_id && (
               <div>
                 <label htmlFor="payment_method_id" className="block text-sm font-medium text-gray-700 mb-2">
                   Forma de Pagamento
                 </label>
-                <select
-                  id="payment_method_id"
-                  name="payment_method_id"
-                  value={formData.payment_method_id}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                >
-                  <option value="">Selecione a forma de pagamento</option>
-                  {availablePaymentMethods.map((ppm) => (
-                    <option key={ppm.id} value={ppm.payment_method_id}>
-                      {ppm.payment_method?.name} - R$ {ppm.final_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </option>
-                  ))}
-                </select>
+                
+                {availablePaymentMethods.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">
+                    <p className="text-sm">Carregando formas de pagamento...</p>
+                    <p className="text-xs mt-1">Aguarde enquanto criamos as opções para este pacote</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-2 text-xs text-gray-500">
+                      {availablePaymentMethods.length} forma{availablePaymentMethods.length > 1 ? 's' : ''} disponível{availablePaymentMethods.length > 1 ? 'eis' : ''}
+                    </div>
+                    <select
+                      id="payment_method_id"
+                      name="payment_method_id"
+                      value={formData.payment_method_id}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="">Selecione a forma de pagamento</option>
+                      {availablePaymentMethods.map((ppm) => (
+                        <option key={ppm.id} value={ppm.payment_method_id}>
+                          {ppm.payment_method?.name} - R$ {ppm.final_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
                 
                 {/* Detalhes da Forma de Pagamento Selecionada */}
                 {formData.payment_method_id && (
