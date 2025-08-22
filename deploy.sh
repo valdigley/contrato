@@ -34,7 +34,10 @@ warning() {
 
 # Verificar se está rodando como usuário correto
 if [ "$EUID" -eq 0 ]; then
-    error "Não execute este script como root!"
+    warning "Executando como root. Alguns comandos serão ajustados..."
+    SUDO_CMD=""
+else
+    SUDO_CMD="sudo"
 fi
 
 # Verificar se o diretório do projeto existe
@@ -46,8 +49,8 @@ cd $PROJECT_DIR
 
 # Backup da versão atual
 log "Criando backup da versão atual..."
-sudo mkdir -p $BACKUP_DIR
-sudo cp -r $PROJECT_DIR $BACKUP_DIR/backup_$DATE
+$SUDO_CMD mkdir -p $BACKUP_DIR
+$SUDO_CMD cp -r $PROJECT_DIR $BACKUP_DIR/backup_$DATE
 
 # Atualizar código (se usando Git)
 if [ -d ".git" ]; then
@@ -73,7 +76,7 @@ fi
 # Instalar serve se não estiver instalado
 if ! command -v serve &> /dev/null; then
     log "Instalando serve..."
-    sudo npm install -g serve
+    $SUDO_CMD npm install -g serve
 fi
 
 # Reiniciar aplicação com PM2
@@ -102,6 +105,6 @@ fi
 
 # Limpar backups antigos (manter apenas os 5 mais recentes)
 log "Limpando backups antigos..."
-sudo find $BACKUP_DIR -name "backup_*" -type d | sort -r | tail -n +6 | sudo xargs rm -rf
+$SUDO_CMD find $BACKUP_DIR -name "backup_*" -type d | sort -r | tail -n +6 | $SUDO_CMD xargs rm -rf
 
 log "🎉 Deploy finalizado!"
