@@ -154,10 +154,8 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
         const paymentSchedule = paymentMethod.payment_schedule || [];
         console.log('Cronograma de pagamento:', paymentSchedule);
         
-        if (paymentSchedule.length > 0) {
+        if (paymentSchedule.length > 0 && paymentSchedule.some(s => s.percentage > 0)) {
           console.log('Usando cronograma personalizado');
-          // Cronograma personalizado - verificar se tem porcentagens válidas
-          const hasValidPercentages = paymentSchedule.some(schedule => schedule.percentage > 0);
           let totalPercentage = 0;
           
           paymentSchedule.forEach((schedule, index) => {
@@ -178,12 +176,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
             }
             
             let amount: number;
-            if (hasValidPercentages && schedule.percentage > 0) {
+            if (schedule.percentage > 0) {
               amount = (totalAmount * schedule.percentage / 100);
               totalPercentage += schedule.percentage;
               console.log(`Parcela ${index + 1}: ${schedule.percentage}% = R$ ${amount.toFixed(2)}`);
             } else {
-              // Se não tem porcentagens válidas, dividir igualmente
+              // Se não tem porcentagem, dividir igualmente
               amount = totalAmount / paymentSchedule.length;
               console.log(`Parcela ${index + 1}: Divisão igual = R$ ${amount.toFixed(2)}`);
             }
@@ -193,7 +191,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               amount: Math.round(amount * 100) / 100,
               due_date: dueDate.toISOString().split('T')[0],
               status: 'pending',
-              description: hasValidPercentages && schedule.description
+              description: schedule.percentage > 0 && schedule.description
                 ? schedule.description
                 : index === 0 
                 ? 'Entrada (no ato do contrato)'
@@ -204,15 +202,15 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
             });
           });
           
-          if (hasValidPercentages && totalPercentage > 100) {
+          if (totalPercentage > 100) {
             alert(`Erro: Total de porcentagem (${totalPercentage}%) excede 100%`);
             console.log('Total de porcentagem excede 100%, cancelando');
             return;
           }
         } else {
           console.log('Usando parcelas iguais');
-          // Parcelas iguais - sempre dividir em pelo menos 2 parcelas
-          const installments = Math.max(paymentMethod.installments || 2, 2);
+          // Parcelas iguais - FORÇAR pelo menos 2 parcelas
+          const installments = Math.max(paymentMethod.installments || 1, 2);
           console.log('Número de parcelas:', installments);
           const installmentAmount = totalAmount / installments;
           console.log('Valor por parcela:', installmentAmount);
