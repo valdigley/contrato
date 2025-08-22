@@ -106,22 +106,24 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const createAutomaticPayments = async (contracts: Contract[], paymentMethods: PaymentMethod[]) => {
     try {
-      // Primeiro, limpar todos os pagamentos existentes para evitar duplicação
-      const { error: deleteError } = await supabase
-        .from('payments')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
-      
-      if (deleteError) {
-        console.error('Erro ao limpar pagamentos existentes:', deleteError);
-      }
-      
       const paymentsToCreate: Omit<Payment, 'id' | 'created_at'>[] = [];
       
       contracts.forEach(contract => {
-        if (contract.final_price || contract.package_price) {
+        // Verificar se já existem pagamentos para este contrato
+        const existingPayments = payments.filter(p => p.contract_id === contract.id);
+        if (existingPayments.length > 0) {
+          console.log(`Contrato ${contract.nome_completo} já possui pagamentos, pulando...`);
+          return;
+        }
+
+        const totalAmount = Number(contract.final_price) || Number(contract.package_price) || 0;
+        if (totalAmount <= 0) {
+          console.log(`Contrato ${contract.nome_completo} sem valor definido, pulando...`);
+          return;
+        }
+
+        if (totalAmount > 0) {
           const paymentMethod = paymentMethods.find(pm => pm.id === contract.payment_method_id);
-          const totalAmount = contract.final_price || contract.package_price || 0;
           
           console.log(`Processando contrato ${contract.nome_completo}:`, {
             totalAmount,
@@ -131,7 +133,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
           
           if (!paymentMethod) {
             // Se não tem método de pagamento, criar um pagamento único
-            const dueDate = new Date(); // Sempre no ato do contrato
+            const dueDate = new Date();
             
             paymentsToCreate.push({
               contract_id: contract.id,
@@ -139,7 +141,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               due_date: dueDate.toISOString().split('T')[0],
               status: 'pending',
               description: 'Entrada (no ato do contrato)',
-              payment_method: 'Não especificado'
+              payment_method: 'Pagamento único'
             });
             return;
           }
@@ -155,6 +157,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
           // Se tem cronograma personalizado (ex: 50% + 50%)
           if (paymentSchedule.length > 0) {
             console.log('Usando cronograma personalizado');
+            console.log('Usando cronograma personalizado');
             paymentSchedule.forEach((schedule, index) => {
               let dueDate: Date;
               
@@ -162,10 +165,16 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 // Primeira parcela: SEMPRE no ato do contrato (data atual)
                 dueDate = new Date();
               } else if (paymentSchedule.length === 2 && index === 1 && contract.data_evento) {
-                // Última parcela: um dia antes do evento
+                // Para cronograma de 2 parcelas (50%+50%): última parcela um dia antes do evento
                 dueDate = new Date(contract.data_evento);
                 dueDate.setDate(dueDate.getDate() - 1);
               } else {
+                // Para cronogramas com mais de 2 parcelas: distribuir mensalmente
+                dueDate = new Date();
+                dueDate.setMonth(dueDate.getMonth() + index);
+                if (contract.preferred_payment_day && contract.preferred_payment_day >= 1 && contract.preferred_payment_day <= 28) {
+                  dueDate.setDate(contract.preferred_payment_day);
+                }
                 // Parcelas intermediárias: distribuídas mensalmente respeitando dia preferido
                 dueDate = new Date();
                 if (contract.preferred_payment_day) {
@@ -177,7 +186,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               }
               
               const amount = schedule.percentage > 0 
-                ? (totalAmount * schedule.percentage / 100)
+                ? Math.round((totalAmount * schedule.percentage / 100) * 100) / 100
                 : totalAmount / paymentSchedule.length;
               
               console.log(`Parcela ${index + 1}:`, {
@@ -185,7 +194,8 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 percentage: schedule.percentage,
                 dueDate: dueDate.toISOString().split('T')[0]
               });
-              const description = index === 0 
+              
+              let description = index === 0 
                 ? 'Entrada (no ato do contrato)'
                 : paymentSchedule.length === 2 && index === 1 && contract.data_evento
                 ? 'Saldo final (um dia antes do evento)'
@@ -193,7 +203,6 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               
               paymentsToCreate.push({
                 contract_id: contract.id,
-                amount: amount,
                 due_date: dueDate.toISOString().split('T')[0],
                 status: 'pending',
                 description: description,
@@ -205,18 +214,26 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
             console.log('Usando parcelas iguais');
             const installmentAmount = totalAmount / installments;
             
-            let actualInstallments = installments;
+            // Calcular quantos meses até o evento
+            let maxInstallments = installments;
             
-            // Se tem data do evento, calcular quantos meses até o evento
             if (contract.data_evento) {
               const eventDate = new Date(contract.data_evento);
               const currentDate = new Date();
-              const monthsUntilEvent = Math.max(1, Math.ceil((eventDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+              const timeDiff = eventDate.getTime() - currentDate.getTime();
+              const monthsUntilEvent = Math.max(1, Math.ceil(timeDiff / (1000 * 60 * 60 * 24 * 30)));
               
-              // Ajustar número de parcelas se necessário (não pode ser maior que meses até evento)
-              actualInstallments = Math.min(installments, monthsUntilEvent);
+              console.log(`Evento em ${monthsUntilEvent} meses`);
+              
+              // Não pode ter mais parcelas que meses até o evento
+              maxInstallments = Math.min(installments, monthsUntilEvent);
+              
+              if (maxInstallments !== installments) {
+                console.log(`Ajustando de ${installments} para ${maxInstallments} parcelas`);
+              }
             }
             
+            const actualInstallments = maxInstallments;
             const adjustedInstallmentAmount = totalAmount / actualInstallments;
             
             console.log(`Parcelas iguais:`, {
@@ -230,23 +247,24 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               let dueDate = new Date();
               
               if (i === 0) {
-                // Primeira parcela: SEMPRE no ato do contrato (data atual)
-                // Mantém a data atual
+                // Primeira parcela: no ato do contrato
+                // Usar data atual
               } else {
                 // Demais parcelas: distribuídas mensalmente
-                if (contract.preferred_payment_day) {
-                  dueDate.setDate(contract.preferred_payment_day);
+                if (contract.preferred_payment_day && contract.preferred_payment_day >= 1 && contract.preferred_payment_day <= 28) {
                   dueDate.setMonth(dueDate.getMonth() + i);
+                  dueDate.setDate(contract.preferred_payment_day);
                 } else {
-                  dueDate.setDate(dueDate.getDate() + (i * 30));
+                  // Se não tem dia preferido, usar o mesmo dia do mês
+                  dueDate.setMonth(dueDate.getMonth() + i);
                 }
                 
                 // Garantir que não passe da data do evento
                 if (contract.data_evento) {
                   const eventDate = new Date(contract.data_evento);
                   if (dueDate > eventDate) {
-                  dueDate = new Date(eventDate);
-                  dueDate.setDate(dueDate.getDate() - 1); // Um dia antes do evento
+                    dueDate = new Date(eventDate);
+                    dueDate.setDate(dueDate.getDate() - 1); // Um dia antes do evento
                   }
                 }
               }
@@ -261,8 +279,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 amount: adjustedInstallmentAmount,
                 due_date: dueDate.toISOString().split('T')[0],
                 status: 'pending',
-                description: i === 0 ? 'Entrada (no ato do contrato)' : actualInstallments > 1 ? `Parcela ${i + 1}/${actualInstallments}` : 'Pagamento único',
-                payment_method: paymentMethod.name || 'Não especificado'
+                description: i === 0 
+                  ? 'Entrada (no ato do contrato)' 
+                  : actualInstallments === 1 
+                  ? 'Pagamento único'
+                  : `Parcela ${i + 1}/${actualInstallments}`,
+                payment_method: paymentMethod.name
               });
             }
           }
@@ -285,6 +307,33 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     }
   };
   
+  // Função para atualizar status de pagamentos vencidos
+  const updateOverduePayments = async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const overduePayments = payments.filter(payment => {
+        if (payment.status === 'paid') return false;
+        const dueDate = new Date(payment.due_date);
+        return dueDate < today;
+      });
+      
+      if (overduePayments.length > 0) {
+        const { error } = await supabase
+          .from('payments')
+          .update({ status: 'overdue' })
+          .in('id', overduePayments.map(p => p.id));
+          
+        if (!error) {
+          await fetchFinancialData(); // Recarregar dados
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar pagamentos vencidos:', error);
+    }
+  };
+
   const calculateFinancialSummary = () => {
     const totalContracts = contracts.length;
     const totalValue = contracts.reduce((sum, contract) => {
@@ -292,32 +341,28 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       return sum + value;
     }, 0);
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     // Calcular totais baseados nos pagamentos reais
     const totalPaid = payments
       .filter(p => p.status === 'paid')
       .reduce((sum, payment) => sum + Number(payment.amount), 0);
     
-    const totalPending = payments
-      .filter(p => p.status === 'pending')
-      .reduce((sum, payment) => sum + Number(payment.amount), 0);
-    
+    // Pagamentos em atraso (vencidos e não pagos)
     const totalOverdue = payments
       .filter(p => {
         if (p.status === 'paid') return false;
         const dueDate = new Date(p.due_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
         return dueDate < today;
       })
       .reduce((sum, payment) => sum + Number(payment.amount), 0);
     
-    // Ajustar pending para não incluir overdue
-    const adjustedPending = payments
+    // Pagamentos pendentes (futuros e não pagos)
+    const totalPending = payments
       .filter(p => {
         if (p.status === 'paid') return false;
         const dueDate = new Date(p.due_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
         return dueDate >= today;
       })
       .reduce((sum, payment) => sum + Number(payment.amount), 0);
@@ -326,7 +371,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       totalContracts,
       totalValue,
       totalPaid,
-      totalPending: adjustedPending,
+      totalPending,
       totalOverdue
     });
     
@@ -334,11 +379,18 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       totalContracts,
       totalValue,
       totalPaid,
-      totalPending: adjustedPending,
+      totalPending,
       totalOverdue,
       paidPercentage: totalValue > 0 ? (totalPaid / totalValue) * 100 : 0
     };
   };
+
+  // Executar atualização de status ao carregar
+  React.useEffect(() => {
+    if (payments.length > 0) {
+      updateOverduePayments();
+    }
+  }, [payments.length]);
 
   const getContractPayments = (contractId: string) => {
     return payments.filter(p => p.contract_id === contractId);
@@ -346,11 +398,20 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const getPaymentStatus = (contract: Contract): 'pending' | 'partial' | 'paid' | 'overdue' => {
     const contractPayments = getContractPayments(contract.id);
+    if (contractPayments.length === 0) return 'pending';
+    
     const paidPayments = contractPayments.filter(p => p.status === 'paid');
-    const overduePayments = contractPayments.filter(p => p.status === 'overdue');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const overduePayments = contractPayments.filter(p => {
+      if (p.status === 'paid') return false;
+      const dueDate = new Date(p.due_date);
+      return dueDate < today;
+    });
 
     if (overduePayments.length > 0) return 'overdue';
-    if (paidPayments.length === contractPayments.length) return 'paid';
+    if (paidPayments.length === contractPayments.length && contractPayments.length > 0) return 'paid';
     if (paidPayments.length > 0) return 'partial';
     return 'pending';
   };
@@ -388,11 +449,13 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
         return;
       }
 
+      const today = new Date().toISOString().split('T')[0];
+
       const { data, error } = await supabase
         .from('payments')
         .update({ 
           status: 'paid',
-          paid_date: new Date().toISOString().split('T')[0],
+          paid_date: today,
           notes: 'Marcado como pago manualmente'
         })
         .eq('id', paymentId)
@@ -401,6 +464,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
       if (error) throw error;
       
+      // Atualizar estado local
       setPayments(prev => prev.map(payment => 
         payment.id === paymentId ? data : payment
       ));
@@ -408,7 +472,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       alert('Pagamento marcado como pago com sucesso!');
     } catch (error) {
       console.error('Erro ao marcar pagamento como pago:', error);
-      alert(`Erro ao atualizar pagamento: ${error.message}`);
+      alert(`Erro ao atualizar pagamento: ${(error as Error).message}`);
     }
   };
 
@@ -418,12 +482,17 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       return;
     }
 
+    const amount = parseFloat(newPayment.amount);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Valor deve ser um número positivo');
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from('payments')
         .insert([{
           contract_id: selectedContract.id,
-          amount: parseFloat(newPayment.amount),
+          amount: amount,
           due_date: newPayment.due_date,
           status: 'pending',
           description: newPayment.description || 'Pagamento adicional',
@@ -437,9 +506,10 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       setPayments(prev => [...prev, data]);
       setNewPayment({ amount: '', due_date: '', description: '' });
       setShowAddPaymentModal(false);
+      alert('Pagamento adicionado com sucesso!');
     } catch (error) {
       console.error('Erro ao adicionar pagamento:', error);
-      alert('Erro ao adicionar pagamento');
+      alert(`Erro ao adicionar pagamento: ${(error as Error).message}`);
     }
   };
 
@@ -618,7 +688,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                     const contractPayments = getContractPayments(contract.id);
                     const paidPayments = contractPayments.filter(p => p.status === 'paid');
                     const totalPaid = paidPayments.reduce((sum, p) => sum + p.amount, 0);
-                    const totalValue = contract.final_price || contract.package_price || 0;
+                    const totalValue = Number(contract.final_price) || Number(contract.package_price) || 0;
                     const progress = totalValue > 0 ? (totalPaid / totalValue) * 100 : 0;
                     const status = getPaymentStatus(contract);
 
@@ -637,7 +707,13 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{contract.tipo_evento}</div>
                           <div className="text-sm text-gray-500">
-                            {new Date(contract.created_at).toLocaleDateString('pt-BR')}
+                            Contrato: {new Date(contract.created_at).toLocaleDateString('pt-BR')}
+                          </div>
+                          {contract.data_evento && (
+                            <div className="text-sm text-gray-500">
+                              Evento: {new Date(contract.data_evento).toLocaleDateString('pt-BR')}
+                            </div>
+                          )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -647,10 +723,11 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                           <div className="text-sm text-gray-500">
                             Pago: R$ {Number(totalPaid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </div>
-                          <div className="text-xs text-gray-400">
-                            Final: R$ {Number(contract.final_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | 
-                            Pacote: R$ {Number(contract.package_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </div>
+                          {contractPayments.length > 0 && (
+                            <div className="text-xs text-gray-400">
+                              {contractPayments.length} parcela{contractPayments.length > 1 ? 's' : ''}
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(status)}`}>
