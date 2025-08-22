@@ -16,6 +16,7 @@ interface Contract {
   payment_status?: 'pending' | 'partial' | 'paid' | 'overdue';
   next_payment_date?: string;
   total_paid?: number;
+  data_evento?: string;
 }
 
 interface PaymentMethod {
@@ -38,6 +39,7 @@ interface Payment {
   status: 'pending' | 'paid' | 'overdue';
   description: string;
   created_at: string;
+  payment_method?: string;
 }
 
 interface FinancialDashboardProps {
@@ -306,24 +308,11 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const markPaymentAsPaid = async (paymentId: string) => {
     try {
-      // Verificar se o pagamento existe e não está já pago
-      const existingPayment = payments.find(p => p.id === paymentId);
-      if (!existingPayment) {
-        alert('Pagamento não encontrado');
-        return;
-      }
-      
-      if (existingPayment.status === 'paid') {
-        alert('Este pagamento já foi marcado como pago');
-        return;
-      }
-
       const { data, error } = await supabase
         .from('payments')
         .update({ 
           status: 'paid',
-          paid_date: new Date().toISOString().split('T')[0],
-          notes: 'Marcado como pago manualmente'
+          paid_date: new Date().toISOString().split('T')[0]
         })
         .eq('id', paymentId)
         .select()
@@ -331,16 +320,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
       if (error) throw error;
       
-      // Atualizar o estado local
       setPayments(prev => prev.map(payment => 
         payment.id === paymentId ? data : payment
       ));
-      
-      // Mostrar confirmação
-      alert('Pagamento marcado como pago com sucesso!');
     } catch (error) {
       console.error('Erro ao marcar pagamento como pago:', error);
-      alert(`Erro ao atualizar pagamento: ${error.message}`);
+      alert('Erro ao atualizar pagamento');
     }
   };
 
@@ -811,31 +796,6 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                     </div>
                   ) : null;
                 })()}
-              </div>
-            </div>
-          </div>
-        )}
-
-                            {payment.paid_date && (
-                              <p>Pago em: {new Date(payment.paid_date).toLocaleDateString('pt-BR')}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex space-x-2">
-                          {payment.status !== 'paid' && (
-                            <button
-                              onClick={() => markPaymentAsPaid(payment.id)}
-                              className="text-green-600 hover:text-green-900 p-1 rounded"
-                              title="Marcar como pago"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
