@@ -21,6 +21,30 @@ error() {
     echo -e "${RED}[ERROR] $1${NC}"
 }
 
+# 0. Ensure Nginx and essential utilities are installed
+log "0. Ensuring Nginx and essential utilities are installed..."
+if ! command -v nginx &> /dev/null; then
+    warning "Nginx not found. Attempting to install Nginx..."
+    apt update && apt install -y nginx
+    if ! command -v nginx &> /dev/null; then
+        error "Failed to install Nginx. Please install it manually (e.g., apt install nginx) and try again."
+        exit 1
+    fi
+fi
+
+if ! command -v grep &> /dev/null; then
+    warning "Grep not found. Attempting to install grep..."
+    apt update && apt install -y grep
+    if ! command -v grep &> /dev/null; then
+        error "Failed to install grep. Please install it manually (e.g., apt install grep) and try again."
+        exit 1
+    fi
+fi
+
+# Ensure Nginx configuration directories exist
+log "Ensuring Nginx configuration directories exist..."
+mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+
 # 1. Parar PM2 e limpar
 log "1. Limpando PM2..."
 pm2 delete all 2>/dev/null || true
