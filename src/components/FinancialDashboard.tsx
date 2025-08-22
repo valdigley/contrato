@@ -227,11 +227,6 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               <p className="text-gray-600">Visão geral e controle financeiro dos contratos</p>
             </div>
           </div>
-        </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Financial Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
