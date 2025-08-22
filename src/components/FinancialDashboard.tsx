@@ -679,7 +679,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 >
                   <option value="all">Todos</option>
                   <option value="recent">Recentes (30 dias)</option>
-                  <option value="high-value">Alto valor (>R$ 5.000)</option>
+                   <option value="high-value">Alto valor (&gt;R$ 5.000)</option>
                 </select>
                 <button
                   onClick={() => setShowPaymentModal(true)}
