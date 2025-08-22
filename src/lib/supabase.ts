@@ -26,12 +26,15 @@ const getSupabaseAnonKey = () => {
 const supabaseUrl = getSupabaseUrl();
 const supabaseAnonKey = getSupabaseAnonKey();
 
+let supabase;
+
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Credenciais do Supabase não encontradas!');
   // Create a dummy client to prevent initialization errors
-  export const supabase = createClient('https://dummy.supabase.co', 'dummy-key');
+  supabase = createClient('https://dummy.supabase.co', 'dummy-key');
 } else {
   console.log('Inicializando cliente Supabase...');
-  export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
 }
 
+export { supabase };
