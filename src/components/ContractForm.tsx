@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, FileText, MapPin, Calendar, Camera, Send, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { User, FileText, MapPin, Calendar, Camera, Send, CheckCircle, AlertCircle, ArrowLeft, CreditCard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { EventType, Package, PaymentMethod, PackagePaymentMethod } from '../types';
 
@@ -162,6 +162,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
 
   const createPackagePaymentMethods = async (packageId: string, packagePrice: number) => {
     try {
+      console.log('Criando associações de pagamento para pacote:', packageId);
+      
       // First, delete existing associations for this package
       await supabase
         .from('package_payment_methods')
@@ -177,10 +179,15 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       if (paymentMethodsError) throw paymentMethodsError;
 
       if (activePaymentMethods && activePaymentMethods.length > 0) {
+        console.log('Métodos de pagamento ativos encontrados:', activePaymentMethods.length);
+        
         // Create new associations with calculated prices
         const associations = activePaymentMethods.map(method => {
-          const discountMultiplier = 1 + (Number(method.discount_percentage) / 100);
+          // Se discount_percentage for positivo, é acréscimo; se negativo, é desconto
+          const discountMultiplier = 1 + (Number(method.discount_percentage || 0) / 100);
           const finalPrice = packagePrice * discountMultiplier;
+          
+          console.log(`Método: ${method.name}, Desconto: ${method.discount_percentage}%, Preço final: ${finalPrice}`);
           
           return {
             package_id: packageId,
@@ -201,9 +208,14 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
         
         // Update local state with new associations
         if (insertedData) {
+          console.log('Associações criadas com sucesso:', insertedData.length);
           setPackagePaymentMethods(prev => [...prev, ...insertedData]);
           setAvailablePaymentMethods(insertedData);
+        } else {
+          console.log('Nenhuma associação foi criada');
         }
+      } else {
+        console.log('Nenhum método de pagamento ativo encontrado');
       }
     } catch (error) {
       console.error('Erro ao criar associações de pagamento:', error);
@@ -740,18 +752,27 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             {formData.package_id && (
               <div>
                 <label htmlFor="payment_method_id" className="block text-sm font-medium text-gray-700 mb-2">
-                  Forma de Pagamento
+                  Forma de Pagamento (Opcional)
                 </label>
                 
                 {availablePaymentMethods.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">
-                    <p className="text-sm">Carregando formas de pagamento...</p>
+                  <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <CreditCard className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-medium">Carregando formas de pagamento...</p>
                     <p className="text-xs mt-1">Aguarde enquanto criamos as opções para este pacote</p>
+                    <div className="mt-3">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mx-auto"></div>
+                    </div>
                   </div>
                 ) : (
                   <>
-                    <div className="mb-2 text-xs text-gray-500">
-                      {availablePaymentMethods.length} forma{availablePaymentMethods.length > 1 ? 's' : ''} disponível{availablePaymentMethods.length > 1 ? 'eis' : ''}
+                    <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-sm text-blue-800 font-medium">
+                        ✅ {availablePaymentMethods.length} forma{availablePaymentMethods.length > 1 ? 's' : ''} de pagamento disponível{availablePaymentMethods.length > 1 ? 'eis' : ''}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        Selecione uma forma de pagamento para ver detalhes e cronograma
+                      </p>
                     </div>
                     <select
                       id="payment_method_id"

@@ -291,11 +291,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   const updateOverduePayments = async () => {
     try {
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      today.setHours(23, 59, 59, 999); // Set to end of day to be more lenient
       
       const overduePayments = payments.filter(payment => {
         if (payment.status === 'paid') return false;
         const dueDate = new Date(payment.due_date);
+        dueDate.setHours(23, 59, 59, 999); // Set due date to end of day
         return dueDate < today;
       });
       
@@ -325,7 +326,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     });
     
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setHours(23, 59, 59, 999); // Set to end of day
     
     // Calcular totais baseados nos pagamentos
     let totalPaid = 0;
@@ -339,6 +340,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
         totalPaid += amount;
       } else {
         const dueDate = new Date(payment.due_date);
+        dueDate.setHours(23, 59, 59, 999); // Set due date to end of day
         if (dueDate < today) {
           totalOverdue += amount;
         } else {
@@ -402,11 +404,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     
     const paidPayments = contractPayments.filter(p => p.status === 'paid');
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setHours(23, 59, 59, 999); // Set to end of day
     
     const overduePayments = contractPayments.filter(p => {
       if (p.status === 'paid') return false;
       const dueDate = new Date(p.due_date);
+      dueDate.setHours(23, 59, 59, 999); // Set due date to end of day
       return dueDate < today;
     });
 
@@ -495,8 +498,9 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
       // Determinar o status correto baseado na data de vencimento
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      today.setHours(23, 59, 59, 999); // Set to end of day
       const dueDate = new Date(existingPayment.due_date);
+      dueDate.setHours(23, 59, 59, 999); // Set due date to end of day
       const newStatus = dueDate < today ? 'overdue' : 'pending';
 
       const { data, error } = await supabase
@@ -934,7 +938,13 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                             <div className="space-y-1">
                               <p>
                                 <span className="font-medium">Vencimento:</span> {new Date(payment.due_date).toLocaleDateString('pt-BR')}
-                                {new Date(payment.due_date) < new Date() && payment.status !== 'paid' && (
+                                {(() => {
+                                  const today = new Date();
+                                  today.setHours(23, 59, 59, 999);
+                                  const dueDate = new Date(payment.due_date);
+                                  dueDate.setHours(23, 59, 59, 999);
+                                  return dueDate < today && payment.status !== 'paid';
+                                })() && (
                                   <span className="ml-2 text-red-600 font-medium">(Vencido)</span>
                                 )}
                               </p>
