@@ -41,6 +41,16 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   });
   const [showTemplateForm, setShowTemplateForm] = useState(false);
 
+  // Payment Method Form
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [newPaymentMethod, setNewPaymentMethod] = useState({
+    name: '',
+    description: '',
+    discount_percentage: '0',
+    installments: '1',
+    payment_schedule: [{ percentage: 0, description: '' }]
+  });
+  const [showPaymentMethodForm, setShowPaymentMethodForm] = useState(false);
   useEffect(() => {
     fetchData();
   }, []);
@@ -233,6 +243,63 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
     }
   };
 
+  const handleSavePaymentMethod = async () => {
+    try {
+      const paymentMethodData = {
+        name: newPaymentMethod.name,
+        description: newPaymentMethod.description,
+        discount_percentage: parseFloat(newPaymentMethod.discount_percentage),
+        installments: parseInt(newPaymentMethod.installments),
+        payment_schedule: newPaymentMethod.payment_schedule.filter(s => s.description.trim() !== '')
+      };
+
+      if (editingPaymentMethod) {
+        const { error } = await supabase
+          .from('payment_methods')
+          .update(paymentMethodData)
+          .eq('id', editingPaymentMethod.id);
+        
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('payment_methods')
+          .insert([paymentMethodData]);
+        
+        if (error) throw error;
+      }
+
+      await fetchData();
+      setShowPaymentMethodForm(false);
+      setEditingPaymentMethod(null);
+      setNewPaymentMethod({
+        name: '',
+        description: '',
+        discount_percentage: '0',
+        installments: '1',
+        payment_schedule: [{ percentage: 0, description: '' }]
+      });
+    } catch (error) {
+      console.error('Erro ao salvar forma de pagamento:', error);
+    }
+  };
+
+  const handleDeletePaymentMethod = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta forma de pagamento?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('payment_methods')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await fetchData();
+    } catch (error) {
+      console.error('Erro ao excluir forma de pagamento:', error);
+    }
+  };
   const startEditEventType = (eventType: EventType) => {
     setEditingEventType(eventType);
     setNewEventType({ name: eventType.name });
@@ -261,6 +328,19 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
     setShowTemplateForm(true);
   };
 
+  const startEditPaymentMethod = (paymentMethod: PaymentMethod) => {
+    setEditingPaymentMethod(paymentMethod);
+    setNewPaymentMethod({
+      name: paymentMethod.name,
+      description: paymentMethod.description || '',
+      discount_percentage: paymentMethod.discount_percentage.toString(),
+      installments: paymentMethod.installments.toString(),
+      payment_schedule: paymentMethod.payment_schedule.length > 0 
+        ? paymentMethod.payment_schedule 
+        : [{ percentage: 0, description: '' }]
+    });
+    setShowPaymentMethodForm(true);
+  };
   const addFeature = () => {
     setNewPackage(prev => ({
       ...prev,
@@ -282,6 +362,28 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
     }));
   };
 
+  const addScheduleItem = () => {
+    setNewPaymentMethod(prev => ({
+      ...prev,
+      payment_schedule: [...prev.payment_schedule, { percentage: 0, description: '' }]
+    }));
+  };
+
+  const updateScheduleItem = (index: number, field: 'percentage' | 'description', value: string | number) => {
+    setNewPaymentMethod(prev => ({
+      ...prev,
+      payment_schedule: prev.payment_schedule.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const removeScheduleItem = (index: number) => {
+    setNewPaymentMethod(prev => ({
+      ...prev,
+      payment_schedule: prev.payment_schedule.filter((_, i) => i !== index)
+    }));
+  };
   const getEventTypeName = (eventTypeId: string) => {
     const eventType = eventTypes.find(et => et.id === eventTypeId);
     return eventType?.name || 'Tipo não encontrado';
@@ -407,6 +509,19 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                 <div className="flex items-center space-x-2">
                   <FileText className="h-4 w-4" />
                   <span>Modelos de Contrato</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('payments')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'payments'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <CreditCard className="h-4 w-4" />
+                  <span>Formas de Pagamento</span>
                 </div>
               </button>
             </nav>
@@ -812,73 +927,193 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
             {activeTab === 'payments' && (
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900">Associações Pacote-Pagamento</h2>
-                  <p className="text-sm text-gray-600">
-                    As formas de pagamento são criadas automaticamente para cada pacote
-                  </p>
+                  <h2 className="text-lg font-semibold text-gray-900">Formas de Pagamento</h2>
+                  <button
+                    onClick={() => setShowPaymentMethodForm(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Nova Forma</span>
+                  </button>
                 </div>
 
-                <div className="space-y-6">
-                  {packages.map((pkg) => {
-                    const packagePayments = packagePaymentMethods.filter(ppm => ppm.package_id === pkg.id);
+                {showPaymentMethodForm && (
+                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                    <h3 className="text-md font-medium text-gray-900 mb-4">
+                      {editingPaymentMethod ? 'Editar Forma de Pagamento' : 'Nova Forma de Pagamento'}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+                        <input
+                          type="text"
+                          value={newPaymentMethod.name}
+                          onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Ex: À vista, Parcelado, etc."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Número de Parcelas</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={newPaymentMethod.installments}
+                          onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, installments: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                        <input
+                          type="text"
+                          value={newPaymentMethod.description}
+                          onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, description: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Descrição da forma de pagamento"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Desconto/Acréscimo (%)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={newPaymentMethod.discount_percentage}
+                          onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, discount_percentage: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="0 (negativo para desconto, positivo para acréscimo)"
+                        />
+                      </div>
+                    </div>
                     
-                    return (
-                      <div key={pkg.id} className="bg-white border border-gray-200 rounded-lg p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h3 className="text-lg font-medium text-gray-900">{pkg.name}</h3>
-                            <p className="text-sm text-gray-600">
-                              Preço base: R$ {pkg.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => createPackagePaymentMethods(pkg.id, pkg.price)}
-                            className="text-blue-600 hover:text-blue-900 text-sm"
-                          >
-                            Atualizar Preços
-                          </button>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Cronograma de Pagamento</label>
+                      <p className="text-xs text-gray-500 mb-3">
+                        Configure as porcentagens e descrições para cada parcela. Se não definir porcentagens, será dividido igualmente.
+                      </p>
+                      {newPaymentMethod.payment_schedule.map((schedule, index) => (
+                        <div key={index} className="flex space-x-2 mb-2">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={schedule.percentage}
+                            onChange={(e) => updateScheduleItem(index, 'percentage', parseFloat(e.target.value) || 0)}
+                            className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="0"
+                          />
+                          <span className="flex items-center text-sm text-gray-500">%</span>
+                          <input
+                            type="text"
+                            value={schedule.description}
+                            onChange={(e) => updateScheduleItem(index, 'description', e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Ex: Entrada, Saldo final, etc."
+                          />
+                          {newPaymentMethod.payment_schedule.length > 1 && (
+                            <button
+                              onClick={() => removeScheduleItem(index)}
+                              className="text-red-600 hover:text-red-900 p-2"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
-                        
-                        <div className="grid gap-3">
-                          {packagePayments.length > 0 ? (
-                            packagePayments.map((ppm) => {
-                              const paymentMethod = paymentMethods.find(pm => pm.id === ppm.payment_method_id);
-                              if (!paymentMethod) return null;
-                              
-                              return (
-                                <div key={ppm.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                  <div>
-                                    <p className="font-medium text-gray-900">{paymentMethod.name}</p>
-                                    <p className="text-sm text-gray-600">{paymentMethod.description}</p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="font-semibold text-green-600">
-                                      R$ {ppm.final_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </p>
-                                    {paymentMethod.discount_percentage !== 0 && (
-                                      <p className="text-xs text-gray-500">
-                                        {paymentMethod.discount_percentage > 0 ? '+' : ''}{paymentMethod.discount_percentage}%
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <div className="text-center py-4 text-gray-500">
-                              <p>Nenhuma forma de pagamento configurada</p>
-                              <button
-                                onClick={() => createPackagePaymentMethods(pkg.id, pkg.price)}
-                                className="mt-2 text-blue-600 hover:text-blue-900 text-sm"
-                              >
-                                Criar formas de pagamento
-                              </button>
+                      ))}
+                      <button
+                        onClick={addScheduleItem}
+                        className="text-blue-600 hover:text-blue-900 text-sm flex items-center space-x-1"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Adicionar parcela</span>
+                      </button>
+                    <div className="flex space-x-4">
+                      <button
+                        onClick={handleSavePaymentMethod}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                      >
+                        <Save className="h-4 w-4" />
+                        <span>Salvar</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowPaymentMethodForm(false);
+                          setEditingPaymentMethod(null);
+                          setNewPaymentMethod({
+                            name: '',
+                            description: '',
+                            discount_percentage: '0',
+                            installments: '1',
+                            payment_schedule: [{ percentage: 0, description: '' }]
+                          });
+                        }}
+                        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                      >
+                        <X className="h-4 w-4" />
+                        <span>Cancelar</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                    </div>
+                <div className="grid gap-4">
+                  {paymentMethods.map((paymentMethod) => (
+                    <div key={paymentMethod.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h3 className="font-medium text-gray-900">{paymentMethod.name}</h3>
+                            <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              {paymentMethod.installments}x
+                            </span>
+                            {paymentMethod.discount_percentage !== 0 && (
+                              <span className={`text-sm px-2 py-1 rounded ${
+                                paymentMethod.discount_percentage > 0 
+                                  ? 'bg-red-100 text-red-800' 
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {paymentMethod.discount_percentage > 0 ? '+' : ''}{paymentMethod.discount_percentage}%
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">{paymentMethod.description}</p>
+                          {paymentMethod.payment_schedule.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs font-medium text-gray-700 mb-1">Cronograma:</p>
+                              <ul className="text-xs text-gray-600 space-y-1">
+                                {paymentMethod.payment_schedule.map((schedule, index) => (
+                                  <li key={index} className="flex items-center space-x-1">
+                                    <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                                    <span>
+                                      {schedule.percentage > 0 
+                                        ? `${schedule.percentage}% - ${schedule.description}`
+                                        : schedule.description
+                                      }
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
                             </div>
                           )}
                         </div>
+                        <div className="flex space-x-2 ml-4">
+                          <button
+                            onClick={() => startEditPaymentMethod(paymentMethod)}
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePaymentMethod(paymentMethod.id)}
+                            className="text-red-600 hover:text-red-900 p-1 rounded"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
