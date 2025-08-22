@@ -1,19 +1,11 @@
 import React, { useState } from 'react';
 import { User, FileText, MapPin, Calendar, Camera, Send, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import { EventType, Package, PaymentMethod, PackagePaymentMethod } from '../types';
 
 interface ContractFormProps {
   onBackToList?: () => void;
 }
-
-// Configuração do Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
 
 interface ContractData {
   nome_completo: string;
@@ -80,8 +72,6 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
   }, []);
 
   const fetchEventTypesAndPackages = async () => {
-    if (!supabase) return;
-
     try {
       const [eventTypesResponse, packagesResponse, paymentMethodsResponse, packagePaymentMethodsResponse] = await Promise.all([
         supabase.from('event_types').select('*').eq('is_active', true).order('name'),
@@ -163,8 +153,6 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
   }, [formData.payment_method_id, availablePaymentMethods]);
 
   const createPackagePaymentMethods = async (packageId: string, packagePrice: number) => {
-    if (!supabase) return;
-    
     try {
       // First, delete existing associations for this package
       await supabase
@@ -312,11 +300,6 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       return;
     }
 
-    if (!supabase) {
-      setSubmitStatus('error');
-      return;
-    }
-
     setIsSubmitting(true);
     setSubmitStatus('idle');
 
@@ -397,21 +380,6 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
   const isCasamento = selectedEventType?.name === 'Casamento';
   const isAniversario = selectedEventType?.name?.includes('Aniversário');
   const isEnsaio = selectedEventType?.name === 'Ensaio Fotográfico';
-
-  if (!supabase) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Configuração Necessária</h2>
-          <p className="text-gray-600 mb-6">
-            Para usar este formulário, você precisa conectar ao Supabase clicando no botão 
-            "Connect to Supabase" no canto superior direito da tela.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (loadingData) {
     return (

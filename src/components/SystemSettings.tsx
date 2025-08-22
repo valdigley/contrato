@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Plus, Edit2, Trash2, Save, X, ArrowLeft, Package as PackageIcon, Calendar, FileText, CreditCard } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import { EventType, Package, ContractTemplate, PaymentMethod, PackagePaymentMethod } from '../types';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 interface SystemSettingsProps {
   onBack: () => void;
