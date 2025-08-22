@@ -43,8 +43,40 @@ log "3. Configurando Nginx para contratos.fotografo.site..."
 rm -f /etc/nginx/sites-enabled/controle-fotografo* 2>/dev/null || true
 rm -f /etc/nginx/sites-available/controle-fotografo* 2>/dev/null || true
 
-# Copiar nova configuração
-cp nginx-fotografo-site.conf /etc/nginx/sites-available/contratos-fotografo-site
+# Criar nova configuração
+cat > /etc/nginx/sites-available/contratos-fotografo-site << 'EOF'
+server {
+    listen 80;
+    server_name contratos.fotografo.site;
+    
+    # Proxy para aplicação Node.js
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
+    
+    # Headers de segurança
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+    
+    # Logs específicos para o subdomínio
+    access_log /var/log/nginx/contratos-fotografo.access.log;
+    error_log /var/log/nginx/contratos-fotografo.error.log;
+}
+EOF
+
+# Ativar site
 ln -s /etc/nginx/sites-available/contratos-fotografo-site /etc/nginx/sites-enabled/
 
 # 5. Testar e recarregar Nginx
