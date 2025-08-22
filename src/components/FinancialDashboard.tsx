@@ -134,41 +134,23 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
           // Se tem cronograma personalizado (ex: 50% + 50%)
           if (paymentSchedule.length > 0) {
             paymentSchedule.forEach((schedule, index) => {
-              let dueDate = new Date();
+              let dueDate: Date;
               
               if (index === 0) {
-                // Primeira parcela: data atual respeitando dia preferido
-                if (contract.preferred_payment_day) {
-                  dueDate.setDate(contract.preferred_payment_day);
-                  // Se o dia já passou neste mês, vai para o próximo
-                  if (dueDate < new Date()) {
-                    dueDate.setMonth(dueDate.getMonth() + 1);
-                  }
-                }
+                // Primeira parcela: SEMPRE no ato do contrato (data atual)
+                dueDate = new Date();
               } else if (index === paymentSchedule.length - 1 && contract.data_evento) {
                 // Última parcela: um dia antes do evento
                 dueDate = new Date(contract.data_evento);
                 dueDate.setDate(dueDate.getDate() - 1);
               } else {
-                // Parcelas intermediárias: distribuídas entre primeira e última
-                const eventDate = contract.data_evento ? new Date(contract.data_evento) : new Date();
-                const firstPaymentDate = new Date();
-                if (contract.preferred_payment_day) {
-                  firstPaymentDate.setDate(contract.preferred_payment_day);
-                  if (firstPaymentDate < new Date()) {
-                    firstPaymentDate.setMonth(firstPaymentDate.getMonth() + 1);
-                  }
-                }
-                
-                const timeDiff = eventDate.getTime() - firstPaymentDate.getTime();
-                const monthsBetween = timeDiff / (1000 * 60 * 60 * 24 * 30);
-                const monthsPerInstallment = monthsBetween / (paymentSchedule.length - 1);
-                
-                dueDate = new Date(firstPaymentDate);
-                dueDate.setMonth(dueDate.getMonth() + Math.round(monthsPerInstallment * index));
-                
+                // Parcelas intermediárias: distribuídas mensalmente respeitando dia preferido
+                dueDate = new Date();
                 if (contract.preferred_payment_day) {
                   dueDate.setDate(contract.preferred_payment_day);
+                  dueDate.setMonth(dueDate.getMonth() + index);
+                } else {
+                  dueDate.setMonth(dueDate.getMonth() + index);
                 }
               }
               
@@ -176,12 +158,18 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 ? (totalAmount * schedule.percentage / 100)
                 : totalAmount / paymentSchedule.length;
               
+              const description = index === 0 
+                ? 'Entrada (no ato do contrato)'
+                : index === paymentSchedule.length - 1 && contract.data_evento
+                ? 'Saldo final (um dia antes do evento)'
+                : schedule.description || `Parcela ${index + 1}/${paymentSchedule.length}`;
+              
               paymentsToCreate.push({
                 contract_id: contract.id,
                 amount: amount,
                 due_date: dueDate.toISOString().split('T')[0],
                 status: 'pending',
-                description: schedule.description || `Parcela ${index + 1}/${paymentSchedule.length}`,
+                description: description,
                 payment_method: paymentMethod.name || 'Não especificado'
               });
             });
@@ -199,11 +187,11 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
             const adjustedInstallmentAmount = totalAmount / actualInstallments;
             
             for (let i = 0; i < actualInstallments; i++) {
-              const dueDate = new Date();
+              let dueDate = new Date();
               
               if (i === 0) {
-                // Primeira parcela: sempre no ato do contrato (data atual)
-                // Não alterar a data, usar data atual
+                // Primeira parcela: SEMPRE no ato do contrato (data atual)
+                // Mantém a data atual
               } else {
                 // Demais parcelas: distribuídas mensalmente até o evento
                 if (contract.preferred_payment_day) {
@@ -225,7 +213,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 amount: adjustedInstallmentAmount,
                 due_date: dueDate.toISOString().split('T')[0],
                 status: 'pending',
-                description: i === 0 ? 'Entrada (no ato)' : actualInstallments > 1 ? `Parcela ${i + 1}/${actualInstallments}` : 'Pagamento único',
+                description: i === 0 ? 'Entrada (no ato do contrato)' : actualInstallments > 1 ? `Parcela ${i + 1}/${actualInstallments}` : 'Pagamento único',
                 payment_method: paymentMethod.name || 'Não especificado'
               });
             }
