@@ -116,17 +116,10 @@ function App() {
     return (
       <ContractList 
         onNewContract={() => setCurrentView('form')}
-        onFinancial={() => setCurrentView('financial')}
       />
     );
   }
 
-  // Financial dashboard view
-  if (currentView === 'financial') {
-    return (
-      <FinancialDashboard onBack={() => setCurrentView('dashboard')} />
-    );
-  }
 
   // Main dashboard
   return (

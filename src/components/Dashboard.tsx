@@ -46,6 +46,11 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     loadDashboardData();
   }, []);
 
+  const getUniqueEventTypes = () => {
+    const uniqueTypes = new Set(stats.recentContracts.map(c => c.tipo_evento));
+    return uniqueTypes.size;
+  };
+
   const loadDashboardData = async () => {
     try {
       // Inicializar com zeros
@@ -165,15 +170,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       count: null
     },
     {
-      id: 'financial',
-      title: 'Financeiro',
-      description: 'Dashboard financeiro completo',
-      icon: DollarSign,
-      color: 'bg-purple-500',
-      hoverColor: 'hover:bg-purple-600',
-      count: formatCurrency(stats.monthlyRevenue)
-    },
-    {
       id: 'profile',
       title: 'Meu Perfil',
       description: 'Configurações do perfil',
@@ -189,6 +185,15 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       icon: Settings,
       color: 'bg-gray-500',
       hoverColor: 'hover:bg-gray-600',
+      count: null
+    },
+    {
+      id: 'templates',
+      title: 'Modelos',
+      description: 'Templates de contratos',
+      icon: FileText,
+      color: 'bg-orange-500',
+      hoverColor: 'hover:bg-orange-600',
       count: null
     }
   ];
@@ -243,11 +248,11 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Receita Mensal</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.monthlyRevenue)}</p>
+                <p className="text-sm font-medium text-gray-600">Contratos Este Mês</p>
+                <p className="text-2xl font-bold text-green-600">{stats.contractsThisMonth}</p>
               </div>
               <div className="bg-green-100 rounded-full p-3">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+                <Calendar className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </div>
@@ -255,23 +260,23 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Pagamentos Pendentes</p>
-                <p className="text-2xl font-bold text-yellow-600">{Math.round(stats.pendingPayments)}</p>
-              </div>
-              <div className="bg-yellow-100 rounded-full p-3">
-                <Clock className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Eventos Concluídos</p>
-                <p className="text-2xl font-bold text-purple-600">{Math.round(stats.completedEvents)}</p>
+                <p className="text-sm font-medium text-gray-600">Tipos de Eventos</p>
+                <p className="text-2xl font-bold text-purple-600">{getUniqueEventTypes()}</p>
               </div>
               <div className="bg-purple-100 rounded-full p-3">
-                <CheckCircle className="w-6 h-6 text-purple-600" />
+                <Camera className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Valor Médio</p>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats.averageContractValue)}</p>
+              </div>
+              <div className="bg-blue-100 rounded-full p-3">
+                <TrendingUp className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </div>
@@ -340,11 +345,11 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               <span>Novo Contrato</span>
             </button>
             <button
-              onClick={() => onNavigate('financial')}
+              onClick={() => onNavigate('contracts')}
               className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
             >
-              <BarChart3 className="w-5 h-5" />
-              <span>Ver Financeiro</span>
+              <FileText className="w-5 h-5" />
+              <span>Ver Contratos</span>
             </button>
           </div>
         </div>

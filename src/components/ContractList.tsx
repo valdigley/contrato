@@ -26,10 +26,8 @@ interface Contract {
 
 interface ContractListProps {
   onNewContract: () => void;
-  onFinancial: () => void;
 }
 
-export default function ContractList({ onNewContract, onFinancial }: ContractListProps) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
