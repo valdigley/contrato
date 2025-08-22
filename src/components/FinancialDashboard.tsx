@@ -186,30 +186,46 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               });
             });
           } else {
-            // Parcelas iguais distribuídas mensalmente
+            // Parcelas iguais distribuídas até a data do evento
             const installmentAmount = totalAmount / installments;
             
-            for (let i = 0; i < installments; i++) {
+            // Calcular quantos meses até o evento
+            const eventDate = contract.data_evento ? new Date(contract.data_evento) : new Date();
+            const currentDate = new Date();
+            const monthsUntilEvent = Math.max(1, Math.ceil((eventDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+            
+            // Ajustar número de parcelas se necessário (não pode ser maior que meses até evento)
+            const actualInstallments = Math.min(installments, monthsUntilEvent);
+            const adjustedInstallmentAmount = totalAmount / actualInstallments;
+            
+            for (let i = 0; i < actualInstallments; i++) {
               const dueDate = new Date();
               
-              if (contract.preferred_payment_day) {
-                dueDate.setDate(contract.preferred_payment_day);
-                dueDate.setMonth(dueDate.getMonth() + i);
-                
-                // Se o dia já passou no primeiro mês, vai para o próximo
-                if (i === 0 && dueDate < new Date()) {
-                  dueDate.setMonth(dueDate.getMonth() + 1);
-                }
+              if (i === 0) {
+                // Primeira parcela: sempre no ato do contrato (data atual)
+                // Não alterar a data, usar data atual
               } else {
-                dueDate.setDate(dueDate.getDate() + (i * 30));
+                // Demais parcelas: distribuídas mensalmente até o evento
+                if (contract.preferred_payment_day) {
+                  dueDate.setDate(contract.preferred_payment_day);
+                  dueDate.setMonth(dueDate.getMonth() + i);
+                } else {
+                  dueDate.setDate(dueDate.getDate() + (i * 30));
+                }
+                
+                // Garantir que não passe da data do evento
+                if (contract.data_evento && dueDate > eventDate) {
+                  dueDate = new Date(eventDate);
+                  dueDate.setDate(dueDate.getDate() - 1); // Um dia antes do evento
+                }
               }
               
               paymentsToCreate.push({
                 contract_id: contract.id,
-                amount: installmentAmount,
+                amount: adjustedInstallmentAmount,
                 due_date: dueDate.toISOString().split('T')[0],
                 status: 'pending',
-                description: installments > 1 ? `Parcela ${i + 1}/${installments}` : 'Pagamento único',
+                description: i === 0 ? 'Entrada (no ato)' : actualInstallments > 1 ? `Parcela ${i + 1}/${actualInstallments}` : 'Pagamento único',
                 payment_method: paymentMethod.name || 'Não especificado'
               });
             }
