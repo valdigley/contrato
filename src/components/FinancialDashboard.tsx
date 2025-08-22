@@ -100,6 +100,43 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     }
   };
 
+  const createAutomaticPayments = async (contractId: string) => {
+    try {
+      const contract = contracts.find(c => c.id === contractId);
+      if (!contract) return;
+
+      const paymentMethod = paymentMethods.find(pm => pm.id === contract.payment_method_id);
+      if (!paymentMethod || !paymentMethod.payment_schedule) return;
+
+      const contractValue = contract.final_price || contract.package_price || 0;
+      const baseDate = new Date(contract.created_at);
+      
+      // Ajustar para o dia preferido de pagamento
+      if (contract.preferred_payment_day) {
+        baseDate.setDate(contract.preferred_payment_day);
+      }
+
+      const paymentsToCreate = paymentMethod.payment_schedule.map((schedule, index) => {
+        const paymentDate = new Date(baseDate);
+        paymentDate.setMonth(paymentDate.getMonth() + index);
+        
+        return {
+          contract_id: contractId,
+          amount: (contractValue * schedule.percentage) / 100,
+          due_date: paymentDate.toISOString().split('T')[0],
+          status: 'pending' as const,
+          description: schedule.description || `Parcela ${index + 1}/${paymentMethod.installments}`,
+          payment_method: paymentMethod.name
+        };
+      });
+
+      if (paymentsToCreate.length > 0) {
+        const { error } = await supabase
+          .from('payments')
+          .insert(paymentsToCreate);
+
+        if (error) throw error;
+
         // Recarregar todos os dados após criar
         await fetchFinancialData();
       }
@@ -336,7 +373,6 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       alert('Valor deve ser um número positivo');
       return;
     }
-    
     try {
       const { data, error } = await supabase
         .from('payments')
@@ -363,118 +399,6 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     }
   };
 
-  const createPaymentsForContract = async (contract: Contract) => {
-    try {
-      // Verificar se já existem pagamentos para este contrato
-      const existingPayments = payments.filter(p => p.contract_id === contract.id);
-      if (existingPayments.length > 0) {
-        alert('Este contrato já possui pagamentos cadastrados');
-        return;
-      }
-
-      const totalAmount = Number(contract.final_price) || Number(contract.package_price) || 0;
-      if (totalAmount <= 0) {
-        alert('Contrato sem valor definido');
-        return;
-      }
-
-      const paymentMethod = paymentMethods.find(pm => pm.id === contract.payment_method_id);
-      const paymentsToCreate: Omit<Payment, 'id' | 'created_at'>[] = [];
-
-      if (!paymentMethod) {
-        // Pagamento único
-        paymentsToCreate.push({
-          contract_id: contract.id,
-          amount: totalAmount,
-          due_date: new Date().toISOString().split('T')[0],
-          status: 'pending',
-          description: 'Pagamento único',
-          payment_method: 'Pagamento único'
-        });
-      } else {
-        const paymentSchedule = paymentMethod.payment_schedule || [];
-        
-        if (paymentSchedule.length > 0) {
-          // Cronograma personalizado
-          paymentSchedule.forEach((schedule, index) => {
-            let dueDate = new Date();
-            
-            if (index === 0) {
-              // Primeira parcela: hoje
-            } else if (paymentSchedule.length === 2 && index === 1 && contract.data_evento) {
-              // Segunda parcela: um dia antes do evento
-              dueDate = new Date(contract.data_evento);
-              dueDate.setDate(dueDate.getDate() - 1);
-            } else {
-              // Outras parcelas: mensalmente
-              dueDate.setMonth(dueDate.getMonth() + index);
-              if (contract.preferred_payment_day >= 1 && contract.preferred_payment_day <= 28) {
-                dueDate.setDate(contract.preferred_payment_day);
-              }
-            }
-            
-            const amount = schedule.percentage > 0 
-              ? (totalAmount * schedule.percentage / 100)
-              : totalAmount / paymentSchedule.length;
-            
-            paymentsToCreate.push({
-              contract_id: contract.id,
-              amount: Math.round(amount * 100) / 100,
-              due_date: dueDate.toISOString().split('T')[0],
-              status: 'pending',
-              description: index === 0 
-                ? 'Entrada (no ato do contrato)'
-                : paymentSchedule.length === 2 && index === 1 
-                ? 'Saldo final (um dia antes do evento)'
-                : schedule.description || `Parcela ${index + 1}/${paymentSchedule.length}`,
-              payment_method: paymentMethod.name
-            });
-          });
-        } else {
-          // Parcelas iguais
-          const installments = paymentMethod.installments || 1;
-          const installmentAmount = totalAmount / installments;
-          
-          for (let i = 0; i < installments; i++) {
-            let dueDate = new Date();
-            
-            if (i > 0) {
-              dueDate.setMonth(dueDate.getMonth() + i);
-              if (contract.preferred_payment_day >= 1 && contract.preferred_payment_day <= 28) {
-                dueDate.setDate(contract.preferred_payment_day);
-              }
-            }
-            
-            paymentsToCreate.push({
-              contract_id: contract.id,
-              amount: Math.round(installmentAmount * 100) / 100,
-              due_date: dueDate.toISOString().split('T')[0],
-              status: 'pending',
-              description: i === 0 
-                ? 'Entrada (no ato do contrato)'
-                : `Parcela ${i + 1}/${installments}`,
-              payment_method: paymentMethod.name
-            });
-          }
-        }
-      }
-
-      if (paymentsToCreate.length > 0) {
-        const { data, error } = await supabase
-          .from('payments')
-          .insert(paymentsToCreate)
-          .select();
-          
-        if (error) throw error;
-        
-        setPayments(prev => [...prev, ...data]);
-        alert('Parcelas criadas com sucesso!');
-      }
-    } catch (error) {
-      console.error('Erro ao criar parcelas:', error);
-      alert(`Erro ao criar parcelas: ${(error as Error).message}`);
-    }
-  };
   const filteredContracts = contracts.filter(contract => {
     const status = getPaymentStatus(contract);
     const matchesStatus = !filterStatus || status === filterStatus;
@@ -888,11 +812,11 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                         Este contrato ainda não possui parcelas de pagamento cadastradas.
                       </p>
                       <button
-                        onClick={() => createPaymentsForContract(selectedContract)}
+                        onClick={() => setShowAddPaymentModal(true)}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 mx-auto"
                       >
                         <Plus className="w-4 h-4" />
-                        <span>Criar Parcelas Automaticamente</span>
+                        <span>Adicionar Primeira Parcela</span>
                       </button>
                     </div>
                   )}
