@@ -340,7 +340,7 @@ interface ContractListProps {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => window.location.href = '/'}
+                onClick={() => onBackToDashboard ? onBackToDashboard() : window.location.href = '/'}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
