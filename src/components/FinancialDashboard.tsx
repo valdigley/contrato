@@ -476,6 +476,54 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     }
   };
 
+  const markPaymentAsUnpaid = async (paymentId: string) => {
+    try {
+      const existingPayment = payments.find(p => p.id === paymentId);
+      if (!existingPayment) {
+        alert('Pagamento não encontrado');
+        return;
+      }
+      
+      if (existingPayment.status !== 'paid') {
+        alert('Este pagamento não está marcado como pago');
+        return;
+      }
+
+      if (!confirm('Tem certeza que deseja desmarcar este pagamento como pago?')) {
+        return;
+      }
+
+      // Determinar o status correto baseado na data de vencimento
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = new Date(existingPayment.due_date);
+      const newStatus = dueDate < today ? 'overdue' : 'pending';
+
+      const { data, error } = await supabase
+        .from('payments')
+        .update({ 
+          status: newStatus,
+          paid_date: null,
+          notes: 'Desmarcado como pago manualmente'
+        })
+        .eq('id', paymentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Atualizar estado local
+      setPayments(prev => prev.map(payment => 
+        payment.id === paymentId ? data : payment
+      ));
+      
+      alert('Pagamento desmarcado como pago com sucesso!');
+    } catch (error) {
+      console.error('Erro ao desmarcar pagamento como pago:', error);
+      alert(`Erro ao atualizar pagamento: ${(error as Error).message}`);
+    }
+  };
+
   const addNewPayment = async () => {
     if (!selectedContract || !newPayment.amount || !newPayment.due_date) {
       alert('Preencha todos os campos obrigatórios');
@@ -896,9 +944,19 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                                 </button>
                               )}
                               {payment.status === 'paid' && (
-                                <div className="flex items-center space-x-1 text-green-600">
-                                  <Check className="w-4 h-4" />
-                                  <span className="text-sm font-medium">Pago</span>
+                                <div className="flex items-center space-x-2">
+                                  <div className="flex items-center space-x-1 text-green-600">
+                                    <Check className="w-4 h-4" />
+                                    <span className="text-sm font-medium">Pago</span>
+                                  </div>
+                                  <button
+                                    onClick={() => markPaymentAsUnpaid(payment.id)}
+                                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center space-x-1 transition-colors"
+                                    title="Desmarcar como pago"
+                                  >
+                                    <X className="w-3 h-3" />
+                                    <span>Desmarcar</span>
+                                  </button>
                                 </div>
                               )}
                             </div>
