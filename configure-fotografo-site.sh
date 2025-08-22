@@ -1,5 +1,53 @@
 #!/bin/bash
 
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo -e "${GREEN}🚀 Configurando contratos.fotografo.site...${NC}"
+
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Install missing core utilities
+echo -e "${YELLOW}📦 Verificando dependências...${NC}"
+
+# Update package list
+apt-get update -qq
+
+# Install findutils if missing
+if ! command_exists find; then
+    echo -e "${YELLOW}Instalando findutils...${NC}"
+    apt-get install -y findutils
+fi
+
+# Install nginx if missing
+if ! command_exists nginx; then
+    echo -e "${YELLOW}Instalando nginx...${NC}"
+    apt-get install -y nginx
+fi
+
+# Install other utilities if missing
+if ! command_exists grep; then
+    echo -e "${YELLOW}Instalando grep...${NC}"
+    apt-get install -y grep
+fi
+
+# Create Nginx directories if they don't exist
+echo -e "${YELLOW}📁 Criando diretórios do Nginx...${NC}"
+mkdir -p /etc/nginx/sites-available
+mkdir -p /etc/nginx/sites-enabled
+
+# Ensure nginx.conf includes sites-enabled
+if ! grep -q "include /etc/nginx/sites-enabled" /etc/nginx/nginx.conf; then
+    echo -e "${YELLOW}Configurando nginx.conf...${NC}"
+    sed -i '/http {/a\\tinclude /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf
+fi
+
 # 🌐 Configurar contratos.fotografo.site
 echo "🌐 Configurando contratos.fotografo.site..."
 
@@ -61,6 +109,10 @@ pm2 start "serve -s dist -l 3000" --name contratos-fotografo
 pm2 save
 
 # 4. Configurar Nginx
+
+# Remove old configurations
+find /etc/nginx/sites-enabled/ -name "*controle*" -type l -delete 2>/dev/null || true
+
 log "3. Configurando Nginx para contratos.fotografo.site..."
 
 # Remover configurações antigas
