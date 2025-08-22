@@ -50,14 +50,33 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
     try {
       console.log('Buscando contratos...');
       
-      // Buscar contratos apenas do usuário logado
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('Usuário não autenticado');
+        setLoading(false);
+        return;
+      }
+
+      // Get photographer profile for current user
+      const { data: photographerData, error: photographerError } = await supabase
+        .from('photographers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (photographerError) {
+        console.warn('Perfil de fotógrafo não encontrado:', photographerError);
+        setContracts([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch contracts for this photographer
       const contractsResponse = await supabase
         .from('contratos')
-        .select(`
-          *,
-          photographer:photographers!inner(user_id)
-        `)
-        .eq('photographers.user_id', (await supabase.auth.getUser()).data.user?.id)
+        .select('*')
+        .eq('photographer_id', photographerData.id)
         .order('created_at', { ascending: false });
       
       console.log('Resposta dos contratos:', contractsResponse);

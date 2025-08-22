@@ -122,13 +122,35 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       setSupabaseConfigured(true);
 
       // Buscar contratos apenas do usuário logado
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Get photographer profile for current user
+      const { data: photographerData, error: photographerError } = await supabase
+        .from('photographers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (photographerError) {
+        console.warn('Perfil de fotógrafo não encontrado:', photographerError);
+        // If no photographer profile exists, show empty state
+        setContracts([]);
+        setPayments([]);
+        calculateSummary([], []);
+        calculateMonthlyData([], []);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch contracts for this photographer
       const { data: contractsData, error: contractsError } = await supabase
         .from('contratos')
-        .select(`
-          *,
-          photographer:photographers!inner(user_id)
-        `)
-        .eq('photographers.user_id', (await supabase.auth.getUser()).data.user?.id)
+        .select('*')
+        .eq('photographer_id', photographerData.id)
         .order('created_at', { ascending: false });
 
       if (contractsError) {

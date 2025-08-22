@@ -367,15 +367,18 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
 
     try {
       // Buscar o photographer_id do usuário logado
-      let photographer_id = null;
-      if (user) {
-        const { data: photographerData } = await supabase
-          .from('photographers')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-        
-        photographer_id = photographerData?.id;
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const { data: photographerData, error: photographerError } = await supabase
+        .from('photographers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (photographerError) {
+        throw new Error('Perfil de fotógrafo não encontrado. Crie seu perfil primeiro.');
       }
 
       // Debug: Log dos valores antes de salvar
@@ -388,7 +391,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       const { data, error } = await supabase
         .from('contratos')
         .insert([{
-          photographer_id: photographer_id,
+          photographer_id: photographerData.id,
           nome_completo: formData.nome_completo,
           cpf: formData.cpf.replace(/\D/g, ''),
           email: formData.email,
