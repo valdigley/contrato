@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Trash2, Link, Calendar, MapPin, User, Phone, Mail, FileText, Copy, Check, Settings, Download, DollarSign } from 'lucide-react';
+import { Search, Plus, Eye, Trash2, Link, Calendar, MapPin, User, Phone, Mail, FileText, Copy, Check, Settings, Download, DollarSign, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Contract {
@@ -21,6 +21,10 @@ interface Contract {
   local_pre_wedding?: string;
   local_making_of?: string;
   local_cerimonia?: string;
+  data_evento?: string;
+  horario_evento?: string;
+  final_price?: number;
+  preferred_payment_day?: number;
   created_at: string;
 }
 
@@ -29,6 +33,7 @@ interface ContractListProps {
   onBackToDashboard?: () => void;
 }
 
+export default function ContractList({ onNewContract, onBackToDashboard }: ContractListProps) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
@@ -340,7 +345,7 @@ interface ContractListProps {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => onBackToDashboard ? onBackToDashboard() : window.location.href = '/'}
+                onClick={() => window.location.href = '/'}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
