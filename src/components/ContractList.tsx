@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Trash2, Link, Calendar, MapPin, User, Phone, Mail, FileText, Copy, Check, Settings, Download, DollarSign } from 'lucide-react';
+import { Search, Plus, Eye, Trash2, Link, Calendar, MapPin, User, Phone, Mail, FileText, Copy, Check, Settings, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Contract {
@@ -338,13 +338,6 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
               >
                 {linkCopied ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
                 <span>{linkCopied ? 'Link Copiado!' : 'Copiar Link Cliente'}</span>
-              </button>
-              <button
-                onClick={onFinancial}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-              >
-                <DollarSign className="w-4 h-4" />
-                <span>Financeiro</span>
               </button>
               <button
                 onClick={() => window.location.href = '?settings=true'}
