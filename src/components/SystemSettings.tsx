@@ -14,6 +14,7 @@ interface SupabaseConfig {
 
 export default function SystemSettings({ onBack }: SystemSettingsProps) {
   const [activeTab, setActiveTab] = useState<'supabase' | 'event-types' | 'packages' | 'payment-methods' | 'templates'>('supabase');
+  const [activeTab, setActiveTab] = useState<'supabase' | 'event-types' | 'packages' | 'payment-methods' | 'templates'>('event-types');
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>({
     url: '',
     anonKey: ''
@@ -522,18 +523,6 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <nav className="flex space-x-8 px-6">
             <button
-              onClick={() => setActiveTab('supabase')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                activeTab === 'supabase'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Database className="h-4 w-4" />
-              <span>Supabase</span>
-            </button>
-            
-            <button
               onClick={() => setActiveTab('event-types')}
               className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'event-types'
@@ -579,6 +568,18 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
             >
               <FileText className="h-4 w-4" />
               <span>Contratos</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('supabase')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                activeTab === 'supabase'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Database className="h-4 w-4" />
+              <span>Supabase</span>
             </button>
           </nav>
         </div>
