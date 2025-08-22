@@ -1,0 +1,58 @@
+## 🚀 CONFIGURAÇÃO MANUAL PARA contratos.fotografo.site
+
+### 1. LIMPAR PM2
+pm2 delete all
+
+### 2. VERIFICAR SE TEM BUILD
+ls -la dist/
+
+### 3. SE NÃO TIVER BUILD, FAZER:
+npm run build
+
+### 4. INICIAR APLICAÇÃO NA PORTA 3000
+pm2 start "serve -s dist -l 3000" --name contratos-fotografo
+pm2 save
+
+### 5. CRIAR CONFIGURAÇÃO DO NGINX
+cat > /etc/nginx/sites-available/contratos-fotografo-site << 'EOF'
+server {
+    listen 80;
+    server_name contratos.fotografo.site;
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
+    
+    access_log /var/log/nginx/contratos-fotografo.access.log;
+    error_log /var/log/nginx/contratos-fotografo.error.log;
+}
+EOF
+
+### 6. ATIVAR SITE NO NGINX
+ln -s /etc/nginx/sites-available/contratos-fotografo-site /etc/nginx/sites-enabled/
+
+### 7. TESTAR E RECARREGAR NGINX
+nginx -t
+systemctl reload nginx
+
+### 8. VERIFICAR SE ESTÁ FUNCIONANDO
+curl http://localhost:3000
+pm2 list
+
+### 9. CONFIGURAR DNS NO PAINEL fotografo.site:
+Nome: contratos
+Tipo: A
+Valor: 147.93.182.205
+TTL: 300
+
+### 10. TESTAR APÓS DNS PROPAGAR:
+http://contratos.fotografo.site
