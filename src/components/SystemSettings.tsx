@@ -149,12 +149,22 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
           .eq('id', editingPackage.id);
         
         if (error) throw error;
+        
+        // Atualizar associações de pagamento para este pacote
+        await createPackagePaymentMethods(editingPackage.id, parseFloat(newPackage.price));
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('packages')
-          .insert([packageData]);
+          .insert([packageData])
+          .select()
+          .single();
         
         if (error) throw error;
+        
+        // Criar associações de pagamento para o novo pacote
+        if (data) {
+          await createPackagePaymentMethods(data.id, parseFloat(newPackage.price));
+        }
       }
 
       await fetchData();
@@ -435,19 +445,47 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         if (insertError) throw insertError;
       }
 
-      // Refresh data
-      await fetchData();
     } catch (error) {
       console.error('Erro ao criar associações de pagamento:', error);
     }
   };
 
-  const updateAllPackagePaymentMethods = async () => {
-    // Implementation for updating all package payment methods
+  const createPaymentMethodForAllPackages = async () => {
+    try {
+      // Get all packages
+      const { data: allPackages, error: packagesError } = await supabase
+        .from('packages')
+        .select('*');
+
+      if (packagesError) throw packagesError;
+
+      if (allPackages && allPackages.length > 0) {
+        for (const pkg of allPackages) {
+          await createPackagePaymentMethods(pkg.id, pkg.price);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao criar forma de pagamento para todos os pacotes:', error);
+    }
   };
 
-  const createPaymentMethodForAllPackages = async () => {
-    // Implementation for creating payment method for all packages
+  const updateAllPackagePaymentMethods = async () => {
+    try {
+      // Get all packages
+      const { data: allPackages, error: packagesError } = await supabase
+        .from('packages')
+        .select('*');
+
+      if (packagesError) throw packagesError;
+
+      if (allPackages && allPackages.length > 0) {
+        for (const pkg of allPackages) {
+          await createPackagePaymentMethods(pkg.id, pkg.price);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar associações de pagamento:', error);
+    }
   };
 
   if (loading) {
@@ -946,13 +984,23 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-lg font-semibold text-gray-900">Formas de Pagamento</h2>
-                  <button
-                    onClick={() => setShowPaymentMethodForm(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Nova Forma</span>
-                  </button>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={createPaymentMethodForAllPackages}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                      title="Aplicar todas as formas de pagamento para todos os pacotes"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Aplicar a Todos</span>
+                    </button>
+                    <button
+                      onClick={() => setShowPaymentMethodForm(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Nova Forma</span>
+                    </button>
+                  </div>
                 </div>
 
                 {showPaymentMethodForm && (
@@ -1047,7 +1095,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                         <span>Adicionar parcela</span>
                       </button>
                     </div>
-
+                    
                     <div className="flex space-x-4">
                       <button
                         onClick={handleSavePaymentMethod}
