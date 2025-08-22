@@ -6,7 +6,7 @@ import SystemSettings from './components/SystemSettings';
 import FinancialDashboard from './components/FinancialDashboard';
 import Login from './components/Login';
 import { useAuth } from './hooks/useAuth';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, DollarSign, FileText, Settings, Plus } from 'lucide-react';
 
 function App() {
   const { user, loading, signOut, isAuthenticated } = useAuth();
@@ -15,32 +15,31 @@ function App() {
     const isClientMode = urlParams.get('client') === 'true';
     const editId = urlParams.get('edit');
     const isSettings = urlParams.get('settings') === 'true';
-    const isFinancial = urlParams.get('financial') === 'true';
+    const isContracts = urlParams.get('contracts') === 'true';
     
-    if (isFinancial) {
-      return 'financial';
-    }
     if (isSettings) {
       return 'settings';
+    }
+    if (isContracts) {
+      return 'contracts';
     }
     if (isClientMode || editId) {
       return 'form';
     }
-    return 'list';
+    return 'dashboard'; // Dashboard como primeira tela
   });
 
-  const handleViewChange = (view: 'list' | 'form' | 'settings' | 'financial') => {
+  const handleViewChange = (view: 'dashboard' | 'contracts' | 'form' | 'settings') => {
     setCurrentView(view);
     // Update URL without page reload
-    if (view === 'list') {
+    if (view === 'dashboard') {
       window.history.pushState({}, '', window.location.pathname);
+    } else if (view === 'contracts') {
+      window.history.pushState({}, '', '?contracts=true');
     } else if (view === 'settings') {
       window.history.pushState({}, '', '?settings=true');
-    } else if (view === 'financial') {
-      window.history.pushState({}, '', '?financial=true');
-    } else if (view === 'financial') {
-      };
-  }
+    }
+  };
 
   // Mostrar loading enquanto verifica autenticação
   if (loading) {
@@ -60,39 +59,105 @@ function App() {
 
   // Se não está autenticado e não é modo cliente, mostrar login
   if (!isAuthenticated && !isClientMode) {
-    return <Login onLogin={() => handleViewChange('list')} />;
+    return <Login onLogin={() => handleViewChange('dashboard')} />;
   }
 
-  if (currentView === 'financial') {
+  // Modo cliente - apenas formulário
+  if (isClientMode) {
+    return <ContractForm onBackToList={() => handleViewChange('contracts')} />;
+  }
+
+  // Formulário interno (para usuários autenticados)
+  if (currentView === 'form') {
     return (
       <div>
-        {isAuthenticated && <UserHeader user={user} onSignOut={signOut} />}
-        <FinancialDashboard onBack={() => handleViewChange('list')} />
+        <UserHeader user={user} onSignOut={signOut} />
+        <ContractForm onBackToList={() => handleViewChange('contracts')} />
       </div>
     );
   }
 
+  // Configurações
   if (currentView === 'settings') {
     return (
       <div>
-        {isAuthenticated && <UserHeader user={user} onSignOut={signOut} />}
-        <SystemSettings onBack={() => handleViewChange('list')} />
+        <UserHeader user={user} onSignOut={signOut} />
+        <SystemSettings onBack={() => handleViewChange('dashboard')} />
       </div>
     );
   }
 
-  if (currentView === 'form') {
-    return <ContractForm onBackToList={() => handleViewChange('list')} />;
-  }
-  
+  // Layout principal com guias
   return (
-    <div>
-      {isAuthenticated && <UserHeader user={user} onSignOut={signOut} />}
-      <ContractList 
-        onNewContract={() => handleViewChange('form')}
-        onFinancial={() => handleViewChange('financial')}
-        onFinancial={() => handleViewChange('financial')}
-      />
+    <div className="min-h-screen bg-gray-50">
+      <UserHeader user={user} onSignOut={signOut} />
+      
+      {/* Navigation Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => handleViewChange('dashboard')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                currentView === 'dashboard'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <DollarSign className="h-4 w-4" />
+              <span>Dashboard Financeiro</span>
+            </button>
+            
+            <button
+              onClick={() => handleViewChange('contracts')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                currentView === 'contracts'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              <span>Contratos</span>
+            </button>
+
+            <button
+              onClick={() => handleViewChange('settings')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                currentView === 'settings'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Settings className="h-4 w-4" />
+              <span>Configurações</span>
+            </button>
+
+            <div className="flex-1"></div>
+
+            <button
+              onClick={() => handleViewChange('form')}
+              className="py-4 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg my-2 flex items-center space-x-2 text-sm font-medium transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Novo Contrato</span>
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div>
+        {currentView === 'dashboard' && (
+          <FinancialDashboard onBack={() => handleViewChange('dashboard')} />
+        )}
+        
+        {currentView === 'contracts' && (
+          <ContractList 
+            onNewContract={() => handleViewChange('form')}
+            onFinancial={() => handleViewChange('dashboard')}
+          />
+        )}
+      </div>
     </div>
   );
 }

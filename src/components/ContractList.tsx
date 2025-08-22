@@ -340,27 +340,6 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
                 {linkCopied ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
                 <span>{linkCopied ? 'Link Copiado!' : 'Copiar Link Cliente'}</span>
               </button>
-              <button
-                onClick={() => window.location.href = '?settings=true'}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-                <span>Configurações</span>
-              </button>
-              <button
-                onClick={onFinancial}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-              >
-                <DollarSign className="w-4 h-4" />
-                <span>Financeiro</span>
-              </button>
-              <button
-                onClick={onNewContract}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Novo Contrato</span>
-              </button>
             </div>
           </div>
         </div>
