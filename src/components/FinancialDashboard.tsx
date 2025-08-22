@@ -62,21 +62,23 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     due_date: '',
     description: ''
   });
+  const [supabaseConfigured, setSupabaseConfigured] = useState(false);
 
   useEffect(() => {
-    fetchFinancialData();
+    // Verificar se as credenciais do Supabase estão configuradas
+    const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    setSupabaseConfigured(!!(supabaseUrl && supabaseKey));
   }, []);
 
   const fetchFinancialData = async () => {
-    try {
-      // Verificar se as credenciais do Supabase estão configuradas
-      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Credenciais do Supabase não configuradas. Acesse as Configurações para inserir a URL e chave do projeto.');
-      }
+    if (!supabaseConfigured) {
+      setLoading(false);
+      return;
+    }
 
+    try {
       const [contractsResponse, paymentMethodsResponse, paymentsResponse] = await Promise.all([
         supabase
           .from('contratos')
@@ -309,6 +311,10 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   
   // Função para atualizar status de pagamentos vencidos
   const updateOverduePayments = async () => {
+    if (!supabaseConfigured) {
+      return;
+    }
+
     try {
       const today = new Date();
       today.setHours(23, 59, 59, 999); // Set to end of day to be more lenient
@@ -401,11 +407,14 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     }
   }, [payments, loading]);
 
-  // Mostrar mensagem de configuração se as credenciais não estiverem definidas
-  const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseKey) {
+  useEffect(() => {
+    if (supabaseConfigured) {
+      fetchFinancialData();
+      updateOverduePayments();
+    }
+  }, [supabaseConfigured]);
+
+  if (!supabaseConfigured) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="max-w-md mx-auto text-center bg-white rounded-lg shadow-sm p-8">
