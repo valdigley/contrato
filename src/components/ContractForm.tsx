@@ -350,6 +350,13 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     setSubmitStatus('idle');
 
     try {
+      // Debug: Log dos valores antes de salvar
+      console.log('Valores do formulário:', {
+        package_price: formData.package_price,
+        final_price: formData.final_price,
+        payment_method_id: formData.payment_method_id
+      });
+
       const { data, error } = await supabase
         .from('contratos')
         .insert([{
@@ -363,9 +370,9 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
           tipo_evento: formData.tipo_evento || eventTypes.find(et => et.id === formData.event_type_id)?.name || '',
           event_type_id: formData.event_type_id,
           package_id: formData.package_id,
-          package_price: formData.package_price,
+          package_price: Number(formData.package_price),
           payment_method_id: formData.payment_method_id || null,
-          final_price: formData.final_price || formData.package_price,
+          final_price: Number(formData.final_price) || Number(formData.package_price),
           preferred_payment_day: formData.preferred_payment_day ? parseInt(formData.preferred_payment_day) : null,
           data_evento: formData.data_evento,
           horario_evento: formData.horario_evento,
@@ -380,6 +387,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
 
       if (error) throw error;
 
+      console.log('Contrato salvo:', data);
       setSubmitStatus('success');
       
       console.log('Contrato salvo com sucesso:', data);

@@ -150,13 +150,28 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   const calculateFinancialSummary = () => {
     const totalContracts = contracts.length;
     const totalValue = contracts.reduce((sum, contract) => {
-      const value = contract.final_price || contract.package_price || 0;
+      // Debug: Log dos valores de cada contrato
+      console.log('Contrato:', contract.nome_completo, {
+        final_price: contract.final_price,
+        package_price: contract.package_price,
+        payment_method_id: contract.payment_method_id
+      });
+      
+      // Usar final_price se existir, senão usar package_price
+      const value = Number(contract.final_price) || Number(contract.package_price) || 0;
       return sum + value;
     }, 0);
     const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum, payment) => sum + payment.amount, 0);
     const totalPending = payments.filter(p => p.status === 'pending').reduce((sum, payment) => sum + payment.amount, 0);
     const totalOverdue = payments.filter(p => p.status === 'overdue').reduce((sum, payment) => sum + payment.amount, 0);
 
+    console.log('Resumo financeiro:', {
+      totalContracts,
+      totalValue,
+      totalPaid,
+      totalPending,
+      totalOverdue
+    });
     return {
       totalContracts,
       totalValue,
@@ -455,10 +470,14 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
-                            R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R$ {Number(totalValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </div>
                           <div className="text-sm text-gray-500">
-                            Pago: R$ {totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            Pago: R$ {Number(totalPaid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Final: R$ {Number(contract.final_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | 
+                            Pacote: R$ {Number(contract.package_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
