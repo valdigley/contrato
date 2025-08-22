@@ -27,11 +27,6 @@ error() {
     echo -e "${RED}[ERROR] $1${NC}"
     exit 1
 }
-
-warning() {
-    echo -e "${YELLOW}[WARNING] $1${NC}"
-}
-
 # Verificar se está rodando como usuário correto
 if [ "$EUID" -eq 0 ]; then
     warning "Executando como root. Alguns comandos serão ajustados..."
