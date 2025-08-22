@@ -39,7 +39,8 @@ function App() {
     } else if (view === 'financial') {
       window.history.pushState({}, '', '?financial=true');
     } else if (view === 'financial') {
-  };
+      };
+  }
 
   // Mostrar loading enquanto verifica autenticação
   if (loading) {
