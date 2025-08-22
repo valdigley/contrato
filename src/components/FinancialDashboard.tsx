@@ -66,43 +66,34 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const fetchFinancialData = async () => {
     try {
-      const [contractsResponse, paymentMethodsResponse] = await Promise.all([
+      const [contractsResponse, paymentMethodsResponse, paymentsResponse] = await Promise.all([
         supabase
           .from('contratos')
           .select('*')
-          .not('package_price', 'is', null)
           .order('created_at', { ascending: false }),
         supabase
           .from('payment_methods')
           .select('*')
-          .eq('is_active', true)
+          .eq('is_active', true),
+        supabase
+          .from('payments')
+          .select('*')
+          .order('due_date', { ascending: true })
       ]);
 
       if (contractsResponse.error) throw contractsResponse.error;
       if (paymentMethodsResponse.error) throw paymentMethodsResponse.error;
+      if (paymentsResponse.error) throw paymentsResponse.error;
 
       const contractsData = contractsResponse.data || [];
       setContracts(contractsData);
       setPaymentMethods(paymentMethodsResponse.data || []);
+      setPayments(paymentsResponse.data || []);
 
-      // Simular dados de pagamento (em produção, viria de uma tabela de pagamentos)
-      const simulatedPayments = contractsData.map(contract => {
-        const paymentMethod = paymentMethodsResponse.data?.find(pm => pm.id === contract.payment_method_id);
-        const installments = paymentMethod?.installments || 1;
-        const installmentAmount = (contract.final_price || contract.package_price) / installments;
-        
-        return Array.from({ length: installments }, (_, index) => ({
-          id: `${contract.id}-${index}`,
-          contract_id: contract.id,
-          amount: installmentAmount,
-          due_date: new Date(Date.now() + (index * 30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
-          status: Math.random() > 0.7 ? 'paid' : Math.random() > 0.5 ? 'pending' : 'overdue' as 'pending' | 'paid' | 'overdue',
-          description: `Parcela ${index + 1}/${installments}`,
-          created_at: new Date().toISOString()
-        }));
-      }).flat();
-
-      setPayments(simulatedPayments);
+      // Se não há pagamentos cadastrados, criar pagamentos automáticos baseados nos contratos
+      if (paymentsResponse.data?.length === 0 && contractsData.length > 0) {
+        await createAutomaticPayments(contractsData, paymentMethodsResponse.data || []);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados financeiros:', error);
     } finally {
@@ -110,9 +101,58 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
     }
   };
 
+  const createAutomaticPayments = async (contracts: Contract[], paymentMethods: PaymentMethod[]) => {
+    try {
+      const paymentsToCreate: Omit<Payment, 'id' | 'created_at'>[] = [];
+      
+      contracts.forEach(contract => {
+        if (contract.final_price || contract.package_price) {
+          const paymentMethod = paymentMethods.find(pm => pm.id === contract.payment_method_id);
+          const installments = paymentMethod?.installments || 1;
+          const totalAmount = contract.final_price || contract.package_price || 0;
+          const installmentAmount = totalAmount / installments;
+          
+          // Criar parcelas baseadas no cronograma de pagamento
+          for (let i = 0; i < installments; i++) {
+            const dueDate = new Date();
+            if (contract.preferred_payment_day) {
+              dueDate.setDate(contract.preferred_payment_day);
+              dueDate.setMonth(dueDate.getMonth() + i);
+            } else {
+              dueDate.setDate(dueDate.getDate() + (i * 30));
+            }
+            
+            paymentsToCreate.push({
+              contract_id: contract.id,
+              amount: installmentAmount,
+              due_date: dueDate.toISOString().split('T')[0],
+              status: 'pending',
+              description: installments > 1 ? `Parcela ${i + 1}/${installments}` : 'Pagamento único',
+              payment_method: paymentMethod?.name || 'Não especificado'
+            });
+          }
+        }
+      });
+      
+      if (paymentsToCreate.length > 0) {
+        const { data, error } = await supabase
+          .from('payments')
+          .insert(paymentsToCreate)
+          .select();
+          
+        if (error) throw error;
+        setPayments(data || []);
+      }
+    } catch (error) {
+      console.error('Erro ao criar pagamentos automáticos:', error);
+    }
+  };
   const calculateFinancialSummary = () => {
     const totalContracts = contracts.length;
-    const totalValue = contracts.reduce((sum, contract) => sum + (contract.final_price || contract.package_price || 0), 0);
+    const totalValue = contracts.reduce((sum, contract) => {
+      const value = contract.final_price || contract.package_price || 0;
+      return sum + value;
+    }, 0);
     const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum, payment) => sum + payment.amount, 0);
     const totalPending = payments.filter(p => p.status === 'pending').reduce((sum, payment) => sum + payment.amount, 0);
     const totalOverdue = payments.filter(p => p.status === 'overdue').reduce((sum, payment) => sum + payment.amount, 0);
@@ -163,11 +203,26 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   };
 
   const markPaymentAsPaid = async (paymentId: string) => {
-    setPayments(prev => prev.map(payment => 
-      payment.id === paymentId 
-        ? { ...payment, status: 'paid' as const, paid_date: new Date().toISOString().split('T')[0] }
-        : payment
-    ));
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .update({ 
+          status: 'paid',
+          paid_date: new Date().toISOString().split('T')[0]
+        })
+        .eq('id', paymentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      setPayments(prev => prev.map(payment => 
+        payment.id === paymentId ? data : payment
+      ));
+    } catch (error) {
+      console.error('Erro ao marcar pagamento como pago:', error);
+      alert('Erro ao atualizar pagamento');
+    }
   };
 
   const addNewPayment = async () => {
@@ -176,19 +231,29 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       return;
     }
 
-    const payment: Payment = {
-      id: `new-${Date.now()}`,
-      contract_id: selectedContract.id,
-      amount: parseFloat(newPayment.amount),
-      due_date: newPayment.due_date,
-      status: 'pending',
-      description: newPayment.description || 'Pagamento adicional',
-      created_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .insert([{
+          contract_id: selectedContract.id,
+          amount: parseFloat(newPayment.amount),
+          due_date: newPayment.due_date,
+          status: 'pending',
+          description: newPayment.description || 'Pagamento adicional',
+          payment_method: 'Manual'
+        }])
+        .select()
+        .single();
 
-    setPayments(prev => [...prev, payment]);
-    setNewPayment({ amount: '', due_date: '', description: '' });
-    setShowAddPaymentModal(false);
+      if (error) throw error;
+      
+      setPayments(prev => [...prev, data]);
+      setNewPayment({ amount: '', due_date: '', description: '' });
+      setShowAddPaymentModal(false);
+    } catch (error) {
+      console.error('Erro ao adicionar pagamento:', error);
+      alert('Erro ao adicionar pagamento');
+    }
   };
 
   const filteredContracts = contracts.filter(contract => {
