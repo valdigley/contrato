@@ -17,24 +17,30 @@ command_exists() {
 echo -e "${YELLOW}📦 Verificando dependências...${NC}"
 
 # Update package list
-apt-get update -qq
+sudo apt-get update -qq
 
 # Install findutils if missing
 if ! command_exists find; then
     echo -e "${YELLOW}Instalando findutils...${NC}"
-    apt-get install -y findutils
+    sudo apt-get install -y findutils
 fi
 
 # Install nginx if missing
 if ! command_exists nginx; then
     echo -e "${YELLOW}Instalando nginx...${NC}"
-    apt-get install -y nginx
+    sudo apt-get install -y nginx
 fi
 
 # Install other utilities if missing
 if ! command_exists grep; then
     echo -e "${YELLOW}Instalando grep...${NC}"
-    apt-get install -y grep
+    sudo apt-get install -y grep
+fi
+
+# Install certbot if missing
+if ! command_exists certbot; then
+    echo -e "${YELLOW}Instalando certbot...${NC}"
+    sudo apt-get install -y certbot python3-certbot-nginx
 fi
 
 # Create Nginx directories if they don't exist
@@ -73,7 +79,7 @@ error() {
 log "0. Ensuring Nginx and essential utilities are installed..."
 if ! command -v nginx &> /dev/null; then
     warning "Nginx not found. Attempting to install Nginx..."
-    apt update && apt install -y nginx
+    sudo apt update && sudo apt install -y nginx
     if ! command -v nginx &> /dev/null; then
         error "Failed to install Nginx. Please install it manually (e.g., apt install nginx) and try again."
         exit 1
@@ -82,7 +88,7 @@ fi
 
 if ! command -v grep &> /dev/null; then
     warning "Grep not found. Attempting to install grep..."
-    apt update && apt install -y grep
+    sudo apt update && sudo apt install -y grep
     if ! command -v grep &> /dev/null; then
         error "Failed to install grep. Please install it manually (e.g., apt install grep) and try again."
         exit 1
@@ -159,7 +165,7 @@ ln -s /etc/nginx/sites-available/contratos-fotografo-site /etc/nginx/sites-enabl
 log "4. Testando configuração do Nginx..."
 if nginx -t; then
     log "✅ Configuração do Nginx OK"
-    systemctl reload nginx
+    sudo systemctl reload nginx
 else
     error "❌ Erro na configuração do Nginx"
     exit 1
