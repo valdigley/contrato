@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Trash2, Link, Calendar, MapPin, User, Phone, Mail, FileText, Copy, Check, Settings, Download, DollarSign, ArrowLeft } from 'lucide-react';
+import { Search, Plus, Eye, Trash2, Link, Calendar, MapPin, User, Phone, Mail, FileText, Copy, Check, Settings, Download, DollarSign, ArrowLeft, Home } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Contract {
@@ -256,7 +256,7 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
           </head>
           <body>
             <h2>CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h2>
-            <div class="content">${generatedContract.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <div class="content">${generatedContract.replace(/</g, '<').replace(/>/g, '>')}</div>
           </body>
         </html>
       `;
@@ -345,10 +345,10 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => window.location.href = '/'}
+                onClick={onBackToDashboard}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <Home className="h-4 w-4" />
                 <span>Dashboard</span>
               </button>
             </div>
