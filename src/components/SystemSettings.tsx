@@ -491,6 +491,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
       </div>
     </div>
   );
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -552,7 +553,6 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               <Package className="h-4 w-4" />
               <span>Pacotes</span>
             </button>
-        </div>
 
             <button
               onClick={() => setActiveTab('payment-methods')}
@@ -565,18 +565,21 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               <CreditCard className="h-4 w-4" />
               <span>Pagamentos</span>
             </button>
-        {/* Instructions */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-4">Como obter as credenciais do Supabase:</h3>
-          <ol className="list-decimal list-inside space-y-2 text-blue-800">
-            <li>Acesse <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">https://supabase.com/dashboard</a></li>
-            <li>Selecione seu projeto</li>
-            <li>Vá em "Settings" (Configurações) no menu lateral</li>
-            <li>Clique em "API" na seção de configurações</li>
-            <li>Copie a "Project URL" e cole no campo URL acima</li>
-            <li>Copie a chave "anon public" e cole no campo Chave Anônima acima</li>
-            <li>Clique em "Testar Conexão" para verificar se as credenciais estão corretas</li>
-            <li>Se o teste for bem-sucedido, clique em "Salvar Configurações"</li>
+
+            <button
+              onClick={() => setActiveTab('templates')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                activeTab === 'templates'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              <span>Contratos</span>
+            </button>
+          </nav>
+        </div>
+
         {/* Tab Content */}
         {renderTabContent()}
       </div>
