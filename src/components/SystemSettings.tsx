@@ -51,6 +51,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
     payment_schedule: [{ percentage: 0, description: '' }]
   });
   const [showPaymentMethodForm, setShowPaymentMethodForm] = useState(false);
+  
   useEffect(() => {
     fetchData();
   }, []);
@@ -152,9 +153,9 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         // Atualizar associações de pagamento para este pacote
         await createPackagePaymentMethods(editingPackage.id, parseFloat(newPackage.price));
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('packages')
-          .insert([packageData]);
+          .insert([packageData])
           .select()
           .single();
         
@@ -316,13 +317,14 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
       console.error('Erro ao excluir forma de pagamento:', error);
     }
   };
+  
   const startEditEventType = (eventType: EventType) => {
     setEditingEventType(eventType);
     setNewEventType({ name: eventType.name });
     setShowEventTypeForm(true);
   };
 
-  const startEditPackage = (pkg: PackageType) => {
+  const startEditPackage = (pkg: Package) => {
     setEditingPackage(pkg);
     setNewPackage({
       event_type_id: pkg.event_type_id,
@@ -357,6 +359,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
     });
     setShowPaymentMethodForm(true);
   };
+  
   const addFeature = () => {
     setNewPackage(prev => ({
       ...prev,
@@ -400,6 +403,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
       payment_schedule: prev.payment_schedule.filter((_, i) => i !== index)
     }));
   };
+  
   const getEventTypeName = (eventTypeId: string) => {
     const eventType = eventTypes.find(et => et.id === eventTypeId);
     return eventType?.name || 'Tipo não encontrado';
@@ -444,6 +448,14 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
     } catch (error) {
       console.error('Erro ao criar associações de pagamento:', error);
     }
+  };
+
+  const updateAllPackagePaymentMethods = async () => {
+    // Implementation for updating all package payment methods
+  };
+
+  const createPaymentMethodForAllPackages = async () => {
+    // Implementation for creating payment method for all packages
   };
 
   if (loading) {
@@ -942,23 +954,13 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-lg font-semibold text-gray-900">Formas de Pagamento</h2>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={createPaymentMethodForAllPackages}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                      title="Aplicar todas as formas de pagamento para todos os pacotes"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Aplicar a Todos</span>
-                    </button>
-                    <button
-                      onClick={() => setShowPaymentMethodForm(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Nova Forma</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setShowPaymentMethodForm(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Nova Forma</span>
+                  </button>
                 </div>
 
                 {showPaymentMethodForm && (
@@ -1052,6 +1054,8 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                         <Plus className="h-4 w-4" />
                         <span>Adicionar parcela</span>
                       </button>
+                    </div>
+
                     <div className="flex space-x-4">
                       <button
                         onClick={handleSavePaymentMethod}
@@ -1080,7 +1084,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                     </div>
                   </div>
                 )}
-                    </div>
+
                 <div className="grid gap-4">
                   {paymentMethods.map((paymentMethod) => (
                     <div key={paymentMethod.id} className="bg-white border border-gray-200 rounded-lg p-4">
