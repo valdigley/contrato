@@ -106,12 +106,23 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const createAutomaticPayments = async (contracts: Contract[], paymentMethods: PaymentMethod[]) => {
     try {
+      // Primeiro, buscar pagamentos existentes do banco
+      const { data: existingPayments, error: existingError } = await supabase
+        .from('payments')
+        .select('contract_id');
+      
+      if (existingError) {
+        console.error('Erro ao buscar pagamentos existentes:', existingError);
+        return;
+      }
+      
+      const contractsWithPayments = new Set(existingPayments?.map(p => p.contract_id) || []);
+      
       const paymentsToCreate: Omit<Payment, 'id' | 'created_at'>[] = [];
       
       contracts.forEach(contract => {
-        // Verificar se já existem pagamentos para este contrato
-        const existingPayments = payments.filter(p => p.contract_id === contract.id);
-        if (existingPayments.length > 0) {
+        // Verificar se já existem pagamentos para este contrato no banco
+        if (contractsWithPayments.has(contract.id)) {
           console.log(`Contrato ${contract.nome_completo} já possui pagamentos, pulando...`);
           return;
         }
@@ -135,6 +146,8 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
             // Se não tem método de pagamento, criar um pagamento único
             const dueDate = new Date();
             
+            console.log(`Criando pagamento único para ${contract.nome_completo}: R$ ${totalAmount}`);
+            
             paymentsToCreate.push({
               contract_id: contract.id,
               amount: totalAmount,
@@ -156,7 +169,6 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
           
           // Se tem cronograma personalizado (ex: 50% + 50%)
           if (paymentSchedule.length > 0) {
-            console.log('Usando cronograma personalizado');
             console.log('Usando cronograma personalizado');
             paymentSchedule.forEach((schedule, index) => {
               let dueDate: Date;
@@ -189,9 +201,10 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 ? Math.round((totalAmount * schedule.percentage / 100) * 100) / 100
                 : totalAmount / paymentSchedule.length;
               
-              console.log(`Parcela ${index + 1}:`, {
+              console.log(`Parcela ${index + 1} para ${contract.nome_completo}:`, {
                 amount,
                 percentage: schedule.percentage,
+                totalAmount,
                 dueDate: dueDate.toISOString().split('T')[0]
               });
               
@@ -203,6 +216,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               
               paymentsToCreate.push({
                 contract_id: contract.id,
+                amount: amount,
                 due_date: dueDate.toISOString().split('T')[0],
                 status: 'pending',
                 description: description,
@@ -269,8 +283,9 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 }
               }
               
-              console.log(`Parcela ${i + 1}/${actualInstallments}:`, {
+              console.log(`Parcela ${i + 1}/${actualInstallments} para ${contract.nome_completo}:`, {
                 amount: adjustedInstallmentAmount,
+                totalAmount,
                 dueDate: dueDate.toISOString().split('T')[0]
               });
               
@@ -292,7 +307,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       });
       
       if (paymentsToCreate.length > 0) {
-        console.log('Criando pagamentos:', paymentsToCreate);
+        console.log(`Criando ${paymentsToCreate.length} pagamentos:`, paymentsToCreate);
+        
+        // Validar se os valores estão corretos antes de inserir
+        const totalToCreate = paymentsToCreate.reduce((sum, p) => sum + p.amount, 0);
+        console.log(`Total de valores a criar: R$ ${totalToCreate}`);
+        
         const { data, error } = await supabase
           .from('payments')
           .insert(paymentsToCreate)
@@ -300,7 +320,9 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
           
         if (error) throw error;
         console.log('Pagamentos criados:', data);
-        setPayments(data || []);
+        
+        // Recarregar todos os dados após criar
+        await fetchFinancialData();
       }
     } catch (error) {
       console.error('Erro ao criar pagamentos automáticos:', error);
