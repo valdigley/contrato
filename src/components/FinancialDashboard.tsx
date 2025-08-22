@@ -68,7 +68,13 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   }, []);
 
   const fetchFinancialData = async () => {
+    console.log('=== INICIANDO CARREGAMENTO DE DADOS FINANCEIROS ===');
+    console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+    console.log('Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+    
     try {
+      console.log('Fazendo requisições para Supabase...');
+      
       const [contractsResponse, paymentMethodsResponse, paymentsResponse] = await Promise.all([
         supabase
           .from('contratos')
@@ -84,6 +90,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
           .order('due_date', { ascending: true })
       ]);
 
+      console.log('Respostas recebidas:', {
+        contracts: contractsResponse.data?.length || 0,
+        paymentMethods: paymentMethodsResponse.data?.length || 0,
+        payments: paymentsResponse.data?.length || 0
+      });
+
       if (contractsResponse.error) throw contractsResponse.error;
       if (paymentMethodsResponse.error) throw paymentMethodsResponse.error;
       if (paymentsResponse.error) throw paymentsResponse.error;
@@ -93,8 +105,38 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       setPaymentMethods(paymentMethodsResponse.data || []);
       setPayments(paymentsResponse.data || []);
 
+      console.log('Dados carregados com sucesso!');
     } catch (error) {
-      console.error('Erro ao carregar dados financeiros:', error);
+      console.error('=== ERRO DETALHADO ===');
+      console.error('Tipo do erro:', error?.constructor?.name);
+      console.error('Mensagem:', error?.message);
+      console.error('Stack:', error?.stack);
+      
+      if (error?.message?.includes('Failed to fetch')) {
+        console.error('PROBLEMA DE CONECTIVIDADE:');
+        console.error('1. Verifique sua conexão com a internet');
+        console.error('2. Verifique as variáveis de ambiente do Supabase');
+        console.error('3. Verifique se o projeto Supabase está ativo');
+        
+        // Tentar uma requisição simples para testar conectividade
+        try {
+          console.log('Testando conectividade básica...');
+          const testResponse = await fetch(import.meta.env.VITE_SUPABASE_URL + '/rest/v1/', {
+            headers: {
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            }
+          });
+          console.log('Teste de conectividade:', testResponse.status, testResponse.statusText);
+        } catch (testError) {
+          console.error('Teste de conectividade falhou:', testError);
+        }
+      }
+      
+      // Definir dados vazios para evitar quebrar a interface
+      setContracts([]);
+      setPaymentMethods([]);
+      setPayments([]);
     } finally {
       setLoading(false);
     }
@@ -364,7 +406,9 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   // Executar atualização de status ao carregar
   React.useEffect(() => {
-    updateOverduePayments();
+    if (payments.length > 0) {
+      updateOverduePayments();
+    }
   }, [payments]);
   
   // Debug: Log dos dados carregados
