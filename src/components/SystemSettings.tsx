@@ -120,8 +120,25 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
     setLoading(true);
     setSaveStatus('idle');
+    setTestStatus('testing');
 
     try {
+      // Primeiro testar a conexão
+      const response = await fetch(`${supabaseConfig.url}/rest/v1/`, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseConfig.anonKey,
+          'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Conexão falhou: HTTP ${response.status}`);
+      }
+
+      setTestStatus('success');
+
       // Salvar no localStorage
       localStorage.setItem('supabase_url', supabaseConfig.url);
       localStorage.setItem('supabase_anon_key', supabaseConfig.anonKey);
@@ -141,14 +158,10 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         }
       }, 1000);
 
-      
-      // Notify parent component that config was saved
-      if (onConfigSaved) {
-        onConfigSaved();
-      }
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
       setSaveStatus('error');
+      setTestStatus('error');
     } finally {
       setLoading(false);
     }
@@ -265,33 +278,18 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <button
-            onClick={testConnection}
-            disabled={testStatus === 'testing' || !supabaseConfig.url || !supabaseConfig.anonKey}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
-          >
-            {testStatus === 'testing' ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            ) : (
-              <>
-                <Database className="h-5 w-5" />
-                <span>Testar Conexão</span>
-              </>
-            )}
-          </button>
-
+        <div className="flex justify-center">
           <button
             onClick={saveConfiguration}
             disabled={loading || !supabaseConfig.url || !supabaseConfig.anonKey}
-            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 px-8 rounded-lg transition-colors flex items-center space-x-2"
           >
             {loading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
             ) : (
               <>
                 <Save className="h-5 w-5" />
-                <span>Salvar Configurações</span>
+                <span>Salvar e Testar</span>
               </>
             )}
           </button>

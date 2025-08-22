@@ -335,24 +335,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         )}
 
         {/* Quick Actions */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex space-x-4">
-            <button
-              onClick={() => onNavigate('form')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Novo Contrato</span>
-            </button>
-            <button
-              onClick={() => onNavigate('contracts')}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
-            >
-              <FileText className="w-5 h-5" />
-              <span>Ver Contratos</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

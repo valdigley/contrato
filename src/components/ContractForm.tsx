@@ -490,18 +490,6 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-2xl w-full">
         {/* Navigation Header */}
-        {!isClientMode && onBackToList && (
-          <div className="mb-6">
-            <button
-              onClick={onBackToList}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Voltar para Gestão</span>
-            </button>
-          </div>
-        )}
-
         <div className="text-center mb-8">
           <div className="bg-blue-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
             <FileText className="h-8 w-8 text-blue-600" />
