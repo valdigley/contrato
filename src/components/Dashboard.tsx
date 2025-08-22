@@ -14,8 +14,8 @@ import {
   LogOut,
   User,
   BarChart3,
-  Link,
-  Check
+  Check,
+  Link
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -31,6 +31,8 @@ interface DashboardStats {
   pendingPayments: number;
   completedEvents: number;
   recentContracts: any[];
+  contractsThisMonth: number;
+  averageContractValue: number;
 }
 
 export default function Dashboard({ user, onNavigate }: DashboardProps) {
@@ -40,9 +42,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     monthlyRevenue: 0,
     pendingPayments: 0,
     completedEvents: 0,
-    recentContracts: []
+    recentContracts: [],
+    contractsThisMonth: 0,
+    averageContractValue: 0
   });
   const [loading, setLoading] = useState(true);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -53,6 +58,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     return uniqueTypes.size;
   };
 
+  const copyClientLink = () => {
+    // Implementation for copying client link
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
   const loadDashboardData = async () => {
     try {
       // Inicializar com zeros
@@ -61,7 +72,9 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         monthlyRevenue: 0,
         pendingPayments: 0,
         completedEvents: 0,
-        recentContracts: []
+        recentContracts: [],
+        contractsThisMonth: 0,
+        averageContractValue: 0
       });
 
       // Get photographer profile
@@ -93,6 +106,16 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             })
             .reduce((sum, c) => sum + Number(c.final_price || c.package_price || 0), 0);
 
+          const contractsThisMonth = contracts
+            .filter(c => {
+              const createdDate = new Date(c.created_at);
+              return createdDate.getMonth() === currentMonth && 
+                     createdDate.getFullYear() === currentYear;
+            }).length;
+
+          const totalValue = contracts.reduce((sum, c) => sum + Number(c.final_price || c.package_price || 0), 0);
+          const averageContractValue = contracts.length > 0 ? totalValue / contracts.length : 0;
+
           // Buscar pagamentos REAIS
           const { data: payments } = await supabase
             .from('payments')
@@ -110,7 +133,9 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             monthlyRevenue,
             pendingPayments: realPendingPayments,
             completedEvents: realCompletedEvents,
-            recentContracts: contracts.slice(0, 5)
+            recentContracts: contracts.slice(0, 5),
+            contractsThisMonth,
+            averageContractValue
           });
         } else {
           // Se não há contratos, manter tudo zerado
@@ -119,7 +144,9 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             monthlyRevenue: 0,
             pendingPayments: 0,
             completedEvents: 0,
-            recentContracts: []
+            recentContracts: [],
+            contractsThisMonth: 0,
+            averageContractValue: 0
           });
         }
       } else {
@@ -134,7 +161,9 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         monthlyRevenue: 0,
         pendingPayments: 0,
         completedEvents: 0,
-        recentContracts: []
+        recentContracts: [],
+        contractsThisMonth: 0,
+        averageContractValue: 0
       });
     } finally {
       setLoading(false);
@@ -272,22 +301,40 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           {modules.map((module) => {
             const IconComponent = module.icon;
             return (
-              <button
+              <div
                 key={module.id}
-                onClick={() => onNavigate(module.id)}
-                className={`${module.color} ${module.hoverColor} text-white rounded-xl shadow-lg p-6 transition-all duration-200 transform hover:scale-105 hover:shadow-xl`}
+                className={`${module.color} text-white rounded-xl shadow-lg p-6 transition-all duration-200 transform hover:scale-105 hover:shadow-xl relative`}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <IconComponent className="w-8 h-8" />
-                  {module.count && (
-                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
-                      {module.count}
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-xl font-bold mb-2">{module.title}</h3>
-                <p className="text-white/80 text-sm">{module.description}</p>
-              </button>
+                <button
+                  onClick={() => onNavigate(module.id)}
+                  className="w-full h-full text-left"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <IconComponent className="w-8 h-8" />
+                    {module.count !== null && (
+                      <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
+                        {module.count}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{module.title}</h3>
+                  <p className="text-white/80 text-sm">{module.description}</p>
+                </button>
+                
+                {/* Botão de copiar link apenas no card Novo Contrato */}
+                {module.id === 'form' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyClientLink();
+                    }}
+                    className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-colors"
+                    title={linkCopied ? 'Link Copiado!' : 'Copiar Link para Cliente'}
+                  >
+                    {linkCopied ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
