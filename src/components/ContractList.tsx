@@ -342,13 +342,6 @@ export default function ContractList({ onNewContract }: ContractListProps) {
               <h1 className="text-2xl font-bold text-gray-900">Gestão de Contratos</h1>
               <p className="text-gray-600 mt-1">Gerencie todos os seus contratos de eventos</p>
             </div>
-            <button
-              onClick={copyClientLink}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-            >
-              {linkCopied ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-              <span>{linkCopied ? 'Link Copiado!' : 'Copiar Link Cliente'}</span>
-            </button>
           </div>
         </div>
 
