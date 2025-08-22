@@ -36,7 +36,7 @@ cd /var/www/controle-fotografo
 ### 2. Clonar/Enviar arquivos do projeto
 ```bash
 # Se usando Git
-git clone <seu-repositorio> .
+git clone https://github.com/valdigley/controle.git .
 
 # Ou enviar arquivos via SCP/SFTP
 # scp -r ./projeto/* usuario@ip-vps:/var/www/controle-fotografo/

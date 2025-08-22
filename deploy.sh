@@ -52,7 +52,7 @@ sudo cp -r $PROJECT_DIR $BACKUP_DIR/backup_$DATE
 # Atualizar código (se usando Git)
 if [ -d ".git" ]; then
     log "Atualizando código do Git..."
-    git pull origin main || git pull origin master
+    git pull origin main
 else
     warning "Não é um repositório Git. Pulando atualização..."
 fi
