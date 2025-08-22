@@ -108,28 +108,111 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       contracts.forEach(contract => {
         if (contract.final_price || contract.package_price) {
           const paymentMethod = paymentMethods.find(pm => pm.id === contract.payment_method_id);
-          const installments = paymentMethod?.installments || 1;
           const totalAmount = contract.final_price || contract.package_price || 0;
-          const installmentAmount = totalAmount / installments;
           
-          // Criar parcelas baseadas no cronograma de pagamento
-          for (let i = 0; i < installments; i++) {
+          if (!paymentMethod) {
+            // Se não tem método de pagamento, criar um pagamento único
             const dueDate = new Date();
             if (contract.preferred_payment_day) {
               dueDate.setDate(contract.preferred_payment_day);
-              dueDate.setMonth(dueDate.getMonth() + i);
-            } else {
-              dueDate.setDate(dueDate.getDate() + (i * 30));
             }
             
             paymentsToCreate.push({
               contract_id: contract.id,
-              amount: installmentAmount,
+              amount: totalAmount,
               due_date: dueDate.toISOString().split('T')[0],
               status: 'pending',
-              description: installments > 1 ? `Parcela ${i + 1}/${installments}` : 'Pagamento único',
-              payment_method: paymentMethod?.name || 'Não especificado'
+              description: 'Pagamento único',
+              payment_method: 'Não especificado'
             });
+            return;
+          }
+          
+          const installments = paymentMethod.installments || 1;
+          const paymentSchedule = paymentMethod.payment_schedule || [];
+          
+          // Se tem cronograma personalizado (ex: 50% + 50%)
+          if (paymentSchedule.length > 0) {
+            paymentSchedule.forEach((schedule, index) => {
+              let dueDate = new Date();
+              
+              if (index === 0) {
+                // Primeira parcela: data atual respeitando dia preferido
+                if (contract.preferred_payment_day) {
+                  dueDate.setDate(contract.preferred_payment_day);
+                  // Se o dia já passou neste mês, vai para o próximo
+                  if (dueDate < new Date()) {
+                    dueDate.setMonth(dueDate.getMonth() + 1);
+                  }
+                }
+              } else if (index === paymentSchedule.length - 1 && contract.data_evento) {
+                // Última parcela: um dia antes do evento
+                dueDate = new Date(contract.data_evento);
+                dueDate.setDate(dueDate.getDate() - 1);
+              } else {
+                // Parcelas intermediárias: distribuídas entre primeira e última
+                const eventDate = contract.data_evento ? new Date(contract.data_evento) : new Date();
+                const firstPaymentDate = new Date();
+                if (contract.preferred_payment_day) {
+                  firstPaymentDate.setDate(contract.preferred_payment_day);
+                  if (firstPaymentDate < new Date()) {
+                    firstPaymentDate.setMonth(firstPaymentDate.getMonth() + 1);
+                  }
+                }
+                
+                const timeDiff = eventDate.getTime() - firstPaymentDate.getTime();
+                const monthsBetween = timeDiff / (1000 * 60 * 60 * 24 * 30);
+                const monthsPerInstallment = monthsBetween / (paymentSchedule.length - 1);
+                
+                dueDate = new Date(firstPaymentDate);
+                dueDate.setMonth(dueDate.getMonth() + Math.round(monthsPerInstallment * index));
+                
+                if (contract.preferred_payment_day) {
+                  dueDate.setDate(contract.preferred_payment_day);
+                }
+              }
+              
+              const amount = schedule.percentage > 0 
+                ? (totalAmount * schedule.percentage / 100)
+                : totalAmount / paymentSchedule.length;
+              
+              paymentsToCreate.push({
+                contract_id: contract.id,
+                amount: amount,
+                due_date: dueDate.toISOString().split('T')[0],
+                status: 'pending',
+                description: schedule.description || `Parcela ${index + 1}/${paymentSchedule.length}`,
+                payment_method: paymentMethod.name || 'Não especificado'
+              });
+            });
+          } else {
+            // Parcelas iguais distribuídas mensalmente
+            const installmentAmount = totalAmount / installments;
+            
+            for (let i = 0; i < installments; i++) {
+              const dueDate = new Date();
+              
+              if (contract.preferred_payment_day) {
+                dueDate.setDate(contract.preferred_payment_day);
+                dueDate.setMonth(dueDate.getMonth() + i);
+                
+                // Se o dia já passou no primeiro mês, vai para o próximo
+                if (i === 0 && dueDate < new Date()) {
+                  dueDate.setMonth(dueDate.getMonth() + 1);
+                }
+              } else {
+                dueDate.setDate(dueDate.getDate() + (i * 30));
+              }
+              
+              paymentsToCreate.push({
+                contract_id: contract.id,
+                amount: installmentAmount,
+                due_date: dueDate.toISOString().split('T')[0],
+                status: 'pending',
+                description: installments > 1 ? `Parcela ${i + 1}/${installments}` : 'Pagamento único',
+                payment_method: paymentMethod.name || 'Não especificado'
+              });
+            }
           }
         }
       });
