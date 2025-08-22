@@ -428,9 +428,18 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEventTypeColor(contract.tipo_evento)}`}>
                           {contract.tipo_evento}
                         </span>
+                        {contract.data_evento && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            📅 {formatDate(contract.data_evento)}
+                            {contract.horario_evento && (
+                              <span className="ml-2">🕐 {contract.horario_evento}</span>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(contract.created_at)}
+                        <div className="text-xs text-gray-400">Cadastrado em</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
@@ -536,6 +545,23 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
                         </span>
                       </div>
 
+                      {(selectedContract.data_evento || selectedContract.horario_evento) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedContract.data_evento && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">Data do Evento</label>
+                              <p className="text-sm text-gray-900">{formatDate(selectedContract.data_evento)}</p>
+                            </div>
+                          )}
+                          {selectedContract.horario_evento && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">Horário do Evento</label>
+                              <p className="text-sm text-gray-900">{selectedContract.horario_evento}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {selectedContract.nome_noivos && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Nome dos Noivos</label>
@@ -579,6 +605,54 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
                           <p className="text-sm text-gray-900">{selectedContract.local_cerimonia}</p>
                         </div>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Dados Financeiros */}
+                  {(selectedContract.package_price || selectedContract.final_price || selectedContract.preferred_payment_day) && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <DollarSign className="w-5 h-5 mr-2" />
+                        Dados Financeiros
+                      </h3>
+                      <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                        {selectedContract.package_price && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Preço do Pacote</label>
+                            <p className="text-sm text-gray-900">
+                              R$ {Number(selectedContract.package_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        )}
+                        {selectedContract.final_price && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Preço Final</label>
+                            <p className="text-sm text-gray-900">
+                              R$ {Number(selectedContract.final_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        )}
+                        {selectedContract.preferred_payment_day && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Dia Preferido para Pagamento</label>
+                            <p className="text-sm text-gray-900">Dia {selectedContract.preferred_payment_day} de cada mês</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Data de Cadastro */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <Calendar className="w-5 h-5 mr-2" />
+                      Informações do Sistema
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Data de Cadastro</label>
+                        <p className="text-sm text-gray-900">{formatDate(selectedContract.created_at)}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
