@@ -13,7 +13,9 @@ import {
   AlertTriangle,
   LogOut,
   User,
-  BarChart3
+  BarChart3,
+  Link,
+  Check
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
