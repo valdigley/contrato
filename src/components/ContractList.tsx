@@ -523,6 +523,14 @@ export default function ContractList({ onNewContract }: ContractListProps) {
                         <label className="block text-sm font-medium text-gray-700">Endereço</label>
                         <p className="text-sm text-gray-900">{selectedContract.endereco}</p>
                       </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">E-mail</label>
+                        <p className="text-sm text-gray-900">{selectedContract.email}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">WhatsApp</label>
+                        <p className="text-sm text-gray-900">{formatWhatsApp(selectedContract.whatsapp)}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -613,9 +621,9 @@ export default function ContractList({ onNewContract }: ContractListProps) {
                   >
                     ✕
                   </button>
+                </div>
                 <div className="bg-gray-50 p-4 rounded-lg mb-6 max-h-96 overflow-y-auto">
                   <pre className="whitespace-pre-wrap text-sm font-mono">{generatedContract}</pre>
-                </div>
                 </div>
                 <div className="flex space-x-4">
                   <button
