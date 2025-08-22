@@ -299,6 +299,22 @@ export default function ContractList({ onNewContract }: ContractListProps) {
     return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
+  // Filter contracts based on search term and filter type
+  const filteredContracts = contracts.filter(contract => {
+    const matchesSearch = searchTerm === '' || 
+      contract.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contract.cpf.includes(searchTerm) ||
+      contract.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contract.whatsapp.includes(searchTerm) ||
+      contract.cidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (contract.nome_noivos && contract.nome_noivos.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (contract.nome_aniversariante && contract.nome_aniversariante.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesType = filterType === '' || contract.tipo_evento === filterType;
+    
+    return matchesSearch && matchesType;
+  });
+
   // Debug da busca
   console.log('Termo de busca:', searchTerm);
   console.log('Filtro de tipo:', filterType);
