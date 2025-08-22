@@ -4,6 +4,7 @@ import ContractForm from './components/ContractForm';
 import ContractList from './components/ContractList';
 import SystemSettings from './components/SystemSettings';
 import FinancialDashboard from './components/FinancialDashboard';
+import FinancialDashboard from './components/FinancialDashboard';
 import Login from './components/Login';
 import { useAuth } from './hooks/useAuth';
 import { LogOut, User } from 'lucide-react';
@@ -16,7 +17,11 @@ function App() {
     const editId = urlParams.get('edit');
     const isSettings = urlParams.get('settings') === 'true';
     const isFinancial = urlParams.get('financial') === 'true';
+    const isFinancial = urlParams.get('financial') === 'true';
     
+    if (isFinancial) {
+      return 'financial';
+    }
     if (isFinancial) {
       return 'financial';
     }
@@ -36,6 +41,8 @@ function App() {
       window.history.pushState({}, '', window.location.pathname);
     } else if (view === 'settings') {
       window.history.pushState({}, '', '?settings=true');
+    } else if (view === 'financial') {
+      window.history.pushState({}, '', '?financial=true');
     } else if (view === 'financial') {
       window.history.pushState({}, '', '?financial=true');
     }
@@ -71,6 +78,15 @@ function App() {
     );
   }
 
+  if (currentView === 'financial') {
+    return (
+      <div>
+        {isAuthenticated && <UserHeader user={user} onSignOut={signOut} />}
+        <FinancialDashboard onBack={() => handleViewChange('list')} />
+      </div>
+    );
+  }
+
   if (currentView === 'settings') {
     return (
       <div>
@@ -89,6 +105,7 @@ function App() {
       {isAuthenticated && <UserHeader user={user} onSignOut={signOut} />}
       <ContractList 
         onNewContract={() => handleViewChange('form')}
+        onFinancial={() => handleViewChange('financial')}
         onFinancial={() => handleViewChange('financial')}
       />
     </div>
