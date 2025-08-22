@@ -102,23 +102,45 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const createPaymentsForContract = async (contract: Contract) => {
     try {
+      console.log('=== CRIANDO PARCELAS PARA CONTRATO ===');
+      console.log('Cliente:', contract.nome_completo);
+      console.log('Contract ID:', contract.id);
+      
       // Verificar se já existem pagamentos para este contrato
-      const existingPayments = payments.filter(p => p.contract_id === contract.id);
+      const { data: existingPayments, error: checkError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('contract_id', contract.id);
+        
+      if (checkError) {
+        console.error('Erro ao verificar pagamentos existentes:', checkError);
+        throw checkError;
+      }
+      
+      console.log('Pagamentos existentes:', existingPayments?.length || 0);
+      
       if (existingPayments.length > 0) {
         alert('Este contrato já possui pagamentos cadastrados');
+        console.log('Parcelas já existem, cancelando criação');
         return;
       }
 
       const totalAmount = Number(contract.final_price) || Number(contract.package_price) || 0;
+      console.log('Valor total do contrato:', totalAmount);
+      
       if (totalAmount <= 0) {
         alert('Contrato sem valor definido');
+        console.log('Valor inválido, cancelando');
         return;
       }
 
       const paymentMethod = paymentMethods.find(pm => pm.id === contract.payment_method_id);
+      console.log('Método de pagamento encontrado:', paymentMethod?.name || 'Nenhum');
+      
       const paymentsToCreate: Omit<Payment, 'id' | 'created_at'>[] = [];
 
       if (!paymentMethod) {
+        console.log('Criando pagamento único');
         // Pagamento único
         paymentsToCreate.push({
           contract_id: contract.id,
@@ -130,9 +152,12 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
         });
       } else {
         const paymentSchedule = paymentMethod.payment_schedule || [];
+        console.log('Cronograma de pagamento:', paymentSchedule);
         
         if (paymentSchedule.length > 0) {
+          console.log('Usando cronograma personalizado');
           // Cronograma personalizado
+          let totalPercentage = 0;
           paymentSchedule.forEach((schedule, index) => {
             let dueDate = new Date();
             
@@ -150,9 +175,15 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               }
             }
             
-            const amount = schedule.percentage > 0 
-              ? (totalAmount * schedule.percentage / 100)
-              : totalAmount / paymentSchedule.length;
+            let amount: number;
+            if (schedule.percentage > 0) {
+              amount = (totalAmount * schedule.percentage / 100);
+              totalPercentage += schedule.percentage;
+              console.log(`Parcela ${index + 1}: ${schedule.percentage}% = R$ ${amount.toFixed(2)}`);
+            } else {
+              amount = totalAmount / paymentSchedule.length;
+              console.log(`Parcela ${index + 1}: Divisão igual = R$ ${amount.toFixed(2)}`);
+            }
             
             paymentsToCreate.push({
               contract_id: contract.id,
@@ -167,10 +198,19 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
               payment_method: paymentMethod.name
             });
           });
+          
+          console.log('Total de porcentagem:', totalPercentage);
+          if (totalPercentage > 100) {
+            alert(`Erro: Total de porcentagem (${totalPercentage}%) excede 100%`);
+            return;
+          }
         } else {
+          console.log('Usando parcelas iguais');
           // Parcelas iguais
           const installments = paymentMethod.installments || 1;
+          console.log('Número de parcelas:', installments);
           const installmentAmount = totalAmount / installments;
+          console.log('Valor por parcela:', installmentAmount);
           
           for (let i = 0; i < installments; i++) {
             let dueDate = new Date();
@@ -196,22 +236,38 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
         }
       }
 
+      console.log('Parcelas a serem criadas:', paymentsToCreate.length);
+      const totalToCreate = paymentsToCreate.reduce((sum, p) => sum + p.amount, 0);
+      console.log('Valor total das parcelas:', totalToCreate);
+      console.log('Valor do contrato:', totalAmount);
+      
+      if (Math.abs(totalToCreate - totalAmount) > 0.01) {
+        alert(`Erro: Soma das parcelas (R$ ${totalToCreate.toFixed(2)}) não confere com o valor do contrato (R$ ${totalAmount.toFixed(2)})`);
+        console.error('Valores não conferem!');
+        return;
+      }
+      
       if (paymentsToCreate.length > 0) {
+        console.log('Inserindo parcelas no banco...');
         const { data, error } = await supabase
           .from('payments')
           .insert(paymentsToCreate)
           .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao inserir parcelas:', error);
+          throw error;
+        }
         
-        setPayments(prev => [...prev, ...data]);
-        alert('Parcelas criadas com sucesso!');
-
-        // Recarregar todos os dados após criar
+        console.log('Parcelas criadas com sucesso:', data?.length);
+        
+        // Recarregar todos os dados
         await fetchFinancialData();
+        alert('Parcelas criadas com sucesso!');
       }
     } catch (error) {
       console.error('Erro ao criar pagamentos automáticos:', error);
+      alert(`Erro ao criar parcelas: ${(error as Error).message}`);
     }
   };
   
