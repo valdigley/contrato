@@ -352,6 +352,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         <p className="text-xs text-gray-500">Cadastrado em</p>
                         <p className="text-sm text-gray-600">{formatDate(contract.created_at)}</p>
                       </div>
+                    </div>
                     {contract.local_festa && (
                       <div className="pt-2 border-t border-gray-200">
                         <div className="flex items-center space-x-1 text-sm text-gray-600">
@@ -394,10 +395,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               >
                 Criar Primeiro Contrato
               </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         )}
