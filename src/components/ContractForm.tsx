@@ -10,6 +10,8 @@ interface ContractFormProps {
 interface ContractData {
   nome_completo: string;
   cpf: string;
+  email: string;
+  whatsapp: string;
   endereco: string;
   cidade: string;
   data_nascimento: string;
@@ -40,6 +42,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
   const [formData, setFormData] = useState<ContractData>({
     nome_completo: '',
     cpf: '',
+    email: '',
+    whatsapp: '',
     endereco: '',
     cidade: '',
     data_nascimento: '',
@@ -216,6 +220,24 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     return cleanCPF.length === 11;
   };
 
+  const formatWhatsApp = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  };
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateWhatsApp = (whatsapp: string): boolean => {
+    const cleanWhatsApp = whatsapp.replace(/\D/g, '');
+    return cleanWhatsApp.length === 11;
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Partial<ContractData> = {};
 
@@ -227,6 +249,18 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       newErrors.cpf = 'CPF é obrigatório';
     } else if (!validateCPF(formData.cpf)) {
       newErrors.cpf = 'CPF deve ter 11 dígitos';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'E-mail é obrigatório';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'E-mail deve ter um formato válido';
+    }
+
+    if (!formData.whatsapp.trim()) {
+      newErrors.whatsapp = 'WhatsApp é obrigatório';
+    } else if (!validateWhatsApp(formData.whatsapp)) {
+      newErrors.whatsapp = 'WhatsApp deve ter 11 dígitos (DDD + número)';
     }
 
     if (!formData.endereco.trim()) {
@@ -266,6 +300,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     let formattedValue = value;
     if (name === 'cpf') {
       formattedValue = formatCPF(value);
+    } else if (name === 'whatsapp') {
+      formattedValue = formatWhatsApp(value);
     } else if (name === 'event_type_id') {
       // When event type changes, also update the tipo_evento field for backward compatibility
       const selectedEventType = eventTypes.find(et => et.id === value);
@@ -309,6 +345,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
         .insert([{
           nome_completo: formData.nome_completo,
           cpf: formData.cpf.replace(/\D/g, ''),
+          email: formData.email,
+          whatsapp: formData.whatsapp.replace(/\D/g, ''),
           endereco: formData.endereco,
           cidade: formData.cidade,
           data_nascimento: formData.data_nascimento,
@@ -349,6 +387,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       setFormData({
         nome_completo: '',
         cpf: '',
+        email: '',
+        whatsapp: '',
         endereco: '',
         cidade: '',
         data_nascimento: '',
@@ -476,6 +516,47 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
               />
               {errors.cpf && (
                 <p className="mt-1 text-sm text-red-600">{errors.cpf}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                E-mail *
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+                placeholder="Digite seu e-mail"
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-2">
+                WhatsApp *
+              </label>
+              <input
+                type="text"
+                id="whatsapp"
+                name="whatsapp"
+                value={formData.whatsapp}
+                onChange={handleInputChange}
+                maxLength={15}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.whatsapp ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+                placeholder="(11) 99999-9999"
+              />
+              {errors.whatsapp && (
+                <p className="mt-1 text-sm text-red-600">{errors.whatsapp}</p>
               )}
             </div>
 

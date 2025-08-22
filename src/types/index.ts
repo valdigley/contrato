@@ -32,6 +32,8 @@ export interface ContractData {
   id?: string;
   nome_completo: string;
   cpf: string;
+  email: string;
+  whatsapp: string;
   endereco: string;
   cidade: string;
   data_nascimento: string;

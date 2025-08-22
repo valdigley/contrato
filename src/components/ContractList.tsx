@@ -6,6 +6,8 @@ interface Contract {
   id: string;
   nome_completo: string;
   cpf: string;
+  email: string;
+  whatsapp: string;
   endereco: string;
   cidade: string;
   data_nascimento: string;
@@ -265,6 +267,12 @@ export default function ContractList({ onNewContract }: ContractListProps) {
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
   };
 
+  const formatWhatsApp = (whatsapp: string) => {
+    if (!whatsapp) return '';
+    const clean = whatsapp.replace(/\D/g, '');
+    return clean.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
@@ -283,6 +291,8 @@ export default function ContractList({ onNewContract }: ContractListProps) {
     const matchesSearch = !searchTerm || 
       contract.nome_completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contract.cpf?.includes(searchTerm) ||
+      contract.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contract.whatsapp?.includes(searchTerm) ||
       contract.cidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (contract.nome_noivos && contract.nome_noivos.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (contract.nome_aniversariante && contract.nome_aniversariante.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -353,7 +363,7 @@ export default function ContractList({ onNewContract }: ContractListProps) {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Buscar por nome, CPF, cidade, noivos ou aniversariante..."
+                  placeholder="Buscar por nome, CPF, email, WhatsApp, cidade, noivos ou aniversariante..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -420,6 +430,9 @@ export default function ContractList({ onNewContract }: ContractListProps) {
                           </div>
                           <div className="text-sm text-gray-500">
                             {formatCPF(contract.cpf)} • {contract.cidade}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            📧 {contract.email} • 📱 {contract.whatsapp ? formatWhatsApp(contract.whatsapp) : 'N/A'}
                           </div>
                         </div>
                       </td>
