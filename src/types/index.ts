@@ -41,6 +41,8 @@ export interface ContractData {
   event_type_id?: string;
   package_id?: string;
   package_price?: number;
+  data_evento?: string;
+  horario_evento?: string;
   local_pre_wedding?: string;
   local_making_of?: string;
   local_cerimonia?: string;

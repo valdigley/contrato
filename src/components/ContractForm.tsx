@@ -48,6 +48,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     cidade: '',
     data_nascimento: '',
     tipo_evento: '',
+    data_evento: '',
+    horario_evento: '',
     local_pre_wedding: '',
     local_making_of: '',
     local_cerimonia: '',
@@ -287,6 +289,14 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       newErrors.package_id = 'Pacote é obrigatório';
     }
 
+    if (!formData.data_evento) {
+      newErrors.data_evento = 'Data do evento é obrigatória';
+    }
+
+    if (!formData.horario_evento) {
+      newErrors.horario_evento = 'Horário do evento é obrigatório';
+    }
+
     if (formData.payment_method_id && !formData.preferred_payment_day) {
       newErrors.preferred_payment_day = 'Dia do pagamento é obrigatório quando uma forma de pagamento é selecionada';
     }
@@ -357,6 +367,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
           payment_method_id: formData.payment_method_id || null,
           final_price: formData.final_price || formData.package_price,
           preferred_payment_day: formData.preferred_payment_day ? parseInt(formData.preferred_payment_day) : null,
+          data_evento: formData.data_evento,
+          horario_evento: formData.horario_evento,
           local_pre_wedding: formData.local_pre_wedding || null,
           local_making_of: formData.local_making_of || null,
           local_cerimonia: formData.local_cerimonia || null,
@@ -393,6 +405,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
         cidade: '',
         data_nascimento: '',
         tipo_evento: '',
+        data_evento: '',
+        horario_evento: '',
         local_pre_wedding: '',
         local_making_of: '',
         local_cerimonia: '',
@@ -819,6 +833,47 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 )}
               </div>
             )}
+
+            {/* Data e Horário do Evento */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="data_evento" className="block text-sm font-medium text-gray-700 mb-2">
+                  Data do Evento *
+                </label>
+                <input
+                  type="date"
+                  id="data_evento"
+                  name="data_evento"
+                  value={formData.data_evento}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.data_evento ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {errors.data_evento && (
+                  <p className="mt-1 text-sm text-red-600">{errors.data_evento}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="horario_evento" className="block text-sm font-medium text-gray-700 mb-2">
+                  Horário do Evento *
+                </label>
+                <input
+                  type="time"
+                  id="horario_evento"
+                  name="horario_evento"
+                  value={formData.horario_evento}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.horario_evento ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {errors.horario_evento && (
+                  <p className="mt-1 text-sm text-red-600">{errors.horario_evento}</p>
+                )}
+              </div>
+            </div>
 
             {/* Debug: Mostrar informações para verificar */}
           </div>
