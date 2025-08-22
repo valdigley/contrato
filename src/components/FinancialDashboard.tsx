@@ -40,6 +40,7 @@ interface Payment {
   description: string;
   created_at: string;
   payment_method?: string;
+  notes?: string;
 }
 
 interface FinancialDashboardProps {
@@ -236,6 +237,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       console.error('Erro ao criar pagamentos automáticos:', error);
     }
   };
+  
   const calculateFinancialSummary = () => {
     const totalContracts = contracts.length;
     const totalValue = contracts.reduce((sum, contract) => {
@@ -308,11 +310,24 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const markPaymentAsPaid = async (paymentId: string) => {
     try {
+      // Verificar se o pagamento existe e não está já pago
+      const existingPayment = payments.find(p => p.id === paymentId);
+      if (!existingPayment) {
+        alert('Pagamento não encontrado');
+        return;
+      }
+      
+      if (existingPayment.status === 'paid') {
+        alert('Este pagamento já foi marcado como pago');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('payments')
         .update({ 
           status: 'paid',
-          paid_date: new Date().toISOString().split('T')[0]
+          paid_date: new Date().toISOString().split('T')[0],
+          notes: 'Marcado como pago manualmente'
         })
         .eq('id', paymentId)
         .select()
@@ -320,12 +335,16 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
       if (error) throw error;
       
+      // Atualizar o estado local
       setPayments(prev => prev.map(payment => 
         payment.id === paymentId ? data : payment
       ));
+      
+      // Mostrar confirmação
+      alert('Pagamento marcado como pago com sucesso!');
     } catch (error) {
       console.error('Erro ao marcar pagamento como pago:', error);
-      alert('Erro ao atualizar pagamento');
+      alert(`Erro ao atualizar pagamento: ${error.message}`);
     }
   };
 
