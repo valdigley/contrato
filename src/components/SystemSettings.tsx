@@ -719,16 +719,22 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
                           <code>{'{{nome_completo}}'}</code>
                           <code>{'{{cpf}}'}</code>
+                          <code>{'{{email}}'}</code>
+                          <code>{'{{whatsapp}}'}</code>
                           <code>{'{{endereco}}'}</code>
                           <code>{'{{cidade}}'}</code>
                           <code>{'{{data_nascimento}}'}</code>
                           <code>{'{{tipo_evento}}'}</code>
+                          <code>{'{{data_evento}}'}</code>
+                          <code>{'{{horario_evento}}'}</code>
                           <code>{'{{package_name}}'}</code>
                           <code>{'{{package_price}}'}</code>
                           <code>{'{{nome_noivos}}'}</code>
                           <code>{'{{nome_aniversariante}}'}</code>
                           <code>{'{{local_festa}}'}</code>
                           <code>{'{{local_pre_wedding}}'}</code>
+                          <code>{'{{local_making_of}}'}</code>
+                          <code>{'{{local_cerimonia}}'}</code>
                         </div>
                       </div>
                       <textarea
