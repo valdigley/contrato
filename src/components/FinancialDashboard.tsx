@@ -306,11 +306,24 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const markPaymentAsPaid = async (paymentId: string) => {
     try {
+      // Verificar se o pagamento existe e não está já pago
+      const existingPayment = payments.find(p => p.id === paymentId);
+      if (!existingPayment) {
+        alert('Pagamento não encontrado');
+        return;
+      }
+      
+      if (existingPayment.status === 'paid') {
+        alert('Este pagamento já foi marcado como pago');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('payments')
         .update({ 
           status: 'paid',
-          paid_date: new Date().toISOString().split('T')[0]
+          paid_date: new Date().toISOString().split('T')[0],
+          notes: 'Marcado como pago manualmente'
         })
         .eq('id', paymentId)
         .select()
@@ -318,12 +331,16 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
       if (error) throw error;
       
+      // Atualizar o estado local
       setPayments(prev => prev.map(payment => 
         payment.id === paymentId ? data : payment
       ));
+      
+      // Mostrar confirmação
+      alert('Pagamento marcado como pago com sucesso!');
     } catch (error) {
       console.error('Erro ao marcar pagamento como pago:', error);
-      alert('Erro ao atualizar pagamento');
+      alert(`Erro ao atualizar pagamento: ${error.message}`);
     }
   };
 
@@ -615,7 +632,23 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">Pagamentos - {selectedContract.nome_completo}</h2>
-                    <p className="text-gray-600">{selectedContract.tipo_evento}</p>
+                    <div className="text-gray-600 space-y-1">
+                      <p>{selectedContract.tipo_evento}</p>
+                      {(() => {
+                        const paymentMethod = paymentMethods.find(pm => pm.id === selectedContract.payment_method_id);
+                        return paymentMethod ? (
+                          <p className="text-sm">
+                            <span className="font-medium">Forma de pagamento:</span> {paymentMethod.name}
+                            {paymentMethod.installments > 1 && (
+                              <span className="ml-2 text-blue-600">({paymentMethod.installments}x)</span>
+                            )}
+                          </p>
+                        ) : null;
+                      })()}
+                      <p className="text-sm">
+                        <span className="font-medium">Valor total:</span> R$ {Number(selectedContract.final_price || selectedContract.package_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex space-x-2">
                     <button
@@ -634,20 +667,155 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                   </div>
                 </div>
 
+                {/* Payment Summary */}
+                {(() => {
+                  const contractPayments = getContractPayments(selectedContract.id);
+                  const totalPaid = contractPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+                  const totalPending = contractPayments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+                  const totalOverdue = contractPayments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
+                  const totalValue = selectedContract.final_price || selectedContract.package_price || 0;
+                  
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <div className="text-sm font-medium text-blue-700">Total do Contrato</div>
+                        <div className="text-lg font-semibold text-blue-900">
+                          R$ {Number(totalValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <div className="text-sm font-medium text-green-700">Pago</div>
+                        <div className="text-lg font-semibold text-green-900">
+                          R$ {totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      <div className="bg-yellow-50 rounded-lg p-4">
+                        <div className="text-sm font-medium text-yellow-700">Pendente</div>
+                        <div className="text-lg font-semibold text-yellow-900">
+                          R$ {totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      <div className="bg-red-50 rounded-lg p-4">
+                        <div className="text-sm font-medium text-red-700">Em Atraso</div>
+                        <div className="text-lg font-semibold text-red-900">
+                          R$ {totalOverdue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="space-y-4">
                   {getContractPayments(selectedContract.id).map((payment) => (
-                    <div key={payment.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-start">
+                    <div key={payment.id} className={`border rounded-lg p-4 ${
+                      payment.status === 'paid' ? 'border-green-200 bg-green-50' :
+                      payment.status === 'overdue' ? 'border-red-200 bg-red-50' :
+                      'border-gray-200 bg-white'
+                    }`}>
+                      <div className="flex justify-between items-center">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <h4 className="font-medium text-gray-900">{payment.description}</h4>
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
-                              {getStatusLabel(payment.status)}
-                            </span>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="font-medium text-gray-900">{payment.description}</h4>
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.status)}`}>
+                                {getStatusLabel(payment.status)}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-semibold text-gray-900">
+                                R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <p>Valor: R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            <p>Vencimento: {new Date(payment.due_date).toLocaleDateString('pt-BR')}</p>
+                          <div className="flex justify-between items-center text-sm text-gray-600">
+                            <div className="space-y-1">
+                              <p>
+                                <span className="font-medium">Vencimento:</span> {new Date(payment.due_date).toLocaleDateString('pt-BR')}
+                                {new Date(payment.due_date) < new Date() && payment.status !== 'paid' && (
+                                  <span className="ml-2 text-red-600 font-medium">(Vencido)</span>
+                                )}
+                              </p>
+                              {payment.paid_date && (
+                                <p>
+                                  <span className="font-medium">Pago em:</span> {new Date(payment.paid_date).toLocaleDateString('pt-BR')}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {payment.status !== 'paid' && (
+                                <button
+                                  onClick={() => markPaymentAsPaid(payment.id)}
+                                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center space-x-1 transition-colors"
+                                  title="Marcar como pago"
+                                >
+                                  <Check className="w-3 h-3" />
+                                  <span>Marcar como Pago</span>
+                                </button>
+                              )}
+                              {payment.status === 'paid' && (
+                                <div className="flex items-center space-x-1 text-green-600">
+                                  <Check className="w-4 h-4" />
+                                  <span className="text-sm font-medium">Pago</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {getContractPayments(selectedContract.id).length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum pagamento encontrado</h3>
+                      <p className="text-gray-600 mb-4">
+                        Este contrato ainda não possui parcelas de pagamento cadastradas.
+                      </p>
+                      <button
+                        onClick={() => setShowAddPaymentModal(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 mx-auto"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Adicionar Primeira Parcela</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Progress Bar */}
+                {(() => {
+                  const contractPayments = getContractPayments(selectedContract.id);
+                  const totalPaid = contractPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+                  const totalValue = selectedContract.final_price || selectedContract.package_price || 0;
+                  const progress = totalValue > 0 ? (totalPaid / totalValue) * 100 : 0;
+                  
+                  return contractPayments.length > 0 ? (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-700">Progresso do Pagamento</span>
+                        <span className="text-sm text-gray-600">{progress.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className={`h-3 rounded-full transition-all duration-300 ${
+                            progress === 100 ? 'bg-green-600' : 
+                            progress > 0 ? 'bg-blue-600' : 'bg-gray-300'
+                          }`}
+                          style={{ width: `${Math.min(progress, 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>R$ {totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} pago</span>
+                        <span>R$ {Number(totalValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} total</span>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
                             {payment.paid_date && (
                               <p>Pago em: {new Date(payment.paid_date).toLocaleDateString('pt-BR')}</p>
                             )}
