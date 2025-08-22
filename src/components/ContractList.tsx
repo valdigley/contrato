@@ -48,12 +48,9 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
 
   const fetchContracts = async () => {
     try {
-      console.log('Buscando contratos...');
-      
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.error('Usuário não autenticado');
         setLoading(false);
         return;
       }
@@ -66,7 +63,6 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
         .single();
 
       if (photographerError) {
-        console.warn('Perfil de fotógrafo não encontrado:', photographerError);
         setContracts([]);
         setLoading(false);
         return;
@@ -79,21 +75,11 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
         .eq('photographer_id', photographerData.id)
         .order('created_at', { ascending: false });
       
-      console.log('Resposta dos contratos:', contractsResponse);
-      
-      if (contractsResponse.error) {
-        console.error('Erro na query de contratos:', contractsResponse.error);
-        console.error('Código do erro:', contractsResponse.error.code);
-        console.error('Mensagem do erro:', contractsResponse.error.message);
-      }
-
       if (contractsResponse.error) {
         console.error('Erro ao buscar contratos:', contractsResponse.error);
-        // Não fazer throw para não quebrar a aplicação
       }
 
       setContracts(contractsResponse.data || []);
-      console.log('Contratos carregados:', contractsResponse.data?.length || 0);
       
       // Carregar templates e packages separadamente para não bloquear a listagem
       const [templatesResponse, packagesResponse] = await Promise.all([
@@ -106,7 +92,6 @@ export default function ContractList({ onNewContract, onFinancial }: ContractLis
       
     } catch (error) {
       console.error('Erro ao buscar contratos:', error);
-      // Mesmo com erro, tentar mostrar o que conseguiu carregar
     } finally {
       setLoading(false);
     }

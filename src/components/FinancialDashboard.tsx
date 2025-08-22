@@ -137,13 +137,7 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
       if (photographerError) {
         console.warn('Perfil de fotógrafo não encontrado:', photographerError);
-        // If no photographer profile exists, show empty state
-        setContracts([]);
-        setPayments([]);
-        calculateSummary([], []);
-        calculateMonthlyData([], []);
-        setLoading(false);
-        return;
+        throw new Error('Perfil de fotógrafo não encontrado. Crie seu perfil primeiro.');
       }
 
       // Fetch contracts for this photographer
@@ -154,19 +148,16 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
         .order('created_at', { ascending: false });
 
       if (contractsError) {
-        if (contractsError.message.includes('Invalid API key')) {
-          throw new Error('Chave de API inválida. Verifique suas credenciais do Supabase nas configurações.');
-        }
         throw contractsError;
       }
 
-      // Buscar pagamentos com dados do contrato
+      // Buscar pagamentos relacionados aos contratos deste fotógrafo
+      const contractIds = contractsData?.map(c => c.id) || [];
+      
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .select(`
-          *,
-          contract:contratos(*)
-        `)
+        .select('*')
+        .in('contract_id', contractIds)
         .order('due_date', { ascending: true });
 
       if (paymentsError && !paymentsError.message.includes('does not exist')) {
