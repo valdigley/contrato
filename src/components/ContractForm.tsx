@@ -349,11 +349,18 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
 
       setSubmitStatus('success');
       
+      console.log('Contrato salvo com sucesso:', data);
+      
       // If not in client mode, go back to list after 2 seconds
       if (!isClientMode && onBackToList) {
         setTimeout(() => {
           onBackToList();
         }, 2000);
+      } else if (isClientMode) {
+        // Em modo cliente, mostrar mensagem de sucesso por mais tempo
+        setTimeout(() => {
+          setSubmitStatus('idle');
+        }, 5000);
       }
       
       setFormData({

@@ -50,21 +50,32 @@ export default function ContractList({ onNewContract }: ContractListProps) {
 
   const fetchContracts = async () => {
     try {
-      const [contractsResponse, templatesResponse, packagesResponse] = await Promise.all([
-        supabase.from('contratos').select('*').order('created_at', { ascending: false }),
+      console.log('Buscando contratos...');
+      
+      const contractsResponse = await supabase
+        .from('contratos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      console.log('Resposta dos contratos:', contractsResponse);
+
+      if (contractsResponse.error) throw contractsResponse.error;
+
+      setContracts(contractsResponse.data || []);
+      console.log('Contratos carregados:', contractsResponse.data?.length || 0);
+      
+      // Carregar templates e packages separadamente para não bloquear a listagem
+      const [templatesResponse, packagesResponse] = await Promise.all([
         supabase.from('contract_templates').select('*').eq('is_active', true),
         supabase.from('packages').select('*').eq('is_active', true)
       ]);
-
-      if (contractsResponse.error) throw contractsResponse.error;
-      if (templatesResponse.error) throw templatesResponse.error;
-      if (packagesResponse.error) throw packagesResponse.error;
-
-      setContracts(contractsResponse.data || []);
-      setTemplates(templatesResponse.data || []);
-      setPackages(packagesResponse.data || []);
+      
+      if (!templatesResponse.error) setTemplates(templatesResponse.data || []);
+      if (!packagesResponse.error) setPackages(packagesResponse.data || []);
+      
     } catch (error) {
       console.error('Erro ao buscar contratos:', error);
+      // Mesmo com erro, tentar mostrar o que conseguiu carregar
     } finally {
       setLoading(false);
     }
