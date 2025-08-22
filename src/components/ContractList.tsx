@@ -269,10 +269,10 @@ export default function ContractList({ onNewContract }: ContractListProps) {
   };
 
   const filteredContracts = contracts.filter(contract => {
-    const matchesSearch = 
-      contract.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contract.cpf.includes(searchTerm) ||
-      contract.cidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = !searchTerm || 
+      contract.nome_completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contract.cpf?.includes(searchTerm) ||
+      contract.cidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (contract.nome_noivos && contract.nome_noivos.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (contract.nome_aniversariante && contract.nome_aniversariante.toLowerCase().includes(searchTerm.toLowerCase()));
     
@@ -280,6 +280,12 @@ export default function ContractList({ onNewContract }: ContractListProps) {
     
     return matchesSearch && matchesFilter;
   });
+
+  // Debug da busca
+  console.log('Termo de busca:', searchTerm);
+  console.log('Filtro de tipo:', filterType);
+  console.log('Total de contratos:', contracts.length);
+  console.log('Contratos filtrados:', filteredContracts.length);
 
   if (loading) {
     return (
