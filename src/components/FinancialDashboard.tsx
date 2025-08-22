@@ -312,46 +312,43 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const calculateFinancialSummary = () => {
     const totalContracts = contracts.length;
-    const totalValue = contracts.reduce((sum, contract) => {
-      const value = Number(contract.final_price) || Number(contract.package_price) || 0;
-      return sum + value;
-    }, 0);
+    
+    // Calcular valor total baseado nos contratos
+    let totalValue = 0;
+    contracts.forEach(contract => {
+      const contractValue = Number(contract.final_price) || Number(contract.package_price) || 0;
+      totalValue += contractValue;
+    });
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Calcular totais baseados nos pagamentos reais
-    const totalPaid = payments
-      .filter(p => p.status === 'paid')
-      .reduce((sum, payment) => sum + Number(payment.amount), 0);
+    // Calcular totais baseados nos pagamentos
+    let totalPaid = 0;
+    let totalOverdue = 0;
+    let totalPending = 0;
     
-    // Pagamentos em atraso (vencidos e não pagos)
-    const totalOverdue = payments
-      .filter(p => {
-        if (p.status === 'paid') return false;
-        const dueDate = new Date(p.due_date);
-        return dueDate < today;
-      })
-      .reduce((sum, payment) => sum + Number(payment.amount), 0);
-    
-    // Pagamentos pendentes (futuros e não pagos)
-    const totalPending = payments
-      .filter(p => {
-        if (p.status === 'paid') return false;
-        const dueDate = new Date(p.due_date);
-        return dueDate >= today;
-      })
-      .reduce((sum, payment) => sum + Number(payment.amount), 0);
-
-    console.log('Resumo financeiro calculado:', {
-      totalContracts,
-      totalValue,
-      totalPaid,
-      totalPending,
-      totalOverdue
+    payments.forEach(payment => {
+      const amount = Number(payment.amount) || 0;
+      
+      if (payment.status === 'paid') {
+        totalPaid += amount;
+      } else {
+        const dueDate = new Date(payment.due_date);
+        if (dueDate < today) {
+          totalOverdue += amount;
+        } else {
+          totalPending += amount;
+        }
+      }
     });
     
-    return {
+    // Se não há pagamentos cadastrados, considerar tudo como pendente
+    if (payments.length === 0 && totalValue > 0) {
+      totalPending = totalValue;
+    }
+
+    const summary = {
       totalContracts,
       totalValue,
       totalPaid,
@@ -359,14 +356,35 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
       totalOverdue,
       paidPercentage: totalValue > 0 ? (totalPaid / totalValue) * 100 : 0
     };
+    
+    console.log('Resumo financeiro calculado:', summary);
+    
+    return summary;
   };
 
   // Executar atualização de status ao carregar
   React.useEffect(() => {
-    if (payments.length > 0) {
-      updateOverduePayments();
-    }
-  }, [payments.length]);
+    updateOverduePayments();
+  }, [payments]);
+  
+  // Debug: Log dos dados carregados
+  React.useEffect(() => {
+    console.log('=== DEBUG DASHBOARD ===');
+    console.log('Contratos carregados:', contracts.length);
+    console.log('Pagamentos carregados:', payments.length);
+    console.log('Contratos:', contracts.map(c => ({
+      nome: c.nome_completo,
+      valor_final: c.final_price,
+      valor_pacote: c.package_price,
+      id: c.id
+    })));
+    console.log('Pagamentos:', payments.map(p => ({
+      contract_id: p.contract_id,
+      amount: p.amount,
+      status: p.status,
+      due_date: p.due_date
+    })));
+  }, [contracts, payments]);
 
   const getContractPayments = (contractId: string) => {
     return payments.filter(p => p.contract_id === contractId);
@@ -712,10 +730,21 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
                   {filteredContracts.map((contract) => {
                     const contractPayments = getContractPayments(contract.id);
                     const paidPayments = contractPayments.filter(p => p.status === 'paid');
-                    const totalPaid = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+                    const totalPaid = paidPayments.reduce((sum, p) => sum + Number(p.amount), 0);
                     const totalValue = Number(contract.final_price) || Number(contract.package_price) || 0;
                     const progress = totalValue > 0 ? (totalPaid / totalValue) * 100 : 0;
                     const status = getPaymentStatus(contract);
+                    
+                    // Debug para este contrato específico
+                    if (contract.nome_completo === 'Jose Valdigley dos Santos') {
+                      console.log('Debug contrato Jose:', {
+                        contractPayments: contractPayments.length,
+                        totalValue,
+                        totalPaid,
+                        progress,
+                        status
+                      });
+                    }
 
                     return (
                       <tr key={contract.id} className="hover:bg-gray-50">
