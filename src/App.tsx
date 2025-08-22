@@ -107,7 +107,7 @@ function App() {
   // Contract form view
   if (currentView === 'form') {
     return (
-      <ContractForm onBackToList={() => setCurrentView('contracts')} />
+      <ContractForm onBackToList={() => setCurrentView('dashboard')} />
     );
   }
 
@@ -116,6 +116,7 @@ function App() {
     return (
       <ContractList 
         onNewContract={() => setCurrentView('form')}
+        onBackToDashboard={() => setCurrentView('dashboard')}
       />
     );
   }

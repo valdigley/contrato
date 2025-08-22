@@ -26,9 +26,9 @@ interface Contract {
 
 interface ContractListProps {
   onNewContract: () => void;
+  onBackToDashboard?: () => void;
 }
 
-export default function ContractList({ onNewContract }: ContractListProps) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
@@ -338,6 +338,15 @@ export default function ContractList({ onNewContract }: ContractListProps) {
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Dashboard</span>
+              </button>
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Gestão de Contratos</h1>
               <p className="text-gray-600 mt-1">Gerencie todos os seus contratos de eventos</p>
