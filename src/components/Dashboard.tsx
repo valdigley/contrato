@@ -170,30 +170,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       count: null
     },
     {
-      id: 'profile',
-      title: 'Meu Perfil',
-      description: 'Configurações do perfil',
-      icon: User,
-      color: 'bg-indigo-500',
-      hoverColor: 'hover:bg-indigo-600',
-      count: null
-    },
-    {
       id: 'settings',
       title: 'Configurações',
       description: 'Configurações do sistema',
       icon: Settings,
       color: 'bg-gray-500',
       hoverColor: 'hover:bg-gray-600',
-      count: null
-    },
-    {
-      id: 'templates',
-      title: 'Modelos',
-      description: 'Templates de contratos',
-      icon: FileText,
-      color: 'bg-orange-500',
-      hoverColor: 'hover:bg-orange-600',
       count: null
     }
   ];
@@ -283,7 +265,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         </div>
 
         {/* Main Modules */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {modules.map((module) => {
             const IconComponent = module.icon;
             return (
