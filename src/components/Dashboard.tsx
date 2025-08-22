@@ -294,21 +294,106 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         {stats.recentContracts.length > 0 && (
           <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Contratos Recentes</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Contratos Recentes</h2>
+                <span className="text-sm text-gray-500">{stats.recentContracts.length} contrato{stats.recentContracts.length > 1 ? 's' : ''}</span>
+              </div>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 {stats.recentContracts.map((contract) => (
-                  <div key={contract.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <h3 className="font-medium text-gray-900">{contract.nome_completo}</h3>
-                      <p className="text-sm text-gray-600">{contract.tipo_evento}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">
-                        {formatCurrency(contract.final_price || contract.package_price || 0)}
-                      </p>
-                      <p className="text-sm text-gray-600">{formatDate(contract.created_at)}</p>
+                  <div key={contract.id} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3 className="font-semibold text-gray-900">{contract.nome_completo}</h3>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            contract.tipo_evento === 'Casamento' ? 'bg-pink-100 text-pink-800' :
+                            contract.tipo_evento === 'Aniversário' ? 'bg-yellow-100 text-yellow-800' :
+                            contract.tipo_evento === 'Ensaio Fotográfico' ? 'bg-purple-100 text-purple-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {contract.tipo_evento}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                          <div className="flex items-center space-x-1">
+                            <span>📧</span>
+                            <span>{contract.email}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <span>📱</span>
+                            <span>{contract.whatsapp ? contract.whatsapp.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3') : 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <span>🏙️</span>
+                            <span>{contract.cidade}</span>
+                          </div>
+                          {contract.data_evento && (
+                            <div className="flex items-center space-x-1">
+                              <span>📅</span>
+                              <span>{formatDate(contract.data_evento)}</span>
+                            </div>
+                          )}
+                        </div>
+                        {(contract.nome_noivos || contract.nome_aniversariante) && (
+                          <div className="mt-2 text-sm text-gray-700">
+                            <span className="font-medium">
+                              {contract.nome_noivos ? `Noivos: ${contract.nome_noivos}` : ''}
+                              {contract.nome_aniversariante ? `Aniversariante: ${contract.nome_aniversariante}` : ''}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="font-bold text-lg text-green-600">
+                          {formatCurrency(contract.final_price || contract.package_price || 0)}
+                        </p>
+                        <p className="text-xs text-gray-500">Cadastrado em</p>
+                        <p className="text-sm text-gray-600">{formatDate(contract.created_at)}</p>
+                      </div>
+                    {contract.local_festa && (
+                      <div className="pt-2 border-t border-gray-200">
+                        <div className="flex items-center space-x-1 text-sm text-gray-600">
+                          <span>📍</span>
+                          <span className="font-medium">Local:</span>
+                          <span>{contract.local_festa}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => onNavigate('contracts')}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                >
+                  Ver todos os contratos →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State for Recent Contracts */}
+        {stats.recentContracts.length === 0 && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Contratos Recentes</h2>
+            </div>
+            <div className="p-6 text-center">
+              <div className="text-gray-400 mb-4">
+                <FileText className="w-12 h-12 mx-auto mb-2" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum contrato ainda</h3>
+              <p className="text-gray-600 mb-4">Comece criando seu primeiro contrato</p>
+              <button
+                onClick={() => onNavigate('form')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Criar Primeiro Contrato
+              </button>
                     </div>
                   </div>
                 ))}
