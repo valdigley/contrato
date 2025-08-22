@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, Calendar, Filter, Eye, Edit2, Check, X, Plus, ArrowLeft } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Calendar, Filter, Eye, Edit2, Check, X, Plus, ArrowLeft, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Contract {
@@ -69,6 +69,14 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
   const fetchFinancialData = async () => {
     try {
+      // Verificar se as credenciais do Supabase estão configuradas
+      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Credenciais do Supabase não configuradas. Acesse as Configurações para inserir a URL e chave do projeto.');
+      }
+
       const [contractsResponse, paymentMethodsResponse, paymentsResponse] = await Promise.all([
         supabase
           .from('contratos')
@@ -96,6 +104,18 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
 
     } catch (error) {
       console.error('Erro ao carregar dados financeiros:', error);
+      
+      // Mostrar mensagem específica baseada no tipo de erro
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        alert('Erro de conexão com o Supabase. Verifique suas configurações de URL e chave API nas Configurações do Sistema.');
+      } else if (error.message.includes('Invalid API key')) {
+        alert('Chave API do Supabase inválida. Verifique suas credenciais nas Configurações do Sistema.');
+      } else if (error.message.includes('Credenciais do Supabase não configuradas')) {
+        alert(error.message);
+      } else {
+        alert(`Erro ao carregar dados: ${error.message}`);
+      }
+      
       setContracts([]);
       setPaymentMethods([]);
       setPayments([]);
@@ -371,9 +391,52 @@ export default function FinancialDashboard({ onBack }: FinancialDashboardProps) 
   // Executar atualização de status ao carregar
   React.useEffect(() => {
     if (payments.length > 0 && !loading) {
-      updateOverduePayments();
+      // Verificar se as credenciais estão configuradas antes de tentar atualizar
+      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (supabaseUrl && supabaseKey) {
+        updateOverduePayments();
+      }
     }
   }, [payments, loading]);
+
+  // Mostrar mensagem de configuração se as credenciais não estiverem definidas
+  const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center bg-white rounded-lg shadow-sm p-8">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Configuração Necessária</h2>
+          <p className="text-gray-600 mb-6">
+            As credenciais do Supabase não estão configuradas. É necessário configurar a URL do projeto e a chave API para acessar os dados financeiros.
+          </p>
+          <button
+            onClick={() => window.location.href = '/?settings=true'}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium"
+          >
+            Ir para Configurações
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando dados financeiros...</p>
+        </div>
+      </div>
+    );
+  }
   
   // Debug: Log dos dados carregados
   React.useEffect(() => {
