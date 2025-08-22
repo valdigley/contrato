@@ -106,11 +106,14 @@ export default function Login({ onLogin }: LoginProps) {
           setDebugInfo('Cadastro concluído com sucesso!');
           setSuccess('Conta criada com sucesso! Você pode fazer login agora.');
           setIsLogin(true);
-          setEmail('');
-          setPassword('');
-          setName('');
-          setBusinessName('');
-          setPhone('');
+          // Clear form
+          setTimeout(() => {
+            setEmail('');
+            setPassword('');
+            setName('');
+            setBusinessName('');
+            setPhone('');
+          }, 2000);
         }
       }
     } catch (error: any) {
