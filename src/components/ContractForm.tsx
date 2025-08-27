@@ -644,13 +644,13 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 value={formData.whatsapp}
                 onChange={handleInputChange}
                 maxLength={15}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                  errors.whatsapp ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.whatsapp ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                 }`}
                 placeholder="(11) 99999-9999"
               />
               {errors.whatsapp && (
-                <p className="mt-1 text-sm text-red-600">{errors.whatsapp}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.whatsapp}</p>
               )}
             </div>
 
@@ -664,12 +664,12 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 name="data_nascimento"
                 value={formData.data_nascimento}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                  errors.data_nascimento ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.data_nascimento ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                 }`}
               />
               {errors.data_nascimento && (
-                <p className="mt-1 text-sm text-red-600">{errors.data_nascimento}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.data_nascimento}</p>
               )}
             </div>
           </div>
@@ -678,7 +678,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
               <MapPin className="h-5 w-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Endereço</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Endereço</h2>
             </div>
 
             <div>
@@ -691,13 +691,13 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 name="endereco"
                 value={formData.endereco}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                  errors.endereco ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.endereco ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                 }`}
                 placeholder="Rua, número, bairro, CEP"
               />
               {errors.endereco && (
-                <p className="mt-1 text-sm text-red-600">{errors.endereco}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.endereco}</p>
               )}
             </div>
 
@@ -711,13 +711,13 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 name="cidade"
                 value={formData.cidade}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                  errors.cidade ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.cidade ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                 }`}
                 placeholder="Digite sua cidade"
               />
               {errors.cidade && (
-                <p className="mt-1 text-sm text-red-600">{errors.cidade}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.cidade}</p>
               )}
             </div>
           </div>
@@ -726,7 +726,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
               <Camera className="h-5 w-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Evento</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Evento</h2>
             </div>
 
             <div>
@@ -738,8 +738,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 name="event_type_id"
                 value={formData.event_type_id}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                  errors.event_type_id ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.event_type_id ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                 }`}
               >
                 <option value="">Selecione o tipo de evento</option>
@@ -750,7 +750,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 ))}
               </select>
               {errors.event_type_id && (
-                <p className="mt-1 text-sm text-red-600">{errors.event_type_id}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.event_type_id}</p>
               )}
             </div>
 
@@ -765,8 +765,8 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                   name="package_id"
                   value={formData.package_id}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.package_id ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.package_id ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 >
                   <option value="">Selecione um pacote</option>
@@ -777,24 +777,24 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                   ))}
                 </select>
                 {errors.package_id && (
-                  <p className="mt-1 text-sm text-red-600">{errors.package_id}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.package_id}</p>
                 )}
                 
                 {/* Detalhes do Pacote Selecionado */}
                 {selectedPackage && (
-                  <div className="mt-3 p-4 bg-blue-50 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">{selectedPackage.name}</h4>
-                    <p className="text-sm text-blue-800 mb-2">{selectedPackage.description}</p>
-                    <p className="text-lg font-semibold text-blue-900 mb-2">
+                  <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">{selectedPackage.name}</h4>
+                    <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">{selectedPackage.description}</p>
+                    <p className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
                       R$ {selectedPackage.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     {selectedPackage.features.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-blue-900 mb-1">Inclui:</p>
-                        <ul className="text-sm text-blue-800 space-y-1">
+                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">Inclui:</p>
+                        <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                           {selectedPackage.features.map((feature, index) => (
                             <li key={index} className="flex items-center space-x-2">
-                              <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
+                              <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
                               <span>{feature}</span>
                             </li>
                           ))}
@@ -814,21 +814,21 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 </label>
                 
                 {availablePaymentMethods.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <CreditCard className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm font-medium">Carregando formas de pagamento...</p>
-                    <p className="text-xs mt-1">Aguarde enquanto criamos as opções para este pacote</p>
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                    <CreditCard className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                    <p className="text-sm font-medium dark:text-gray-300">Carregando formas de pagamento...</p>
+                    <p className="text-xs mt-1 dark:text-gray-400">Aguarde enquanto criamos as opções para este pacote</p>
                     <div className="mt-3">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mx-auto"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 dark:border-gray-500 mx-auto"></div>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-blue-800 font-medium">
+                    <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
                         ✅ {availablePaymentMethods.length} forma{availablePaymentMethods.length > 1 ? 's' : ''} de pagamento disponível{availablePaymentMethods.length > 1 ? 'eis' : ''}
                       </p>
-                      <p className="text-xs text-blue-600 mt-1">
+                      <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
                         Selecione uma forma de pagamento para ver detalhes e cronograma
                       </p>
                     </div>
@@ -837,7 +837,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                       name="payment_method_id"
                       value={formData.payment_method_id}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     >
                       <option value="">Selecione a forma de pagamento</option>
                       {availablePaymentMethods.map((ppm) => (
@@ -858,40 +858,40 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                     if (!paymentMethodDetails) return null;
                     
                     return (
-                      <div className="mt-3 p-4 bg-green-50 rounded-lg">
-                        <h4 className="font-medium text-green-900 mb-2">{paymentMethodDetails.name}</h4>
-                        <p className="text-sm text-green-800 mb-2">{paymentMethodDetails.description}</p>
+                      <div className="mt-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">{paymentMethodDetails.name}</h4>
+                        <p className="text-sm text-green-800 dark:text-green-200 mb-2">{paymentMethodDetails.description}</p>
                         
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-green-800">Preço original:</span>
-                          <span className="text-sm text-green-800">R$ {formData.package_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="text-sm text-green-800 dark:text-green-200">Preço original:</span>
+                          <span className="text-sm text-green-800 dark:text-green-200">R$ {formData.package_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                         </div>
                         
                         {paymentMethodDetails.discount_percentage !== 0 && (
                           <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm text-green-800">
+                            <span className="text-sm text-green-800 dark:text-green-200">
                               {paymentMethodDetails.discount_percentage > 0 ? 'Acréscimo' : 'Desconto'}:
                             </span>
-                            <span className="text-sm font-medium text-green-800">
+                            <span className="text-sm font-medium text-green-800 dark:text-green-200">
                               {paymentMethodDetails.discount_percentage > 0 ? '+' : ''}{paymentMethodDetails.discount_percentage}%
                             </span>
                           </div>
                         )}
                         
-                        <div className="flex justify-between items-center mb-3 pt-2 border-t border-green-200">
-                          <span className="text-lg font-semibold text-green-900">Preço final:</span>
-                          <span className="text-lg font-semibold text-green-900">
+                        <div className="flex justify-between items-center mb-3 pt-2 border-t border-green-200 dark:border-green-800">
+                          <span className="text-lg font-semibold text-green-900 dark:text-green-100">Preço final:</span>
+                          <span className="text-lg font-semibold text-green-900 dark:text-green-100">
                             R$ {formData.final_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
                         
                         {paymentMethodDetails.payment_schedule.length > 0 && (
                           <div>
-                            <p className="text-sm font-medium text-green-900 mb-2">Cronograma de pagamento:</p>
-                            <ul className="text-sm text-green-800 space-y-1">
+                            <p className="text-sm font-medium text-green-900 dark:text-green-100 mb-2">Cronograma de pagamento:</p>
+                            <ul className="text-sm text-green-800 dark:text-green-200 space-y-1">
                               {paymentMethodDetails.payment_schedule.map((schedule, index) => (
                                 <li key={index} className="flex items-center space-x-2">
-                                  <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                                  <span className="w-1.5 h-1.5 bg-green-600 dark:bg-green-400 rounded-full"></span>
                                   <span>
                                     {schedule.percentage > 0 
                                       ? `${schedule.percentage}% - ${schedule.description}`
@@ -919,7 +919,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                       name="preferred_payment_day"
                       value={formData.preferred_payment_day}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     >
                       <option value="">Selecione o dia do mês</option>
                       {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
@@ -928,7 +928,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                         </option>
                       ))}
                     </select>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                       Escolha o dia do mês em que você prefere fazer os pagamentos (limitado até o dia 28 para garantir que existe em todos os meses)
                     </p>
                   </div>
@@ -948,12 +948,12 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                   name="data_evento"
                   value={formData.data_evento}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.data_evento ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.data_evento ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
                 {errors.data_evento && (
-                  <p className="mt-1 text-sm text-red-600">{errors.data_evento}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.data_evento}</p>
                 )}
               </div>
 
@@ -967,12 +967,12 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                   name="horario_evento"
                   value={formData.horario_evento}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.horario_evento ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.horario_evento ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
                 {errors.horario_evento && (
-                  <p className="mt-1 text-sm text-red-600">{errors.horario_evento}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.horario_evento}</p>
                 )}
               </div>
             </div>
@@ -985,7 +985,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             <div className="space-y-4">
               <div className="flex items-center space-x-2 mb-4">
                 <MapPin className="h-5 w-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Detalhes do Evento</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Detalhes do Evento</h2>
               </div>
 
               {/* Nome dos Noivos - apenas para casamentos */}
@@ -1000,7 +1000,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                     name="nome_noivos"
                     value={formData.nome_noivos}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder="Ex: João Silva & Maria Santos"
                   />
                 </div>
@@ -1018,7 +1018,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                     name="nome_aniversariante"
                     value={formData.nome_aniversariante}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder="Digite o nome do(a) aniversariante"
                   />
                 </div>
@@ -1037,7 +1037,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                       name="local_pre_wedding"
                       value={formData.local_pre_wedding}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="Local onde será realizado o pré-wedding"
                     />
                   </div>
@@ -1052,7 +1052,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                       name="local_making_of"
                       value={formData.local_making_of}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="Local dos preparativos (making of)"
                     />
                   </div>
@@ -1067,7 +1067,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                       name="local_cerimonia"
                       value={formData.local_cerimonia}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="Igreja, cartório ou local da cerimônia"
                     />
                   </div>
@@ -1085,7 +1085,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                   name="local_festa"
                   value={formData.local_festa}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder={
                     isCasamento 
                       ? "Local da recepção/festa de casamento"
