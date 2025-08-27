@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 
 interface DashboardProps {
   user: any;
@@ -41,6 +42,7 @@ interface DashboardStats {
 
 export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const { signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [stats, setStats] = useState<DashboardStats>({
     totalContracts: 0,
     monthlyRevenue: 0,
@@ -448,27 +450,44 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-white/20 sticky top-0 z-10">
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-white/20 dark:border-gray-700/20 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-600">Bem-vindo, {user?.email}</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-300">Bem-vindo, {user?.email}</p>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white p-2 rounded-lg hover:bg-white/30 dark:hover:bg-gray-700/30 transition-all"
+                title={theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'}
+              >
+                {theme === 'light' ? (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
+              </button>
+              
               {/* Settings access - requires double click */}
               <button
                 onDoubleClick={() => onNavigate('settings')}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/30 transition-all"
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white p-2 rounded-lg hover:bg-white/30 dark:hover:bg-gray-700/30 transition-all"
                 title="Duplo clique para configurações"
               >
                 <Settings className="h-4 w-4" />
               </button>
               <button
                 onClick={signOut}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-white/50 transition-all"
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white px-4 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-all"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sair</span>
@@ -484,7 +503,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           <div className="flex space-x-4">
             <button
               onClick={() => onNavigate('form')}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
             >
               <Plus className="h-4 w-4" />
               <span>Novo Contrato</span>
@@ -519,33 +538,33 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 };
                 getPhotographerId();
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
               title={linkCopied ? 'Link Copiado!' : 'Copiar Link para Cliente'}
             >
               {linkCopied ? <Check className="h-4 w-4" /> : <Link className="h-4 w-4" />}
               <span>{linkCopied ? 'Link Copiado!' : 'Link Cliente'}</span>
             </button>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
             Total: {stats.totalContracts} contrato{stats.totalContracts !== 1 ? 's' : ''}
           </div>
         </div>
 
         {/* Recent Contracts */}
         {stats.recentContracts.length > 0 ? (
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Todos os Contratos</h2>
-                <span className="text-sm text-gray-500">{stats.recentContracts.length} contrato{stats.recentContracts.length > 1 ? 's' : ''}</span>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Todos os Contratos</h2>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{stats.recentContracts.length} contrato{stats.recentContracts.length > 1 ? 's' : ''}</span>
               </div>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 {stats.recentContracts.map((contract) => (
-                  <div key={contract.id} className="bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-all duration-200">
+                  <div key={contract.id} className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-200">
                     <div 
-                      className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => {
                         setSelectedContract(contract);
                         setShowModal(true);
@@ -554,7 +573,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                       <div className="grid grid-cols-5 gap-4 items-center">
                         {/* Nome do Cliente */}
                         <div>
-                          <h3 className="font-semibold text-gray-900 text-lg">{contract.nome_completo}</h3>
+                          <h3 className="font-semibold text-gray-900 dark:text-white text-lg">{contract.nome_completo}</h3>
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             contract.tipo_evento === 'Casamento' ? 'bg-pink-100 text-pink-800' :
                             contract.tipo_evento === 'Aniversário' ? 'bg-yellow-100 text-yellow-800' :
@@ -567,35 +586,35 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
                         {/* Data do Evento */}
                         <div className="text-center">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {contract.data_evento ? formatDate(contract.data_evento) : 'Data não definida'}
                           </div>
-                          <div className="text-xs text-gray-500">Data do Evento</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Data do Evento</div>
                         </div>
 
                         {/* Cidade */}
                         <div className="text-center">
-                          <div className="text-sm font-medium text-gray-900">{contract.cidade}</div>
-                          <div className="text-xs text-gray-500">Cidade</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">{contract.cidade}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Cidade</div>
                         </div>
 
                         {/* Pacote */}
                         <div className="text-center">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {contract.package_id ? 'Pacote Selecionado' : 'Sem Pacote'}
                           </div>
-                          <div className="text-xs text-gray-500">Pacote</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Pacote</div>
                         </div>
 
                         {/* Valor */}
                         <div className="text-center">
-                          <div className="text-lg font-bold text-green-600">
+                          <div className="text-lg font-bold text-green-600 dark:text-green-400">
                             {(contract.final_price || contract.package_price) 
                               ? formatCurrency(contract.final_price || contract.package_price)
                               : 'Valor não definido'
                             }
                           </div>
-                          <div className="text-xs text-gray-500">Valor</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Valor</div>
                         </div>
                       </div>
                     </div>
@@ -605,13 +624,13 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             </div>
           </div>
         ) : (
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 p-12 text-center">
-            <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Nenhum contrato encontrado</h3>
-            <p className="text-gray-600 mb-6">Comece criando seu primeiro contrato</p>
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-12 text-center">
+            <FileText className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Nenhum contrato encontrado</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">Comece criando seu primeiro contrato</p>
             <button
               onClick={() => onNavigate('form')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center space-x-2 mx-auto transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2 mx-auto transition-colors"
             >
               <Plus className="h-5 w-5" />
               <span>Criar Primeiro Contrato</span>
@@ -622,13 +641,13 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         {/* Contract Details Modal */}
         {showModal && selectedContract && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">Detalhes do Contrato</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Detalhes do Contrato</h2>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
+                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     ✕
                   </button>
@@ -639,76 +658,76 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Dados Pessoais */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Dados Pessoais</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">Dados Pessoais</h3>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Nome Completo</label>
-                      <p className="text-gray-900">{selectedContract.nome_completo}</p>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Nome Completo</label>
+                      <p className="text-gray-900 dark:text-white">{selectedContract.nome_completo}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">CPF</label>
-                      <p className="text-gray-900">{selectedContract.cpf}</p>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">CPF</label>
+                      <p className="text-gray-900 dark:text-white">{selectedContract.cpf}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Email</label>
-                      <p className="text-gray-900">{selectedContract.email}</p>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
+                      <p className="text-gray-900 dark:text-white">{selectedContract.email}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">WhatsApp</label>
-                      <p className="text-gray-900">{selectedContract.whatsapp}</p>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">WhatsApp</label>
+                      <p className="text-gray-900 dark:text-white">{selectedContract.whatsapp}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Data de Nascimento</label>
-                      <p className="text-gray-900">{formatDate(selectedContract.data_nascimento)}</p>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Data de Nascimento</label>
+                      <p className="text-gray-900 dark:text-white">{formatDate(selectedContract.data_nascimento)}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Endereço</label>
-                      <p className="text-gray-900">{selectedContract.endereco}</p>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Endereço</label>
+                      <p className="text-gray-900 dark:text-white">{selectedContract.endereco}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Cidade</label>
-                      <p className="text-gray-900">{selectedContract.cidade}</p>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Cidade</label>
+                      <p className="text-gray-900 dark:text-white">{selectedContract.cidade}</p>
                     </div>
                   </div>
 
                   {/* Dados do Evento */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Dados do Evento</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">Dados do Evento</h3>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Tipo de Evento</label>
-                      <p className="text-gray-900">{selectedContract.tipo_evento}</p>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Tipo de Evento</label>
+                      <p className="text-gray-900 dark:text-white">{selectedContract.tipo_evento}</p>
                     </div>
                     {selectedContract.data_evento && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-500">Data do Evento</label>
-                        <p className="text-gray-900">{formatDate(selectedContract.data_evento)}</p>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Data do Evento</label>
+                        <p className="text-gray-900 dark:text-white">{formatDate(selectedContract.data_evento)}</p>
                       </div>
                     )}
                     {selectedContract.horario_evento && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-500">Horário</label>
-                        <p className="text-gray-900">{selectedContract.horario_evento}</p>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Horário</label>
+                        <p className="text-gray-900 dark:text-white">{selectedContract.horario_evento}</p>
                       </div>
                     )}
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Local da Festa</label>
-                      <p className="text-gray-900">{selectedContract.local_festa}</p>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Local da Festa</label>
+                      <p className="text-gray-900 dark:text-white">{selectedContract.local_festa}</p>
                     </div>
                     {selectedContract.nome_noivos && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-500">Nome dos Noivos</label>
-                        <p className="text-gray-900">{selectedContract.nome_noivos}</p>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Nome dos Noivos</label>
+                        <p className="text-gray-900 dark:text-white">{selectedContract.nome_noivos}</p>
                       </div>
                     )}
                     {selectedContract.nome_aniversariante && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-500">Nome do Aniversariante</label>
-                        <p className="text-gray-900">{selectedContract.nome_aniversariante}</p>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Nome do Aniversariante</label>
+                        <p className="text-gray-900 dark:text-white">{selectedContract.nome_aniversariante}</p>
                       </div>
                     )}
                     {(selectedContract.final_price || selectedContract.package_price) && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-500">Valor</label>
-                        <p className="text-2xl font-bold text-green-600">
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Valor</label>
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                           {formatCurrency(selectedContract.final_price || selectedContract.package_price)}
                         </p>
                       </div>
@@ -716,14 +735,14 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
                     {/* Status do Contrato */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-2">Status do Contrato</label>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Status do Contrato</label>
                       <select
                         value={selectedContract.status || 'draft'}
                         onChange={(e) => {
                           updateContractStatus(selectedContract.id, e.target.value as 'draft' | 'sent' | 'signed' | 'cancelled');
                           setSelectedContract({...selectedContract, status: e.target.value});
                         }}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="draft">📝 Rascunho</option>
                         <option value="sent">📤 Enviado</option>
@@ -742,14 +761,14 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         generateContract(selectedContract);
                         setShowModal(false);
                       }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                     >
                       <FileText className="h-4 w-4" />
                       <span>Gerar Contrato</span>
                     </button>
                     <button
                       onClick={() => sendWhatsAppContract(selectedContract)}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                      className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                     >
                       <Phone className="h-4 w-4" />
                       <span>WhatsApp</span>
@@ -761,7 +780,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                           setShowModal(false);
                         }
                       }}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                      className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
                       <span>Excluir</span>
@@ -769,7 +788,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                   </div>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
                   >
                     Fechar
                   </button>
@@ -782,13 +801,13 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         {/* Contract Generation Modal */}
         {showContractModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">Contrato Gerado</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Contrato Gerado</h2>
                   <button
                     onClick={() => setShowContractModal(false)}
-                    className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
+                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     ✕
                   </button>
@@ -796,8 +815,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               </div>
               
               <div className="p-6">
-                <div className="bg-gray-50 rounded-lg p-6 mb-6 max-h-96 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 mb-6 max-h-96 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 font-mono">
                     {generatedContract}
                   </pre>
                 </div>
@@ -805,21 +824,21 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 <div className="flex justify-end space-x-4">
                   <button
                     onClick={downloadContract}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                   >
                     <Download className="h-4 w-4" />
                     <span>Download</span>
                   </button>
                   <button
                     onClick={printContract}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                   >
                     <FileText className="h-4 w-4" />
                     <span>Imprimir</span>
                   </button>
                   <button
                     onClick={() => sendWhatsAppContract(selectedContract)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                   >
                     <Phone className="h-4 w-4" />
                     <span>Enviar WhatsApp</span>
@@ -828,7 +847,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                     onClick={() => {
                       setShowContractModal(false);
                     }}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
                   >
                     Fechar
                   </button>
