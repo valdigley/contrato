@@ -58,6 +58,30 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [templates, setTemplates] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
 
+  const updateContractStatus = async (contractId: string, status: 'sent' | 'signed') => {
+    try {
+      const { error } = await supabase
+        .from('contratos')
+        .update({ status })
+        .eq('id', contractId);
+
+      if (error) throw error;
+
+      // Update local state
+      setStats(prev => ({
+        ...prev,
+        recentContracts: prev.recentContracts.map(contract =>
+          contract.id === contractId ? { ...contract, status } : contract
+        )
+      }));
+
+      console.log(`Contrato ${contractId} marcado como ${status}`);
+    } catch (error) {
+      console.error('Erro ao atualizar status do contrato:', error);
+      alert('Erro ao atualizar status do contrato');
+    }
+  };
+
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -535,6 +559,17 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                       <div className="text-right ml-4">
                         <div className="flex items-center space-x-4">
                           <div className="text-right">
+                            <div className="mb-2">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                contract.status === 'signed' ? 'bg-green-100 text-green-800' :
+                                contract.status === 'sent' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {contract.status === 'signed' ? '✓ Assinado' :
+                                 contract.status === 'sent' ? '📤 Enviado' :
+                                 '📝 Rascunho'}
+                              </span>
+                            </div>
                             <p className="font-bold text-lg text-green-600">
                               {formatCurrency(contract.final_price || contract.package_price || 0)}
                             </p>
@@ -566,6 +601,30 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
+                            <div className="mt-2 space-y-1">
+                              <button
+                                onClick={() => updateContractStatus(contract.id, 'sent')}
+                                className={`w-full text-xs px-2 py-1 rounded transition-colors ${
+                                  contract.status === 'sent' 
+                                    ? 'bg-yellow-200 text-yellow-800' 
+                                    : 'bg-gray-100 text-gray-600 hover:bg-yellow-100'
+                                }`}
+                                title="Marcar como enviado"
+                              >
+                                📤 Enviado
+                              </button>
+                              <button
+                                onClick={() => updateContractStatus(contract.id, 'signed')}
+                                className={`w-full text-xs px-2 py-1 rounded transition-colors ${
+                                  contract.status === 'signed' 
+                                    ? 'bg-green-200 text-green-800' 
+                                    : 'bg-gray-100 text-gray-600 hover:bg-green-100'
+                                }`}
+                                title="Marcar como assinado"
+                              >
+                                ✓ Assinado
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
