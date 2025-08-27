@@ -1,26 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart3, 
-  Users, 
-  Calendar, 
-  TrendingUp, 
-  Plus, 
-  List, 
-  Settings, 
-  User, 
-  LogOut, 
+  Plus,
+  Settings,
+  User,
+  LogOut,
   FileText,
-  Camera, 
-  Sun, 
-  Moon, 
-  Edit2, 
-  Save, 
-  X, 
-  Percent,
-  DollarSign,
-  Phone,
-  Clock,
-  CheckCircle
+  Camera,
+  Sun,
+  Moon,
+  Edit2,
+  Save,
+  X,
+  Search,
+  Eye,
+  Trash2,
+  MessageCircle,
+  Download
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -31,38 +26,40 @@ interface DashboardProps {
   onNavigate: (view: string) => void;
 }
 
-interface Stats {
-  totalContracts: number;
-  pendingContracts: number;
-  completedContracts: number;
-  totalRevenue: number;
-  monthlyRevenue: number;
-  averageContractValue: number;
-}
-
-interface RecentContract {
+interface Contract {
   id: string;
   nome_completo: string;
+  cpf: string;
+  email: string;
+  whatsapp: string;
+  endereco: string;
+  cidade: string;
+  data_nascimento: string;
   tipo_evento: string;
-  created_at: string;
-  status?: string;
-  final_price?: number;
+  event_type_id?: string;
+  package_id?: string;
   package_price?: number;
+  local_festa: string;
+  nome_noivos?: string;
+  nome_aniversariante?: string;
+  local_pre_wedding?: string;
+  local_making_of?: string;
+  local_cerimonia?: string;
+  data_evento?: string;
+  horario_evento?: string;
+  final_price?: number;
+  preferred_payment_day?: number;
+  created_at: string;
+  status?: 'draft' | 'sent' | 'signed';
 }
 
 export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const { signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [stats, setStats] = useState<Stats>({
-    totalContracts: 0,
-    pendingContracts: 0,
-    completedContracts: 0,
-    totalRevenue: 0,
-    monthlyRevenue: 0,
-    averageContractValue: 0
-  });
-  const [recentContracts, setRecentContracts] = useState<RecentContract[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileData, setProfileData] = useState({
     name: '',
@@ -72,7 +69,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchContracts();
     fetchUserProfile();
   }, [user]);
 
@@ -150,7 +147,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     }
   };
 
-  const fetchDashboardData = async () => {
+  const fetchContracts = async () => {
     if (!user) return;
 
     try {
@@ -179,44 +176,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         return;
       }
 
-      // Calculate stats
-      const totalContracts = contracts?.length || 0;
-      const pendingContracts = contracts?.filter(c => c.status === 'draft' || c.status === 'sent').length || 0;
-      const completedContracts = contracts?.filter(c => c.status === 'signed').length || 0;
-      
-      const totalRevenue = contracts?.reduce((sum, contract) => {
-        const price = contract.final_price || contract.package_price || 0;
-        return sum + Number(price);
-      }, 0) || 0;
-
-      // Monthly revenue (current month)
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      const monthlyRevenue = contracts?.filter(contract => {
-        const contractDate = new Date(contract.created_at);
-        return contractDate.getMonth() === currentMonth && contractDate.getFullYear() === currentYear;
-      }).reduce((sum, contract) => {
-        const price = contract.final_price || contract.package_price || 0;
-        return sum + Number(price);
-      }, 0) || 0;
-
-      const averageContractValue = totalContracts > 0 ? totalRevenue / totalContracts : 0;
-
-      setStats({
-        totalContracts,
-        pendingContracts,
-        completedContracts,
-        totalRevenue,
-        monthlyRevenue,
-        averageContractValue
-      });
-
-      // Get recent contracts (last 5)
-      const recentContracts = contracts
-        ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5) || [];
-
-      setRecentContracts(recentContracts);
+      setContracts(contracts?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
 
     } catch (error) {
       console.error('Erro ao buscar dados do dashboard:', error);
@@ -233,6 +193,51 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     }
   };
 
+  const deleteContract = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este contrato?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('contratos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setContracts(prevContracts => prevContracts.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Erro ao excluir contrato:', error);
+      alert('Erro ao excluir contrato');
+    }
+  };
+
+  const updateContractStatus = async (contractId: string, status: 'draft' | 'sent' | 'signed') => {
+    try {
+      const { error } = await supabase
+        .from('contratos')
+        .update({ status })
+        .eq('id', contractId);
+
+      if (error) throw error;
+
+      setContracts(prev => prev.map(contract =>
+        contract.id === contractId ? { ...contract, status } : contract
+      ));
+    } catch (error) {
+      console.error('Erro ao atualizar status do contrato:', error);
+      alert('Erro ao atualizar status do contrato');
+    }
+  };
+
+  const sendWhatsAppContract = (contract: Contract) => {
+    const phone = contract.whatsapp.replace(/\D/g, '');
+    const message = `Olá ${contract.nome_completo}! Segue o contrato para seu ${contract.tipo_evento}.`;
+    const whatsappUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -242,6 +247,16 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const formatCPF = (cpf: string) => {
+    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  };
+
+  const formatWhatsApp = (whatsapp: string) => {
+    if (!whatsapp) return '';
+    const clean = whatsapp.replace(/\D/g, '');
+    return clean.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
   };
 
   const getStatusColor = (status?: string) => {
@@ -269,6 +284,28 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         return '📝 Rascunho';
     }
   };
+
+  const getEventTypeColor = (type: string) => {
+    const colors = {
+      'Casamento': 'bg-pink-100 text-pink-800 border border-pink-200',
+      'Aniversário': 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+      'Ensaio Fotográfico': 'bg-purple-100 text-purple-800 border border-purple-200',
+      'Formatura': 'bg-blue-100 text-blue-800 border border-blue-200'
+    };
+    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800 border border-gray-200';
+  };
+
+  // Filter contracts based on search term and filter type
+  const filteredContracts = contracts.filter(contract => {
+    const matchesSearch = searchTerm === '' || 
+      contract.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contract.cpf.includes(searchTerm) ||
+      contract.email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = filterType === '' || contract.tipo_evento === filterType;
+    
+    return matchesSearch && matchesType;
+  });
 
   if (loading) {
     return (
@@ -344,80 +381,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total de Contratos</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.totalContracts}</p>
-              </div>
-              <div className="bg-blue-100 dark:bg-blue-900 rounded-full p-3">
-                <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Contratos Pendentes</p>
-                <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pendingContracts}</p>
-              </div>
-              <div className="bg-yellow-100 dark:bg-yellow-900 rounded-full p-3">
-                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Contratos Assinados</p>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.completedContracts}</p>
-              </div>
-              <div className="bg-green-100 dark:bg-green-900 rounded-full p-3">
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Receita Total</p>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{formatCurrency(stats.totalRevenue)}</p>
-              </div>
-              <div className="bg-green-100 dark:bg-green-900 rounded-full p-3">
-                <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Receita Mensal</h3>
-              <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(stats.monthlyRevenue)}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Mês atual</p>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ticket Médio</h3>
-              <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{formatCurrency(stats.averageContractValue)}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Por contrato</p>
-          </div>
-        </div>
-
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <button
             onClick={() => onNavigate('form')}
             className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-lg p-6 text-left transition-colors hover-lift"
@@ -431,46 +396,164 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           </button>
 
           <button
-            onClick={() => onNavigate('contracts')}
+            onClick={() => onNavigate('settings')}
             className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded-lg p-6 text-left transition-colors hover-lift"
           >
             <div className="flex items-center justify-between mb-4">
-              <List className="h-8 w-8" />
-              <span className="text-sm opacity-75">Gerenciar</span>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Ver Contratos</h3>
-            <p className="text-green-100 dark:text-green-200">Gerenciar contratos existentes</p>
-          </button>
-
-          <button
-            onClick={() => onNavigate('profile')}
-            className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white rounded-lg p-6 text-left transition-colors hover-lift"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <User className="h-8 w-8" />
+              <Settings className="h-8 w-8" />
               <span className="text-sm opacity-75">Configurar</span>
             </div>
-            <h3 className="text-xl font-semibold mb-2">Meu Perfil</h3>
-            <p className="text-purple-100 dark:text-purple-200">Gerenciar informações pessoais</p>
+            <h3 className="text-xl font-semibold mb-2">Configurações</h3>
+            <p className="text-green-100 dark:text-green-200">Configurar sistema e tipos de eventos</p>
           </button>
         </div>
 
-        {/* Recent Contracts */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contratos Recentes</h3>
-              <button
-                onClick={() => onNavigate('contracts')}
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
+        {/* Filters */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome, CPF ou email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="sm:w-48">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                Ver todos
-              </button>
+                <option value="">Todos os tipos</option>
+                <option value="Casamento">Casamento</option>
+                <option value="Aniversário">Aniversário</option>
+                <option value="Ensaio Fotográfico">Ensaio Fotográfico</option>
+                <option value="Formatura">Formatura</option>
+              </select>
             </div>
           </div>
+        </div>
+
+        {/* Contracts Table */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Todos os Contratos</h3>
+          </div>
           
-          <div className="p-6">
-            {recentContracts.length === 0 ? (
+          {filteredContracts.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                {contracts.length === 0 ? 'Nenhum contrato encontrado' : 'Nenhum resultado encontrado'}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                {contracts.length === 0 
+                  ? 'Comece criando seu primeiro contrato'
+                  : 'Tente ajustar os filtros de busca'
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Cliente
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Tipo de Evento
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Data de Criação
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Ações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredContracts.map((contract) => (
+                    <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {contract.nome_completo}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {formatCPF(contract.cpf)} • {contract.cidade}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            📧 {contract.email} • 📱 {contract.whatsapp ? formatWhatsApp(contract.whatsapp) : 'N/A'}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEventTypeColor(contract.tipo_evento)}`}>
+                          {contract.tipo_evento}
+                        </span>
+                        <div className="mt-1">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(contract.status)}`}>
+                            {getStatusText(contract.status)}
+                          </span>
+                        </div>
+                        {contract.data_evento && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            📅 {formatDate(contract.data_evento)}
+                            {contract.horario_evento && (
+                              <span className="ml-2">🕐 {contract.horario_evento}</span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {formatDate(contract.created_at)}
+                        <div className="text-xs text-gray-400 dark:text-gray-500">Cadastrado em</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => sendWhatsAppContract(contract)}
+                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-1 rounded bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                            title="Enviar WhatsApp"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
+                        {/* Status Controls */}
+                        <div className="flex space-x-1 mt-2">
+                          <button
+                            onClick={() => updateContractStatus(contract.id, 'sent')}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              contract.status === 'sent' 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
+                            }`}
+                            title="Marcar como enviado"
+                          >
+                            📤
+                          </button>
+                          <button
+                            onClick={() => updateContractStatus(contract.id, 'signed')}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              contract.status === 'signed' 
+                                ? 'bg-green-500 text-white' 
+                                : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/20'
+                            }`}
+                            title="Marcar como assinado"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => deleteContract(contract.id)}
+                            className="px-2 py-1 text-xs rounded bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors"
+                            title="Excluir contrato"
               <div className="text-center py-8">
                 <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
                 <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Nenhum contrato encontrado</h4>
@@ -506,6 +589,60 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               </div>
             )}
           </div>
+        </div>
+                        {formatDate(contract.created_at)}
+                        <div className="text-xs text-gray-400 dark:text-gray-500">Cadastrado em</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => sendWhatsAppContract(contract)}
+                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-1 rounded bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                            title="Enviar WhatsApp"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
+                        {/* Status Controls */}
+                        <div className="flex space-x-1 mt-2">
+                          <button
+                            onClick={() => updateContractStatus(contract.id, 'sent')}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              contract.status === 'sent' 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
+                            }`}
+                            title="Marcar como enviado"
+                          >
+                            📤
+                          </button>
+                          <button
+                            onClick={() => updateContractStatus(contract.id, 'signed')}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              contract.status === 'signed' 
+                                ? 'bg-green-500 text-white' 
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/20'
+                            }`}
+                            title="Marcar como assinado"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => deleteContract(contract.id)}
+                            className="px-2 py-1 text-xs rounded bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors"
+                            title="Excluir contrato"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </main>
 
