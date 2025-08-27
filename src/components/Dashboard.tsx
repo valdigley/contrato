@@ -75,6 +75,15 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountContract, setDiscountContract] = useState<any>(null);
+  const [discountData, setDiscountData] = useState({
+    discountType: 'percentage', // 'percentage' ou 'fixed'
+    discountPercentage: 0,
+    discountAmount: 0,
+    adjustedPrice: 0,
+    customNotes: ''
+  });
   const [profileData, setProfileData] = useState({
     name: '',
     business_name: '',
@@ -177,6 +186,102 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       if (!packagesRes.error) setPackages(packagesRes.data || []);
     } catch (error) {
       console.error('Erro ao carregar dados do sistema:', error);
+    }
+  };
+
+  const openDiscountModal = (contract: any) => {
+    setDiscountContract(contract);
+    setDiscountData({
+      discountType: 'percentage',
+      discountPercentage: contract.discount_percentage || 0,
+      discountAmount: 0,
+      adjustedPrice: contract.adjusted_price || contract.final_price || contract.package_price || 0,
+      customNotes: contract.custom_notes || ''
+    });
+    setShowDiscountModal(true);
+  };
+
+  const handleDiscountChange = (field: string, value: string | number) => {
+    const newData = { ...discountData, [field]: value };
+    const originalPrice = discountContract?.final_price || discountContract?.package_price || 0;
+    
+    if (field === 'discountType') {
+      // Reset values when changing type
+      newData.discountPercentage = 0;
+      newData.discountAmount = 0;
+      newData.adjustedPrice = originalPrice;
+    } else if (field === 'discountPercentage' && newData.discountType === 'percentage') {
+      const percentage = Number(value);
+      
+      if (percentage === 0) {
+        newData.adjustedPrice = originalPrice;
+        newData.discountAmount = 0;
+      } else {
+        const newPrice = originalPrice * (1 - percentage / 100);
+        newData.adjustedPrice = newPrice;
+        newData.discountAmount = originalPrice - newPrice;
+      }
+    } else if (field === 'discountAmount' && newData.discountType === 'fixed') {
+      const amount = Number(value);
+      
+      if (amount === 0) {
+        newData.adjustedPrice = originalPrice;
+        newData.discountPercentage = 0;
+      } else {
+        const newPrice = originalPrice - amount;
+        newData.adjustedPrice = Math.max(0, newPrice); // Não pode ser negativo
+        newData.discountPercentage = (amount / originalPrice) * 100;
+      }
+    } else if (field === 'adjustedPrice') {
+      const newPrice = Number(value);
+      
+      if (newPrice === originalPrice) {
+        newData.discountPercentage = 0;
+        newData.discountAmount = 0;
+      } else {
+        const percentage = ((originalPrice - newPrice) / originalPrice) * 100;
+        newData.discountPercentage = percentage;
+        newData.discountAmount = originalPrice - newPrice;
+      }
+    }
+
+    setDiscountData(newData);
+  };
+
+  const applyDiscount = async () => {
+    if (!discountContract) return;
+
+    const originalPrice = discountContract.final_price || discountContract.package_price || 0;
+
+    try {
+      const { error } = await supabase
+        .from('contratos')
+        .update({
+          discount_percentage: (discountData.discountPercentage === 0 || discountData.adjustedPrice === originalPrice) ? null : discountData.discountPercentage,
+          adjusted_price: discountData.adjustedPrice === originalPrice ? null : discountData.adjustedPrice,
+          custom_notes: discountData.customNotes || null
+        })
+        .eq('id', discountContract.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setContracts(prev => prev.map(contract =>
+        contract.id === discountContract.id 
+          ? { 
+              ...contract, 
+              discount_percentage: discountData.discountPercentage === 0 ? null : discountData.discountPercentage,
+              adjusted_price: discountData.adjustedPrice === originalPrice ? null : discountData.adjustedPrice,
+              custom_notes: discountData.customNotes || null
+            } 
+          : contract
+      ));
+
+      setShowDiscountModal(false);
+      setDiscountContract(null);
+    } catch (error) {
+      console.error('Erro ao aplicar desconto:', error);
+      alert('Erro ao aplicar desconto');
     }
   };
 
@@ -1085,77 +1190,150 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           </div>
         </div>
       )}
-      {/* Edit Contract Modal */}
-      {showEditModal && editingContract && (
+
+      {/* Discount Modal */}
+      {showDiscountModal && discountContract && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Editar Contrato</h2>
+                <h2 className="text-xl font-bold text-gray-900">Aplicar Desconto</h2>
                 <button
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingContract(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
+                  onClick={() => setShowDiscountModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
               <div className="space-y-4">
-                {/* Desconto */}
+                {discountError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <span className="text-red-700">Erro ao aplicar desconto. Tente novamente.</span>
+                  </div>
+                )}
+
+                {/* Tipo de Desconto */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Desconto (%)
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Desconto
+                  </label>
+                  <div className="flex space-x-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="discountType"
+                        value="percentage"
+                        checked={discountData.discountType === 'percentage'}
+                        onChange={(e) => handleDiscountChange('discountType', e.target.value)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Percentual (%)</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="discountType"
+                        value="fixed"
+                        checked={discountData.discountType === 'fixed'}
+                        onChange={(e) => handleDiscountChange('discountType', e.target.value)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Valor Fixo (R$)</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Campo de Desconto Percentual */}
+                {discountData.discountType === 'percentage' && (
+                  <div>
+                    <label htmlFor="discountPercentage" className="block text-sm font-medium text-gray-700 mb-2">
+                      Desconto (%)
+                    </label>
+                    <input
+                      type="number"
+                      id="discountPercentage"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={discountData.discountPercentage}
+                      onChange={(e) => handleDiscountChange('discountPercentage', parseFloat(e.target.value) || 0)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                )}
+
+                {/* Campo de Desconto em Valor Fixo */}
+                {discountData.discountType === 'fixed' && (
+                  <div>
+                    <label htmlFor="discountAmount" className="block text-sm font-medium text-gray-700 mb-2">
+                      Valor do Desconto (R$)
+                    </label>
+                    <input
+                      type="number"
+                      id="discountAmount"
+                      step="0.01"
+                      min="0"
+                      value={discountData.discountAmount}
+                      onChange={(e) => handleDiscountChange('discountAmount', parseFloat(e.target.value) || 0)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                )}
+
+                {/* Preço Final */}
+                <div>
+                  <label htmlFor="adjustedPrice" className="block text-sm font-medium text-gray-700 mb-2">
+                    Preço Final (R$)
                   </label>
                   <input
                     type="number"
-                    min="0"
-                    max="100"
+                    id="adjustedPrice"
                     step="0.01"
-                    value={editingContract.discount_percentage || 0}
-                    onChange={(e) => setEditingContract({
-                      ...editingContract,
-                      discount_percentage: parseFloat(e.target.value) || 0
-                    })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    min="0"
+                    value={discountData.adjustedPrice}
+                    onChange={(e) => handleDiscountChange('adjustedPrice', parseFloat(e.target.value) || 0)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     placeholder="0.00"
                   />
                 </div>
 
-                {/* Preço Ajustado */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Preço Final Ajustado
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={editingContract.adjusted_price || editingContract.final_price || editingContract.package_price || 0}
-                    onChange={(e) => setEditingContract({
-                      ...editingContract,
-                      adjusted_price: parseFloat(e.target.value) || 0
-                    })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0.00"
-                  />
-                </div>
+                {/* Resumo do Desconto */}
+                {discountContract && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-700">Preço Original:</span>
+                      <span className="text-sm text-gray-600">R$ {originalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {(discountData.discountPercentage > 0 || discountData.discountAmount > 0) && (
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          Desconto ({discountData.discountPercentage.toFixed(2)}%):
+                        </span>
+                        <span className="text-sm text-red-600">
+                          -R$ {(originalPrice - discountData.adjustedPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                      <span className="text-sm font-semibold text-gray-900">Preço Final:</span>
+                      <span className="text-sm font-semibold text-gray-900">R$ {discountData.adjustedPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                )}
 
-                {/* Observações Personalizadas */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="customNotes" className="block text-sm font-medium text-gray-700 mb-2">
                     Observações Personalizadas
                   </label>
                   <textarea
-                    rows={4}
-                    value={editingContract.custom_notes || ''}
-                    onChange={(e) => setEditingContract({
-                      ...editingContract,
-                      custom_notes: e.target.value
-                    })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    id="customNotes"
+                    rows={3}
+                    value={discountData.customNotes}
+                    onChange={(e) => handleDiscountChange('customNotes', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     placeholder="Observações que aparecerão no contrato..."
                   />
                 </div>
@@ -1163,112 +1341,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
               <div className="mt-6 flex justify-end space-x-4">
                 <button
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingContract(null);
-                  }}
-                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                  onClick={() => setShowDiscountModal(false)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={saveEditedContract}
-                  disabled={savingEdit}
-                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-                >
-                  {savingEdit ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  <span>{savingEdit ? 'Salvando...' : 'Salvar'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Profile Modal */}
-      {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Editar Perfil</h2>
-                <button
-                  onClick={() => setShowProfileModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Nome Completo
-                  </label>
-                  <input
-                    type="text"
-                    value={profileData.name}
-                    onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Digite seu nome completo"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Nome do Negócio
-                  </label>
-                  <input
-                    type="text"
-                    value={profileData.business_name}
-                    onChange={(e) => setProfileData({...profileData, business_name: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ex: João Silva Fotografia"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Telefone/WhatsApp
-                  </label>
-                  <input
-                    type="text"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-4">
-                <button
-                  onClick={() => setShowProfileModal(false)}
-                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={saveProfile}
-                  disabled={savingProfile}
-                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-                >
-                  {savingProfile ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  <span>{savingProfile ? 'Salvando...' : 'Salvar'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                  onClick={applyDiscount}
+                  disabled={applyingDiscount}
+                  className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple
