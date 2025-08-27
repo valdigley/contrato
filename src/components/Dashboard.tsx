@@ -5,11 +5,7 @@ import { DollarSign, Phone } from 'lucide-react';
   TrendingUp,
   Clock,
   CheckCircle,
-  AlertTriangle,
-  LogOut,
-  User,
-  BarChart3,
-import { DollarSign, Phone } from 'lucide-react';
+import { BarChart3, Users, Calendar, TrendingUp, Plus, List, Settings, User, LogOut, FileText, Camera, Sun, Moon, Edit2, Save, X, Percent, DollarSign, Phone } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
