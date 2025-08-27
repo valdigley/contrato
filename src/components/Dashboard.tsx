@@ -542,51 +542,19 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {stats.recentContracts.map((contract) => (
-                  <div key={contract.id} className="p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-all">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="font-semibold text-gray-900">{contract.nome_completo}</h3>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            contract.tipo_evento === 'Casamento' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
-                            contract.tipo_evento === 'Aniversário' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
-                            contract.tipo_evento === 'Ensaio Fotográfico' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
-                            'bg-blue-100 text-blue-800'
-                          }`}>
-                            {contract.tipo_evento}
-                          </span>
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                            contract.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-300' :
-                            contract.status === 'sent' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
-                            contract.status === 'cancelled' ? 'bg-red-100 text-red-800 border border-red-300' :
-                            'bg-gray-100 text-gray-600 border border-gray-300'
-                          }`}>
-                            {contract.status === 'signed' ? '✓ Assinado' :
-                             contract.status === 'sent' ? '📤 Enviado' :
-                             contract.status === 'cancelled' ? '❌ Cancelado' :
-                             '📝 Rascunho'}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <span>📧</span>
-                            <span>{contract.email}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <span>📱</span>
-                            <span>{contract.whatsapp ? contract.whatsapp.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3') : 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <span>🏙️</span>
-                            <span>{contract.cidade}</span>
-                          </div>
-                          {contract.data_evento && (
-                            <div className="flex items-center space-x-1">
-                              <span>📅</span>
-                              <span>{formatDate(contract.data_evento)}</span>
-                            </div>
-                          )}
+                        {/* Dropdown de Status */}
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-500 mr-2">Status:</span>
+                          <select
+                            value={contract.status || 'draft'}
+                            onChange={(e) => updateContractStatus(contract.id, e.target.value as 'draft' | 'sent' | 'signed' | 'cancelled')}
+                            className="px-3 py-1 text-xs rounded-full border border-gray-300 bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          >
+                            <option value="draft">📝 Rascunho</option>
+                            <option value="sent">📤 Enviado</option>
+                            <option value="signed">✓ Assinado</option>
+                            <option value="cancelled">❌ Cancelado</option>
+                          </select>
                         </div>
                         {(contract.nome_noivos || contract.nome_aniversariante) && (
                           <div className="mt-2 text-sm text-gray-700">
