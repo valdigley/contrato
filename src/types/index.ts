@@ -52,6 +52,9 @@ export interface ContractData {
   payment_method_id?: string;
   final_price?: number;
   preferred_payment_day?: number;
+  adjusted_price?: number;
+  discount_percentage?: number;
+  custom_notes?: string;
   created_at?: string;
   updated_at?: string;
 }
