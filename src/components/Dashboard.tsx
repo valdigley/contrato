@@ -1349,4 +1349,4 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 <button
                   onClick={applyDiscount}
                   disabled={applyingDiscount}
-                  className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple
+                  className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
