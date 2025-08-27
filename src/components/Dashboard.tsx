@@ -544,101 +544,58 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               <div className="space-y-4">
                 {stats.recentContracts.map((contract) => (
                   <div key={contract.id} className="bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-all duration-200">
-                    {/* Header Section */}
-                    <div className="p-6 border-b border-gray-100">
-                      <div className="grid grid-cols-12 gap-4 items-center">
-                        {/* Cliente Info - 4 colunas */}
-                        <div className="col-span-4">
-                          <h3 className="font-semibold text-gray-900 text-lg mb-1">{contract.nome_completo}</h3>
-                          <div className="flex items-center space-x-2">
-                            <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                              contract.tipo_evento === 'Casamento' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
-                              contract.tipo_evento === 'Aniversário' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
-                              contract.tipo_evento === 'Ensaio Fotográfico' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
-                              'bg-blue-100 text-blue-800 border border-blue-200'
-                            }`}>
-                              {contract.tipo_evento}
-                            </span>
-                          </div>
-                          {(contract.nome_noivos || contract.nome_aniversariante) && (
-                            <p className="text-sm text-gray-600 mt-2">
-                              {contract.nome_noivos ? `Noivos: ${contract.nome_noivos}` : ''}
-                              {contract.nome_aniversariante ? `Aniversariante: ${contract.nome_aniversariante}` : ''}
-                            </p>
-                          )}
+                    <div 
+                      className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => {
+                        setSelectedContract(contract);
+                        setShowModal(true);
+                      }}
+                    >
+                      <div className="grid grid-cols-5 gap-4 items-center">
+                        {/* Nome do Cliente */}
+                        <div>
+                          <h3 className="font-semibold text-gray-900 text-lg">{contract.nome_completo}</h3>
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            contract.tipo_evento === 'Casamento' ? 'bg-pink-100 text-pink-800' :
+                            contract.tipo_evento === 'Aniversário' ? 'bg-yellow-100 text-yellow-800' :
+                            contract.tipo_evento === 'Ensaio Fotográfico' ? 'bg-purple-100 text-purple-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {contract.tipo_evento}
+                          </span>
                         </div>
 
-                        {/* Status - 2 colunas */}
-                        <div className="col-span-2">
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-                          <select
-                            value={contract.status || 'draft'}
-                            onChange={(e) => updateContractStatus(contract.id, e.target.value as 'draft' | 'sent' | 'signed' | 'cancelled')}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="draft">Rascunho</option>
-                            <option value="sent">Enviado</option>
-                            <option value="signed">Assinado</option>
-                            <option value="cancelled">Cancelado</option>
-                          </select>
+                        {/* Data do Evento */}
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-900">
+                            {contract.data_evento ? formatDate(contract.data_evento) : 'Data não definida'}
+                          </div>
+                          <div className="text-xs text-gray-500">Data do Evento</div>
                         </div>
 
-                        {/* Data e Valor - 3 colunas */}
-                        <div className="col-span-3">
-                          <div className="space-y-1">
-                            {contract.data_evento && (
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Calendar className="h-4 w-4 mr-2" />
-                                <span>{formatDate(contract.data_evento)}</span>
-                              </div>
-                            )}
-                            {(contract.final_price || contract.package_price) && (
-                              <div className="flex items-center text-sm font-semibold text-green-600">
-                                <DollarSign className="h-4 w-4 mr-1" />
-                                <span>{formatCurrency(contract.final_price || contract.package_price)}</span>
-                              </div>
-                            )}
-                          </div>
+                        {/* Cidade */}
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-900">{contract.cidade}</div>
+                          <div className="text-xs text-gray-500">Cidade</div>
                         </div>
 
-                        {/* Actions - 3 colunas */}
-                        <div className="col-span-3">
-                          <div className="flex items-center justify-end space-x-2">
-                            <button
-                              onClick={() => {
-                                setSelectedContract(contract);
-                                setShowModal(true);
-                              }}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Ver detalhes"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedContract(contract);
-                                generateContract(contract);
-                              }}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Gerar contrato"
-                            >
-                              <FileText className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => sendWhatsAppContract(contract)}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Enviar WhatsApp"
-                            >
-                              <Phone className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => deleteContract(contract.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Excluir contrato"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                        {/* Pacote */}
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-900">
+                            {contract.package_id ? 'Pacote Selecionado' : 'Sem Pacote'}
                           </div>
+                          <div className="text-xs text-gray-500">Pacote</div>
+                        </div>
+
+                        {/* Valor */}
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-green-600">
+                            {(contract.final_price || contract.package_price) 
+                              ? formatCurrency(contract.final_price || contract.package_price)
+                              : 'Valor não definido'
+                            }
+                          </div>
+                          <div className="text-xs text-gray-500">Valor</div>
                         </div>
                       </div>
                     </div>
@@ -756,27 +713,65 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         </p>
                       </div>
                     )}
+
+                    {/* Status do Contrato */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-2">Status do Contrato</label>
+                      <select
+                        value={selectedContract.status || 'draft'}
+                        onChange={(e) => {
+                          updateContractStatus(selectedContract.id, e.target.value as 'draft' | 'sent' | 'signed' | 'cancelled');
+                          setSelectedContract({...selectedContract, status: e.target.value});
+                        }}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="draft">📝 Rascunho</option>
+                        <option value="sent">📤 Enviado</option>
+                        <option value="signed">✓ Assinado</option>
+                        <option value="cancelled">❌ Cancelado</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="mt-8 flex justify-end space-x-4">
+                <div className="mt-8 flex justify-between">
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={() => {
+                        generateContract(selectedContract);
+                        setShowModal(false);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>Gerar Contrato</span>
+                    </button>
+                    <button
+                      onClick={() => sendWhatsAppContract(selectedContract)}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    >
+                      <Phone className="h-4 w-4" />
+                      <span>WhatsApp</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Tem certeza que deseja excluir este contrato?')) {
+                          deleteContract(selectedContract.id);
+                          setShowModal(false);
+                        }
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Excluir</span>
+                    </button>
+                  </div>
                   <button
-                    onClick={() => sendWhatsAppContract(selectedContract)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    onClick={() => setShowModal(false)}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
                   >
-                    <Phone className="h-4 w-4" />
-                    <span>WhatsApp</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      generateContract(selectedContract);
-                      setShowModal(false);
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-                  >
-                    <FileText className="h-4 w-4" />
-                    <span>Gerar Contrato</span>
+                    Fechar
                   </button>
                 </div>
               </div>
@@ -823,14 +818,19 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                     <span>Imprimir</span>
                   </button>
                   <button
-                    onClick={() => {
-                      sendWhatsAppContract(selectedContract, generatedContract);
-                      setShowContractModal(false);
-                    }}
+                    onClick={() => sendWhatsAppContract(selectedContract)}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                   >
                     <Phone className="h-4 w-4" />
                     <span>Enviar WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowContractModal(false);
+                    }}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Fechar
                   </button>
                 </div>
               </div>
