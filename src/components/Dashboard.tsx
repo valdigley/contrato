@@ -526,6 +526,15 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                           }`}>
                             {contract.tipo_evento}
                           </span>
+                          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                            contract.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
+                            contract.status === 'sent' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                            'bg-gray-100 text-gray-600 border border-gray-200'
+                          }`}>
+                            {contract.status === 'signed' ? '✓ Assinado' :
+                             contract.status === 'sent' ? '📤 Enviado' :
+                             '📝 Rascunho'}
+                          </span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
                           <div className="flex items-center space-x-1">
@@ -557,51 +566,87 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         )}
                       </div>
                       <div className="text-right ml-4">
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-start space-x-4">
                           <div className="text-right">
-                            <div className="mb-2">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                contract.status === 'signed' ? 'bg-green-100 text-green-800' :
-                                contract.status === 'sent' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {contract.status === 'signed' ? '✓ Assinado' :
-                                 contract.status === 'sent' ? '📤 Enviado' :
-                                 '📝 Rascunho'}
-                              </span>
-                            </div>
                             <p className="font-bold text-lg text-green-600">
                               {formatCurrency(contract.final_price || contract.package_price || 0)}
                             </p>
                             <p className="text-xs text-gray-500">Cadastrado em</p>
                             <p className="text-sm text-gray-600">{formatDate(contract.created_at)}</p>
                           </div>
-                          <div className="flex flex-col space-y-2">
+                          <div className="flex flex-col space-y-1">
+                            {/* Botões de ação */}
                             <button
                               onClick={() => {
                                 setSelectedContract(contract);
                                 setShowModal(true);
                               }}
-                              className="text-blue-600 hover:text-blue-900 p-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+                              className="text-blue-600 hover:text-blue-900 p-1.5 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
                               title="Ver detalhes"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => generateContract(contract)}
-                              className="text-green-600 hover:text-green-900 p-2 rounded-lg bg-green-50 hover:bg-green-100 transition-colors"
+                              className="text-green-600 hover:text-green-900 p-1.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
                               title="Gerar contrato"
                             >
                               <FileText className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => deleteContract(contract.id)}
-                              className="text-red-600 hover:text-red-900 p-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors"
+                              className="text-red-600 hover:text-red-900 p-1.5 rounded bg-red-50 hover:bg-red-100 transition-colors"
                               title="Excluir"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
-                            <div className="mt-2 space-y-1">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Status Actions - Linha separada embaixo */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <div className="text-sm text-gray-500">
+                        Alterar status:
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => updateContractStatus(contract.id, 'sent')}
+                          className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                            contract.status === 'sent' 
+                              ? 'bg-blue-500 text-white' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700'
+                          }`}
+                          title="Marcar como enviado"
+                        >
+                          📤 Enviado
+                        </button>
+                        <button
+                          onClick={() => updateContractStatus(contract.id, 'signed')}
+                          className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                            contract.status === 'signed' 
+                              ? 'bg-green-500 text-white' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-700'
+                          }`}
+                          title="Marcar como assinado"
+                        >
+                          ✓ Assinado
+                        </button>
+                        {contract.status !== 'draft' && (
+                          <button
+                            onClick={() => updateContractStatus(contract.id, 'draft')}
+                            className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                            title="Voltar para rascunho"
+                          >
+                            📝 Rascunho
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
                               <button
                                 onClick={() => updateContractStatus(contract.id, 'sent')}
                                 className={`w-full text-xs px-2 py-1 rounded transition-colors ${
