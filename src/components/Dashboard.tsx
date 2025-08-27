@@ -315,6 +315,17 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const fetchContracts = async () => {
     if (!user) return;
+      // Check if Supabase is properly configured
+      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey || !supabaseUrl.includes('supabase.co') || supabaseKey.length < 20) {
+        console.log('Supabase não configurado corretamente');
+        setContracts([]);
+        setLoading(false);
+        return;
+      }
+
 
     try {
       // Get photographer profile for current user
@@ -345,7 +356,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       setContracts(contracts?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
 
     } catch (error) {
-      console.error('Erro ao buscar dados do dashboard:', error);
+      console.error('Erro ao buscar contratos:', error);
+      // If it's a network error, show a more helpful message
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.log('Erro de conexão - verifique as configurações do Supabase');
+      }
+      setContracts([]);
     } finally {
       setLoading(false);
     }
