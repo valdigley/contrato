@@ -20,7 +20,6 @@ import {
   Trash2,
   Download,
   Phone
-  Phone
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
