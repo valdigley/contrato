@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, Users, Calendar, TrendingUp, Plus, List, Settings, User, LogOut, FileText, Camera, Sun, Moon, Edit2, Save, X, Percent } from 'lucide-react';
-import {
-  FileText, 
-  Users, 
-  Calendar, 
-  DollarSign, 
-  Camera, 
-  Settings,
+import { DollarSign, Phone } from 'lucide-react';
   Plus,
   TrendingUp,
   Clock,
