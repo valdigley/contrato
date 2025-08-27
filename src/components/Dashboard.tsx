@@ -631,99 +631,51 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Contratos Este Mês */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Este Mês</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.contractsThisMonth}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">contratos</p>
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-md p-4 border border-white/20 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center space-x-3">
+              <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-2">
+                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full p-3">
-                <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{contracts.length} contratos</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
               </div>
             </div>
-            <div className="mt-4">
-              <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                {formatCurrency(stats.monthlyContractsValue)}
-              </p>
+            </div>
+          </div>
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-md p-4 border border-white/20 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center space-x-3">
+              <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-2">
+                <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Este Mês</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{monthlyContracts.length} contratos</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  R$ {monthlyValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">valor total</p>
             </div>
           </div>
-
-          {/* Contratos Este Ano */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Este Ano</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.contractsThisYear}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">contratos</p>
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-md p-4 border border-white/20 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center space-x-3">
+              <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-2">
+                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
-              <div className="bg-green-100 dark:bg-green-900/30 rounded-full p-3">
-                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Este Ano</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{yearlyContracts.length} contratos</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  R$ {yearlyValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
               </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                {formatCurrency(stats.yearlyContractsValue)}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">valor total</p>
-            </div>
-          </div>
-
-          {/* Total de Contratos */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Geral</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalContracts}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">contratos</p>
-              </div>
-              <div className="bg-purple-100 dark:bg-purple-900/30 rounded-full p-3">
-                <FileText className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                {formatCurrency(stats.averageContractValue)}
-              </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">valor médio</p>
             </div>
-          </div>
-
-          {/* Tipos de Eventos */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-6">
-            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tipos de Eventos</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{getUniqueEventTypes()}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">diferentes</p>
-              </div>
-              <div className="bg-orange-100 dark:bg-orange-900/30 rounded-full p-3">
-                <Camera className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="flex space-x-1">
-                {['Casamento', 'Aniversário', 'Ensaio'].map((type, index) => (
-                  <div
-                    key={type}
-                    className={`w-2 h-2 rounded-full ${
-                      index === 0 ? 'bg-pink-400' :
-                      index === 1 ? 'bg-yellow-400' :
-                      'bg-purple-400'
-                    }`}
-                  />
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">variedade</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="flex justify-between items-center mb-6">
           <div className="flex space-x-4">
             <button
               onClick={() => onNavigate('form')}
