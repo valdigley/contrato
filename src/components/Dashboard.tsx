@@ -606,56 +606,61 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                             <p className="text-xs text-gray-500">Cadastrado em</p>
                             <p className="text-sm text-gray-600">{formatDate(contract.created_at)}</p>
                           </div>
-                          <div className="flex flex-col space-y-1">
-                            {/* Botões de ação */}
-                            <button
-                              onClick={() => {
-                                setSelectedContract(contract);
-                                setShowModal(true);
-                              }}
-                              className="text-blue-600 hover:text-blue-900 p-1.5 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
-                              title="Ver detalhes"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => generateContract(contract)}
-                              className="text-green-600 hover:text-green-900 p-1.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
-                              title="Gerar contrato"
-                            >
-                              <FileText className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => sendWhatsAppContract(contract)}
-                              className="text-green-600 hover:text-green-900 p-1.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
-                              title="Enviar WhatsApp"
-                            >
-                              <Phone className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => deleteContract(contract.id)}
-                              className="text-red-600 hover:text-red-900 p-1.5 rounded bg-red-50 hover:bg-red-100 transition-colors"
-                              title="Excluir"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
                         </div>
                       </div>
                     </div>
                     
-                    {/* Status Actions - Linha separada embaixo */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      <div className="text-sm text-gray-500">
-                        Alterar status:
+                    {/* Actions - Linha separada embaixo */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 space-y-2">
+                      {/* Botões de Ação */}
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500 mr-2">Ações:</span>
+                        <button
+                          onClick={() => {
+                            setSelectedContract(contract);
+                            setShowModal(true);
+                          }}
+                          className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors flex items-center space-x-1"
+                          title="Ver detalhes"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>Ver</span>
+                        </button>
+                        <button
+                          onClick={() => generateContract(contract)}
+                          className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition-colors flex items-center space-x-1"
+                          title="Gerar contrato"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span>Contrato</span>
+                        </button>
+                        <button
+                          onClick={() => sendWhatsAppContract(contract)}
+                          className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition-colors flex items-center space-x-1"
+                          title="Enviar WhatsApp"
+                        >
+                          <Phone className="w-3 h-3" />
+                          <span>WhatsApp</span>
+                        </button>
+                        <button
+                          onClick={() => deleteContract(contract.id)}
+                          className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition-colors flex items-center space-x-1"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Excluir</span>
+                        </button>
                       </div>
-                      <div className="flex space-x-2">
+                      
+                      {/* Botões de Status */}
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500 mr-2">Status:</span>
                         <button
                           onClick={() => updateContractStatus(contract.id, 'sent')}
                           className={`px-3 py-1 text-xs rounded-full transition-colors ${
                             contract.status === 'sent' 
-                              ? 'bg-blue-500 text-white' 
-                              : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700'
+                              ? 'bg-blue-500 text-white border-2 border-blue-600' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700 border border-gray-300'
                           }`}
                           title="Marcar como enviado"
                         >
@@ -665,8 +670,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                           onClick={() => updateContractStatus(contract.id, 'signed')}
                           className={`px-3 py-1 text-xs rounded-full transition-colors ${
                             contract.status === 'signed' 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-700'
+                              ? 'bg-green-500 text-white border-2 border-green-600' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-700 border border-gray-300'
                           }`}
                           title="Marcar como assinado"
                         >
@@ -676,8 +681,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                           onClick={() => updateContractStatus(contract.id, 'cancelled')}
                           className={`px-3 py-1 text-xs rounded-full transition-colors ${
                             contract.status === 'cancelled' 
-                              ? 'bg-red-500 text-white' 
-                              : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700'
+                              ? 'bg-red-500 text-white border-2 border-red-600' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700 border border-gray-300'
                           }`}
                           title="Marcar como cancelado"
                         >
@@ -686,7 +691,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         {contract.status !== 'draft' && (
                           <button
                             onClick={() => updateContractStatus(contract.id, 'draft')}
-                            className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                            className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-300"
                             title="Voltar para rascunho"
                           >
                             📝 Rascunho
