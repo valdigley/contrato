@@ -366,19 +366,32 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     setSubmitStatus('idle');
 
     try {
-      // Buscar o photographer_id do usuário logado
-      if (!user) {
-        throw new Error('Usuário não autenticado');
-      }
+      let photographerId;
+      
+      // Check if we're in client mode
+      if (isClientMode) {
+        // Get photographer_id from URL parameters
+        photographerId = urlParams.get('photographer_id');
+        if (!photographerId) {
+          throw new Error('ID do fotógrafo não encontrado no link. Entre em contato com o fotógrafo para obter um link válido.');
+        }
+      } else {
+        // Normal mode - get photographer_id from authenticated user
+        if (!user) {
+          throw new Error('Usuário não autenticado');
+        }
 
-      const { data: photographerData, error: photographerError } = await supabase
-        .from('photographers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
+        const { data: photographerData, error: photographerError } = await supabase
+          .from('photographers')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
 
-      if (photographerError) {
-        throw new Error('Perfil de fotógrafo não encontrado. Crie seu perfil primeiro.');
+        if (photographerError) {
+          throw new Error('Perfil de fotógrafo não encontrado. Crie seu perfil primeiro.');
+        }
+        
+        photographerId = photographerData.id;
       }
 
       // Debug: Log dos valores antes de salvar
@@ -391,7 +404,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       const { data, error } = await supabase
         .from('contratos')
         .insert([{
-          photographer_id: photographerData.id,
+          photographer_id: photographerId,
           nome_completo: formData.nome_completo,
           cpf: formData.cpf.replace(/\D/g, ''),
           email: formData.email,

@@ -257,10 +257,28 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             </button>
             <button
               onClick={() => {
-                const clientLink = `${window.location.origin}?client=true`;
-                navigator.clipboard.writeText(clientLink);
-                setLinkCopied(true);
-                setTimeout(() => setLinkCopied(false), 2000);
+                const getPhotographerId = async () => {
+                  try {
+                    const { data: photographerData } = await supabase
+                      .from('photographers')
+                      .select('id')
+                      .eq('user_id', user?.id)
+                      .single();
+                    
+                    if (photographerData) {
+                      const clientLink = `${window.location.origin}?client=true&photographer_id=${photographerData.id}`;
+                      navigator.clipboard.writeText(clientLink);
+                      setLinkCopied(true);
+                      setTimeout(() => setLinkCopied(false), 2000);
+                    } else {
+                      alert('Erro: Perfil de fotógrafo não encontrado. Crie seu perfil primeiro.');
+                    }
+                  } catch (error) {
+                    console.error('Erro ao obter photographer_id:', error);
+                    alert('Erro ao gerar link do cliente');
+                  }
+                };
+                getPhotographerId();
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
               title={linkCopied ? 'Link Copiado!' : 'Copiar Link para Cliente'}
