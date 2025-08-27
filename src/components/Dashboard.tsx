@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, Users, Calendar, TrendingUp, Plus, List, Settings, User, LogOut, FileText, Camera, Sun, Moon, Edit2, Save, X, Percent } from 'lucide-react';
-import { DollarSign, Phone } from 'lucide-react';
-  Plus,
-  TrendingUp,
+import { 
+  BarChart3, 
+  Users, 
+  Calendar, 
+  TrendingUp, 
+  Plus, 
+  List, 
+  Settings, 
+  User, 
+  LogOut, 
+  FileText, 
+  Camera, 
+  Sun, 
+  Moon, 
+  Edit2, 
+  Save, 
+  X, 
+  Percent, 
+  DollarSign, 
+  Phone,
+  AlertCircle,
+  ArrowLeft,
   Clock,
-  CheckCircle,
-import { BarChart3, Users, Calendar, TrendingUp, Plus, List, Settings, User, LogOut, FileText, Camera, Sun, Moon, Edit2, Save, X, Percent, DollarSign, Phone } from 'lucide-react';
+  CheckCircle
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
