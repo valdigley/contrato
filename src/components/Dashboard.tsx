@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import { BarChart3, Users, Calendar, TrendingUp, Plus, List, Settings, User, LogOut, FileText, Camera, Sun, Moon, Edit2, Save, X, Percent } from 'lucide-react';
   FileText, 
   Users, 
   Calendar, 
@@ -25,6 +25,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { ContractData } from '../types';
 
 interface DashboardProps {
   user: any;
@@ -53,6 +54,8 @@ interface ContractEdit {
 export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const { signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [contracts, setContracts] = useState<ContractData[]>([]);
+  const [loadingContracts, setLoadingContracts] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalContracts: 0,
     monthlyRevenue: 0,
@@ -213,6 +216,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   useEffect(() => {
     loadDashboardData();
   }, []);
+      fetchAllContracts();
 
   const getUniqueEventTypes = () => {
     const uniqueTypes = new Set(stats.recentContracts.map(c => c.tipo_evento));
