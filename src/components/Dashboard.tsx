@@ -493,117 +493,50 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Cliente
+                      Evento
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Tipo de Evento
+                      Data do Evento
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Data de Criação
+                      Cidade
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Ações
+                      Valor
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredContracts.map((contract) => (
-                    <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr 
+                      key={contract.id} 
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => {
+                        setSelectedContract(contract);
+                        setShowModal(true);
+                      }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {contract.nome_completo}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {formatCPF(contract.cpf)} • {contract.cidade}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            📧 {contract.email} • 📱 {contract.whatsapp ? formatWhatsApp(contract.whatsapp) : 'N/A'}
-                          </div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {contract.tipo_evento}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {contract.nome_completo}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEventTypeColor(contract.tipo_evento)}`}>
-                          {contract.tipo_evento}
-                        </span>
-                        <div className="mt-1">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(contract.status)}`}>
-                            {getStatusText(contract.status)}
-                          </span>
-                        </div>
-                        {contract.data_evento && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            📅 {formatDate(contract.data_evento)}
-                            {contract.horario_evento && (
-                              <span className="ml-2">🕐 {contract.horario_evento}</span>
-                            )}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {contract.data_evento ? formatDate(contract.data_evento) : 'Não definida'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {contract.cidade}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {formatCurrency(contract.adjusted_price || contract.final_price || contract.package_price || 0)}
+                        {contract.discount_percentage > 0 && (
+                          <div className="text-xs text-green-600 dark:text-green-400">
+                            {contract.discount_percentage}% desconto
                           </div>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(contract.created_at)}
-                        <div className="text-xs text-gray-400 dark:text-gray-500">Cadastrado em</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedContract(contract);
-                              setShowModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                            title="Ver detalhes"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => sendWhatsAppContract(contract)}
-                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-1 rounded bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
-                            title="Enviar WhatsApp"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => openEditModal(contract)}
-                            className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 p-1 rounded bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
-                            title="Editar contrato"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                        
-                        {/* Status Controls */}
-                        <div className="flex space-x-1 mt-2">
-                          <button
-                            onClick={() => updateContractStatus(contract.id, 'sent')}
-                            className={`px-2 py-1 text-xs rounded transition-colors ${
-                              contract.status === 'sent' 
-                                ? 'bg-blue-500 text-white' 
-                                : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
-                            }`}
-                            title="Marcar como enviado"
-                          >
-                            📤
-                          </button>
-                          <button
-                            onClick={() => updateContractStatus(contract.id, 'signed')}
-                            className={`px-2 py-1 text-xs rounded transition-colors ${
-                              contract.status === 'signed' 
-                                ? 'bg-green-500 text-white' 
-                                : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/20'
-                            }`}
-                            title="Marcar como assinado"
-                          >
-                            ✓
-                          </button>
-                          <button
-                            onClick={() => deleteContract(contract.id)}
-                            className="px-2 py-1 text-xs rounded bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors"
-                            title="Excluir contrato"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   ))}
@@ -617,10 +550,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       {/* Contract Details Modal */}
       {showModal && selectedContract && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalhes do Contrato</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Contrato - {selectedContract.nome_completo}
+                </h2>
                 <button
                   onClick={() => setShowModal(false)}
                   className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
@@ -630,6 +565,56 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               </div>
 
               <div className="space-y-6">
+                {/* Ações do Contrato */}
+                <div className="flex flex-wrap gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <button
+                    onClick={() => sendWhatsAppContract(selectedContract)}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Enviar WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => openEditModal(selectedContract)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    <span>Editar Contrato</span>
+                  </button>
+                  <button
+                    onClick={() => updateContractStatus(selectedContract.id, 'sent')}
+                    className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                      selectedContract.status === 'sent' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
+                    }`}
+                  >
+                    <span>📤 Marcar como Enviado</span>
+                  </button>
+                  <button
+                    onClick={() => updateContractStatus(selectedContract.id, 'signed')}
+                    className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                      selectedContract.status === 'signed' 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/20'
+                    }`}
+                  >
+                    <span>✓ Marcar como Assinado</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm('Tem certeza que deseja excluir este contrato?')) {
+                        deleteContract(selectedContract.id);
+                        setShowModal(false);
+                      }
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Excluir</span>
+                  </button>
+                </div>
+
                 {/* Dados Pessoais */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
@@ -644,6 +629,18 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">CPF</label>
                       <p className="text-sm text-gray-900 dark:text-white">{formatCPF(selectedContract.cpf)}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data de Nascimento</label>
+                      <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedContract.data_nascimento)}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Cidade</label>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedContract.cidade}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Endereço</label>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedContract.endereco}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">E-mail</label>
@@ -669,12 +666,152 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         {selectedContract.tipo_evento}
                       </span>
                     </div>
-                    {selectedContract.data_evento && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data do Evento</label>
-                        <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedContract.data_evento)}</p>
+
+                    {(selectedContract.data_evento || selectedContract.horario_evento) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {selectedContract.data_evento && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data do Evento</label>
+                            <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedContract.data_evento)}</p>
+                          </div>
+                        )}
+                        {selectedContract.horario_evento && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Horário do Evento</label>
+                            <p className="text-sm text-gray-900 dark:text-white">{selectedContract.horario_evento}</p>
+                          </div>
+                        )}
                       </div>
                     )}
+
+                    {selectedContract.nome_noivos && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome dos Noivos</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.nome_noivos}</p>
+                      </div>
+                    )}
+
+                    {selectedContract.nome_aniversariante && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome do(a) Aniversariante</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.nome_aniversariante}</p>
+                      </div>
+                    )}
+
+                    {selectedContract.local_festa && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {selectedContract.tipo_evento === 'Ensaio Fotográfico' ? 'Local do Ensaio' : 'Local da Festa'}
+                        </label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.local_festa}</p>
+                      </div>
+                    )}
+
+                    {selectedContract.local_pre_wedding && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Local do Pré-Wedding</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.local_pre_wedding}</p>
+                      </div>
+                    )}
+
+                    {selectedContract.local_making_of && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Local do Making Of</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.local_making_of}</p>
+                      </div>
+                    )}
+
+                    {selectedContract.local_cerimonia && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Local da Cerimônia</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.local_cerimonia}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dados Financeiros */}
+                {(selectedContract.package_price || selectedContract.final_price || selectedContract.preferred_payment_day) && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                      <DollarSign className="w-5 h-5 mr-2" />
+                      Dados Financeiros
+                    </h3>
+                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
+                      {selectedContract.package_price && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preço do Pacote</label>
+                          <p className="text-sm text-gray-900 dark:text-white">
+                            {formatCurrency(selectedContract.package_price)}
+                          </p>
+                        </div>
+                      )}
+                      {selectedContract.final_price && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preço Final</label>
+                          <p className="text-sm text-gray-900 dark:text-white">
+                            {formatCurrency(selectedContract.final_price)}
+                          </p>
+                        </div>
+                      )}
+                      {selectedContract.adjusted_price && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preço Ajustado</label>
+                          <p className="text-sm text-gray-900 dark:text-white">
+                            {formatCurrency(selectedContract.adjusted_price)}
+                          </p>
+                        </div>
+                      )}
+                      {selectedContract.discount_percentage > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Desconto Aplicado</label>
+                          <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                            {selectedContract.discount_percentage}%
+                          </p>
+                        </div>
+                      )}
+                      {selectedContract.preferred_payment_day && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dia Preferido para Pagamento</label>
+                          <p className="text-sm text-gray-900 dark:text-white">Dia {selectedContract.preferred_payment_day} de cada mês</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Observações Personalizadas */}
+                {selectedContract.custom_notes && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                      <FileText className="w-5 h-5 mr-2" />
+                      Observações Personalizadas
+                    </h3>
+                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                      <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+                        {selectedContract.custom_notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Data de Cadastro */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                    <Calendar className="w-5 h-5 mr-2" />
+                    Informações do Sistema
+                  </h3>
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data de Cadastro</label>
+                      <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedContract.created_at)}</p>
+                    </div>
+                    <div className="mt-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedContract.status)}`}>
+                        {getStatusText(selectedContract.status)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
