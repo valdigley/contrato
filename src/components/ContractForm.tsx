@@ -371,9 +371,13 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       // Check if we're in client mode
       if (isClientMode) {
         // Get photographer_id from URL parameters
-        photographerId = urlParams.get('photographer_id');
+        const photographerIdParam = urlParams.get('photographer_id');
+        console.log('Photographer ID from URL:', photographerIdParam);
+        photographerId = photographerIdParam;
         if (!photographerId) {
-          throw new Error('ID do fotógrafo não encontrado no link. Entre em contato com o fotógrafo para obter um link válido.');
+          console.error('URL atual:', window.location.href);
+          console.error('Parâmetros da URL:', Object.fromEntries(urlParams.entries()));
+          throw new Error('ID do fotógrafo não encontrado no link. Verifique se o link está completo.');
         }
       } else {
         // Normal mode - get photographer_id from authenticated user
