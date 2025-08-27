@@ -116,6 +116,7 @@ function App() {
     return (
       <ContractList 
         onNewContract={() => setCurrentView('form')}
+        onBackToDashboard={() => setCurrentView('dashboard')}
       />
     );
   }
