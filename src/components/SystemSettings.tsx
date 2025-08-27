@@ -29,6 +29,10 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
 
+  // Form states for different entities
+  const [formData, setFormData] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     // Carregar configurações atuais do localStorage ou variáveis de ambiente
     const savedUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL || '';
@@ -174,6 +178,122 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
     }));
     setSaveStatus('idle');
     setTestStatus('idle');
+  };
+
+  const handleSave = async (type: string, data: any) => {
+    setSaving(true);
+    try {
+      let result;
+      
+      if (editingItem) {
+        // Update existing item
+        result = await supabase
+          .from(type)
+          .update(data)
+          .eq('id', editingItem.id)
+          .select()
+          .single();
+      } else {
+        // Create new item
+        result = await supabase
+          .from(type)
+          .insert([data])
+          .select()
+          .single();
+      }
+
+      if (result.error) throw result.error;
+
+      // Update local state
+      if (type === 'event_types') {
+        if (editingItem) {
+          setEventTypes(prev => prev.map(item => 
+            item.id === editingItem.id ? result.data : item
+          ));
+        } else {
+          setEventTypes(prev => [...prev, result.data]);
+        }
+      } else if (type === 'packages') {
+        if (editingItem) {
+          setPackages(prev => prev.map(item => 
+            item.id === editingItem.id ? result.data : item
+          ));
+        } else {
+          setPackages(prev => [...prev, result.data]);
+        }
+      } else if (type === 'payment_methods') {
+        if (editingItem) {
+          setPaymentMethods(prev => prev.map(item => 
+            item.id === editingItem.id ? result.data : item
+          ));
+        } else {
+          setPaymentMethods(prev => [...prev, result.data]);
+        }
+      } else if (type === 'contract_templates') {
+        if (editingItem) {
+          setContractTemplates(prev => prev.map(item => 
+            item.id === editingItem.id ? result.data : item
+          ));
+        } else {
+          setContractTemplates(prev => [...prev, result.data]);
+        }
+      }
+
+      // Close modal and reset form
+      setShowAddModal(false);
+      setEditingItem(null);
+      setFormData({});
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (type: string, id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este item?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from(type)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      if (type === 'event_types') {
+        setEventTypes(prev => prev.filter(item => item.id !== id));
+      } else if (type === 'packages') {
+        setPackages(prev => prev.filter(item => item.id !== id));
+      } else if (type === 'payment_methods') {
+        setPaymentMethods(prev => prev.filter(item => item.id !== id));
+      } else if (type === 'contract_templates') {
+        setContractTemplates(prev => prev.filter(item => item.id !== id));
+      }
+
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+
+    } catch (error) {
+      console.error('Erro ao excluir:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+  };
+
+  const openEditModal = (type: string, item?: any) => {
+    setEditingItem(item || null);
+    setFormData(item || {});
+    setShowAddModal(true);
+    setActiveTab(type);
   };
 
   const renderTabContent = () => {
@@ -326,7 +446,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
           <h2 className="text-xl font-semibold text-gray-900">Tipos de Eventos</h2>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => openEditModal('event_types')}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
@@ -345,12 +465,15 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => setEditingItem(eventType)}
+                onClick={() => openEditModal('event_types', eventType)}
                 className="text-blue-600 hover:text-blue-900 p-1 rounded"
               >
                 <Edit2 className="h-4 w-4" />
               </button>
-              <button className="text-red-600 hover:text-red-900 p-1 rounded">
+              <button 
+                onClick={() => handleDelete('event_types', eventType.id)}
+                className="text-red-600 hover:text-red-900 p-1 rounded"
+              >
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
@@ -368,7 +491,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
           <h2 className="text-xl font-semibold text-gray-900">Pacotes</h2>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => openEditModal('packages')}
           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
@@ -386,12 +509,15 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                   R$ {pkg.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
                 <button
-                  onClick={() => setEditingItem(pkg)}
+                  onClick={() => openEditModal('packages', pkg)}
                   className="text-blue-600 hover:text-blue-900 p-1 rounded"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
-                <button className="text-red-600 hover:text-red-900 p-1 rounded">
+                <button 
+                  onClick={() => handleDelete('packages', pkg.id)}
+                  className="text-red-600 hover:text-red-900 p-1 rounded"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -414,7 +540,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
           <h2 className="text-xl font-semibold text-gray-900">Formas de Pagamento</h2>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => openEditModal('payment_methods')}
           className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
@@ -432,12 +558,15 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                   {method.installments}x
                 </span>
                 <button
-                  onClick={() => setEditingItem(method)}
+                  onClick={() => openEditModal('payment_methods', method)}
                   className="text-blue-600 hover:text-blue-900 p-1 rounded"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
-                <button className="text-red-600 hover:text-red-900 p-1 rounded">
+                <button 
+                  onClick={() => handleDelete('payment_methods', method.id)}
+                  className="text-red-600 hover:text-red-900 p-1 rounded"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -461,7 +590,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
           <h2 className="text-xl font-semibold text-gray-900">Modelos de Contrato</h2>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => openEditModal('contract_templates')}
           className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
@@ -476,12 +605,15 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               <h3 className="font-medium text-gray-900">{template.name}</h3>
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setEditingItem(template)}
+                  onClick={() => openEditModal('contract_templates', template)}
                   className="text-blue-600 hover:text-blue-900 p-1 rounded"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
-                <button className="text-red-600 hover:text-red-900 p-1 rounded">
+                <button 
+                  onClick={() => handleDelete('contract_templates', template.id)}
+                  className="text-red-600 hover:text-red-900 p-1 rounded"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -585,6 +717,318 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
         {/* Tab Content */}
         {renderTabContent()}
+
+        {/* Add/Edit Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    {editingItem ? 'Editar' : 'Adicionar'} {
+                      activeTab === 'event_types' ? 'Tipo de Evento' :
+                      activeTab === 'packages' ? 'Pacote' :
+                      activeTab === 'payment_methods' ? 'Forma de Pagamento' :
+                      activeTab === 'contract_templates' ? 'Modelo de Contrato' : 'Item'
+                    }
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setEditingItem(null);
+                      setFormData({});
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {saveStatus === 'success' && (
+                  <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                    <span className="text-green-700">Salvo com sucesso!</span>
+                  </div>
+                )}
+
+                {saveStatus === 'error' && (
+                  <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
+                    <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
+                    <span className="text-red-700">Erro ao salvar. Tente novamente.</span>
+                  </div>
+                )}
+
+                {/* Event Types Form */}
+                {activeTab === 'event_types' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nome do Tipo de Evento *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name || ''}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Ex: Casamento, Aniversário, Ensaio..."
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_active !== false}
+                          onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Ativo</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Packages Form */}
+                {activeTab === 'packages' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tipo de Evento *
+                      </label>
+                      <select
+                        value={formData.event_type_id || ''}
+                        onChange={(e) => setFormData({...formData, event_type_id: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Selecione o tipo de evento</option>
+                        {eventTypes.map(type => (
+                          <option key={type.id} value={type.id}>{type.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nome do Pacote *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name || ''}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Ex: Pacote Básico, Premium..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Descrição
+                      </label>
+                      <textarea
+                        value={formData.description || ''}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={3}
+                        placeholder="Descrição do pacote..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Preço *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.price || ''}
+                        onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Recursos Inclusos (um por linha)
+                      </label>
+                      <textarea
+                        value={Array.isArray(formData.features) ? formData.features.join('\n') : ''}
+                        onChange={(e) => setFormData({...formData, features: e.target.value.split('\n').filter(f => f.trim())})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={4}
+                        placeholder="Ex:&#10;Sessão de fotos de 2 horas&#10;50 fotos editadas&#10;Álbum digital"
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_active !== false}
+                          onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Ativo</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Methods Form */}
+                {activeTab === 'payment_methods' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nome da Forma de Pagamento *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name || ''}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Ex: À vista, Parcelado em 3x..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Descrição
+                      </label>
+                      <textarea
+                        value={formData.description || ''}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={2}
+                        placeholder="Descrição da forma de pagamento..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Desconto/Acréscimo (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.discount_percentage || ''}
+                        onChange={(e) => setFormData({...formData, discount_percentage: parseFloat(e.target.value) || 0})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="0 (negativo para desconto, positivo para acréscimo)"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Número de Parcelas
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formData.installments || 1}
+                        onChange={(e) => setFormData({...formData, installments: parseInt(e.target.value) || 1})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_active !== false}
+                          onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Ativo</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Contract Templates Form */}
+                {activeTab === 'contract_templates' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tipo de Evento *
+                      </label>
+                      <select
+                        value={formData.event_type_id || ''}
+                        onChange={(e) => setFormData({...formData, event_type_id: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Selecione o tipo de evento</option>
+                        {eventTypes.map(type => (
+                          <option key={type.id} value={type.id}>{type.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nome do Modelo *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name || ''}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Ex: Contrato de Casamento Padrão"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Conteúdo do Contrato *
+                      </label>
+                      <textarea
+                        value={formData.content || ''}
+                        onChange={(e) => setFormData({...formData, content: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={10}
+                        placeholder="Digite o modelo do contrato aqui. Use variáveis como {{nome_completo}}, {{cpf}}, {{data_evento}}, etc."
+                      />
+                      <p className="mt-2 text-sm text-gray-500">
+                        Variáveis disponíveis: {{nome_completo}}, {{cpf}}, {{email}}, {{whatsapp}}, {{endereco}}, {{cidade}}, {{data_nascimento}}, {{tipo_evento}}, {{data_evento}}, {{horario_evento}}, {{local_festa}}, {{nome_noivos}}, {{nome_aniversariante}}, {{package_name}}, {{package_price}}, {{package_features}}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_active !== false}
+                          onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Ativo</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6 flex justify-end space-x-4">
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setEditingItem(null);
+                      setFormData({});
+                    }}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      const tableMap = {
+                        'event_types': 'event_types',
+                        'packages': 'packages', 
+                        'payment_methods': 'payment_methods',
+                        'contract_templates': 'contract_templates'
+                      };
+                      handleSave(tableMap[activeTab as keyof typeof tableMap], formData);
+                    }}
+                    disabled={saving}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    {saving ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    <span>{saving ? 'Salvando...' : 'Salvar'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
