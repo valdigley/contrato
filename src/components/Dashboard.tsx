@@ -17,7 +17,7 @@ import {
   MessageCircle,
   Download,
   Calendar,
-  DollarSign
+  DollarSign,
   Link,
   Copy,
   Check
