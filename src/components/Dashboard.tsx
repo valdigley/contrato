@@ -259,18 +259,23 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               onClick={() => {
                 const getPhotographerId = async () => {
                   try {
+                    console.log('Buscando photographer_id para o usuário:', user?.id);
                     const { data: photographerData } = await supabase
                       .from('photographers')
                       .select('id')
                       .eq('user_id', user?.id)
                       .single();
                     
+                    console.log('Dados do fotógrafo encontrados:', photographerData);
+                    
                     if (photographerData) {
                       const clientLink = `${window.location.origin}?client=true&photographer_id=${photographerData.id}`;
+                      console.log('Link gerado:', clientLink);
                       navigator.clipboard.writeText(clientLink);
                       setLinkCopied(true);
                       setTimeout(() => setLinkCopied(false), 2000);
                     } else {
+                      console.error('Nenhum perfil de fotógrafo encontrado para o usuário:', user?.id);
                       alert('Erro: Perfil de fotógrafo não encontrado. Crie seu perfil primeiro.');
                     }
                   } catch (error) {
