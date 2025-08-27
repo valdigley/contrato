@@ -39,6 +39,9 @@ interface DashboardStats {
   recentContracts: any[];
   contractsThisMonth: number;
   averageContractValue: number;
+  contractsThisYear: number;
+  monthlyContractsValue: number;
+  yearlyContractsValue: number;
 }
 
 interface ContractEdit {
@@ -57,7 +60,10 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     completedEvents: 0,
     recentContracts: [],
     contractsThisMonth: 0,
-    averageContractValue: 0
+    averageContractValue: 0,
+    contractsThisYear: 0,
+    monthlyContractsValue: 0,
+    yearlyContractsValue: 0
   });
   const [loading, setLoading] = useState(true);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -229,7 +235,10 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         completedEvents: 0,
         recentContracts: [],
         contractsThisMonth: 0,
-        averageContractValue: 0
+        averageContractValue: 0,
+        contractsThisYear: 0,
+        monthlyContractsValue: 0,
+        yearlyContractsValue: 0
       });
 
       // Get photographer profile
@@ -252,21 +261,28 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
 
-          // Calcular receita mensal REAL (apenas contratos do mês atual)
-          const monthlyRevenue = contracts
+          // Contratos do mês atual
+          const monthlyContracts = contracts
             .filter(c => {
               const createdDate = new Date(c.created_at);
               return createdDate.getMonth() === currentMonth && 
                      createdDate.getFullYear() === currentYear;
-            })
-            .reduce((sum, c) => sum + Number(c.final_price || c.package_price || 0), 0);
+            });
 
-          const contractsThisMonth = contracts
+          // Contratos do ano atual
+          const yearlyContracts = contracts
             .filter(c => {
               const createdDate = new Date(c.created_at);
-              return createdDate.getMonth() === currentMonth && 
-                     createdDate.getFullYear() === currentYear;
-            }).length;
+              return createdDate.getFullYear() === currentYear;
+            });
+
+          // Calcular valores mensais
+          const monthlyContractsValue = monthlyContracts
+            .reduce((sum, c) => sum + Number(c.adjusted_price || c.final_price || c.package_price || 0), 0);
+
+          // Calcular valores anuais
+          const yearlyContractsValue = yearlyContracts
+            .reduce((sum, c) => sum + Number(c.adjusted_price || c.final_price || c.package_price || 0), 0);
 
           const totalValue = contracts.reduce((sum, c) => sum + Number(c.final_price || c.package_price || 0), 0);
           const averageContractValue = contracts.length > 0 ? totalValue / contracts.length : 0;
@@ -285,12 +301,15 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
           setStats({
             totalContracts: contracts.length,
-            monthlyRevenue,
+            monthlyRevenue: monthlyContractsValue,
             pendingPayments: realPendingPayments,
             completedEvents: realCompletedEvents,
             recentContracts: contracts.slice(0, 5),
-            contractsThisMonth,
-            averageContractValue
+            contractsThisMonth: monthlyContracts.length,
+            averageContractValue,
+            contractsThisYear: yearlyContracts.length,
+            monthlyContractsValue,
+            yearlyContractsValue
           });
         } else {
           // Se não há contratos, manter tudo zerado
@@ -301,7 +320,10 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             completedEvents: 0,
             recentContracts: [],
             contractsThisMonth: 0,
-            averageContractValue: 0
+            averageContractValue: 0,
+            contractsThisYear: 0,
+            monthlyContractsValue: 0,
+            yearlyContractsValue: 0
           });
         }
       } else {
@@ -318,7 +340,10 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         completedEvents: 0,
         recentContracts: [],
         contractsThisMonth: 0,
-        averageContractValue: 0
+        averageContractValue: 0,
+        contractsThisYear: 0,
+        monthlyContractsValue: 0,
+        yearlyContractsValue: 0
       });
     } finally {
       setLoading(false);
@@ -605,6 +630,98 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Contratos Este Mês */}
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Este Mês</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.contractsThisMonth}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">contratos</p>
+              </div>
+              <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full p-3">
+                <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                {formatCurrency(stats.monthlyContractsValue)}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">valor total</p>
+            </div>
+          </div>
+
+          {/* Contratos Este Ano */}
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Este Ano</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.contractsThisYear}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">contratos</p>
+              </div>
+              <div className="bg-green-100 dark:bg-green-900/30 rounded-full p-3">
+                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                {formatCurrency(stats.yearlyContractsValue)}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">valor total</p>
+            </div>
+          </div>
+
+          {/* Total de Contratos */}
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Geral</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalContracts}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">contratos</p>
+              </div>
+              <div className="bg-purple-100 dark:bg-purple-900/30 rounded-full p-3">
+                <FileText className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                {formatCurrency(stats.averageContractValue)}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">valor médio</p>
+            </div>
+          </div>
+
+          {/* Tipos de Eventos */}
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tipos de Eventos</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{getUniqueEventTypes()}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">diferentes</p>
+              </div>
+              <div className="bg-orange-100 dark:bg-orange-900/30 rounded-full p-3">
+                <Camera className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="flex space-x-1">
+                {['Casamento', 'Aniversário', 'Ensaio'].map((type, index) => (
+                  <div
+                    key={type}
+                    className={`w-2 h-2 rounded-full ${
+                      index === 0 ? 'bg-pink-400' :
+                      index === 1 ? 'bg-yellow-400' :
+                      'bg-purple-400'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">variedade</p>
+            </div>
+          </div>
+        </div>
+
         {/* Quick Actions */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex space-x-4">
