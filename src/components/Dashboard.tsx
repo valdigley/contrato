@@ -18,7 +18,8 @@ import {
   Link,
   Eye,
   Trash2,
-  Download
+  Download,
+  Phone
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
