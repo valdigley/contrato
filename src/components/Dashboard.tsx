@@ -433,8 +433,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       const { error } = await supabase
         .from('contratos')
         .update({
-          discount_percentage: editingContract.discount_percentage || 0,
-          adjusted_price: editingContract.adjusted_price || editingContract.final_price || editingContract.package_price,
+          adjusted_price: editingContract.adjusted_price,
+          discount_percentage: editingContract.discount_percentage,
           custom_notes: editingContract.custom_notes || null
         })
         .eq('id', editingContract.id);
@@ -968,7 +968,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                           </p>
                         </div>
                       )}
-                      {selectedContract.discount_percentage > 0 && (
+                      {selectedContract.discount_percentage !== 0 && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Desconto Aplicado</label>
                           <p className="text-sm text-green-600 dark:text-green-400 font-medium">
