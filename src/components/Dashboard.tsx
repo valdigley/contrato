@@ -1009,7 +1009,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition-colors text-sm"
                 >
                   Fechar
                 </button>
@@ -1019,6 +1019,56 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         </div>
       )}
 
+      {/* Generated Contract Modal */}
+      {showContractModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contrato Gerado</h2>
+                <button
+                  onClick={() => setShowContractModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-6 max-h-96 overflow-y-auto">
+                <pre className="whitespace-pre-wrap text-sm font-mono text-gray-900 dark:text-white">{generatedContract}</pre>
+              </div>
+              <div className="flex space-x-4">
+                <button
+                  onClick={downloadContract}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Baixar</span>
+                </button>
+                <button
+                  onClick={printContract}
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Imprimir</span>
+                </button>
+                <button
+                  onClick={() => sendWhatsAppContract(selectedContract)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </button>
+                <button
+                  onClick={() => setShowContractModal(false)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Edit Contract Modal */}
       {showEditModal && editingContract && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -1197,57 +1247,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                     <Save className="h-4 w-4" />
                   )}
                   <span>{savingProfile ? 'Salvando...' : 'Salvar'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Contract Modal */}
-      {showContractModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contrato Gerado</h2>
-                <button
-                  onClick={() => setShowContractModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="mb-6 flex space-x-4">
-                <button
-                  onClick={downloadContract}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download</span>
-                </button>
-                <button
-                  onClick={printContract}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Imprimir</span>
-                </button>
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
-                <pre className="whitespace-pre-wrap text-sm text-gray-900 dark:text-white font-mono">
-                  {generatedContract}
-                </pre>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setShowContractModal(false)}
-                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  Fechar
                 </button>
               </div>
             </div>
