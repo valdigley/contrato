@@ -60,6 +60,11 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const updateContractStatus = async (contractId: string, status: 'sent' | 'signed') => {
     try {
+      // Temporarily disable status updates until column is added
+      console.log(`Status update requested for contract ${contractId}: ${status}`);
+      alert('Funcionalidade de status será habilitada em breve. A coluna "status" precisa ser adicionada ao banco de dados.');
+      return;
+      
       const { error } = await supabase
         .from('contratos')
         .update({ status })
