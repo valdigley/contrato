@@ -647,36 +647,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                   </div>
                 ))}
               </div>
-                              <button
-                                onClick={() => updateContractStatus(contract.id, 'sent')}
-                                className={`w-full text-xs px-2 py-1 rounded transition-colors ${
-                                  contract.status === 'sent' 
-                                    ? 'bg-yellow-200 text-yellow-800' 
-                                    : 'bg-gray-100 text-gray-600 hover:bg-yellow-100'
-                                }`}
-                                title="Marcar como enviado"
-                              >
-                                📤 Enviado
-                              </button>
-                              <button
-                                onClick={() => updateContractStatus(contract.id, 'signed')}
-                                className={`w-full text-xs px-2 py-1 rounded transition-colors ${
-                                  contract.status === 'signed' 
-                                    ? 'bg-green-200 text-green-800' 
-                                    : 'bg-gray-100 text-gray-600 hover:bg-green-100'
-                                }`}
-                                title="Marcar como assinado"
-                              >
-                                ✓ Assinado
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
               
               {/* Contract Details Modal */}
               {showModal && selectedContract && (
