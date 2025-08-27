@@ -429,20 +429,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     if (!editingContract) return;
 
     setSavingEdit(true);
-      // Se não há desconto, resetar para preço original
-      const finalAdjustedPrice = discountData.discount_percentage === 0 
-        ? null 
-        : discountData.adjusted_price;
-      
-      const finalDiscountPercentage = discountData.discount_percentage === 0 
-        ? 0 
-        : discountData.discount_percentage;
     try {
       const { error } = await supabase
         .from('contratos')
         .update({
-          adjusted_price: finalAdjustedPrice,
-          discount_percentage: finalDiscountPercentage,
+          discount_percentage: editingContract.discount_percentage || 0,
+          adjusted_price: editingContract.adjusted_price || editingContract.final_price || editingContract.package_price,
           custom_notes: editingContract.custom_notes || null
         })
         .eq('id', editingContract.id);
@@ -454,8 +446,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         contract.id === editingContract.id ? editingContract : contract
       ));
 
-              adjusted_price: finalAdjustedPrice,
-              discount_percentage: finalDiscountPercentage,
+      setShowEditModal(false);
+      setEditingContract(null);
     } catch (error) {
       console.error('Erro ao salvar edições:', error);
       alert('Erro ao salvar edições do contrato');
