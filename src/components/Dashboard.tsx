@@ -245,106 +245,41 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Contratos</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalContracts}</p>
-              </div>
-              <div className="bg-blue-100 rounded-full p-3">
-                <FileText className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
+        {/* Quick Actions */}
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex space-x-4">
+            <button
+              onClick={() => onNavigate('form')}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Novo Contrato</span>
+            </button>
+            <button
+              onClick={() => {
+                const clientLink = `${window.location.origin}?client=true`;
+                navigator.clipboard.writeText(clientLink);
+                setLinkCopied(true);
+                setTimeout(() => setLinkCopied(false), 2000);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+              title={linkCopied ? 'Link Copiado!' : 'Copiar Link para Cliente'}
+            >
+              {linkCopied ? <Check className="h-4 w-4" /> : <Link className="h-4 w-4" />}
+              <span>{linkCopied ? 'Link Copiado!' : 'Link Cliente'}</span>
+            </button>
           </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Contratos Este Mês</p>
-                <p className="text-2xl font-bold text-green-600">{stats.contractsThisMonth}</p>
-              </div>
-              <div className="bg-green-100 rounded-full p-3">
-                <Calendar className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
+          <div className="text-sm text-gray-600">
+            Total: {stats.totalContracts} contrato{stats.totalContracts !== 1 ? 's' : ''}
           </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Tipos de Eventos</p>
-                <p className="text-2xl font-bold text-purple-600">{getUniqueEventTypes()}</p>
-              </div>
-              <div className="bg-purple-100 rounded-full p-3">
-                <Camera className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Valor Médio</p>
-                <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats.averageContractValue)}</p>
-              </div>
-              <div className="bg-blue-100 rounded-full p-3">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Modules */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {modules.map((module) => {
-            const IconComponent = module.icon;
-            return (
-              <div
-                key={module.id}
-                className={`${module.color} text-white rounded-xl shadow-lg p-6 transition-all duration-200 transform hover:scale-105 hover:shadow-xl relative`}
-              >
-                <button
-                  onClick={() => onNavigate(module.id)}
-                  className="w-full h-full text-left"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <IconComponent className="w-8 h-8" />
-                    {module.count !== null && (
-                      <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
-                        {module.count}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">{module.title}</h3>
-                  <p className="text-white/80 text-sm">{module.description}</p>
-                </button>
-                
-                {/* Botão de copiar link apenas no card Novo Contrato */}
-                {module.id === 'form' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyClientLink();
-                    }}
-                    className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-colors"
-                    title={linkCopied ? 'Link Copiado!' : 'Copiar Link para Cliente'}
-                  >
-                    {linkCopied ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-                  </button>
-                )}
-              </div>
-            );
-          })}
         </div>
 
         {/* Recent Contracts */}
-        {stats.recentContracts.length > 0 && (
+        {stats.recentContracts.length > 0 ? (
           <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Contratos Recentes</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Todos os Contratos</h2>
                 <span className="text-sm text-gray-500">{stats.recentContracts.length} contrato{stats.recentContracts.length > 1 ? 's' : ''}</span>
               </div>
             </div>
@@ -414,23 +349,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 text-center">
-                <button
-                  onClick={() => onNavigate('contracts')}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
-                >
-                  Ver todos os contratos →
-                </button>
-              </div>
             </div>
           </div>
-        )}
-
-        {/* Empty State for Recent Contracts */}
-        {stats.recentContracts.length === 0 && (
+        ) : (
           <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Contratos Recentes</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Contratos</h2>
             </div>
             <div className="p-6 text-center">
               <div className="text-gray-400 mb-4">
@@ -447,8 +371,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             </div>
           </div>
         )}
-
-        {/* Quick Actions */}
       </div>
     </div>
   );
