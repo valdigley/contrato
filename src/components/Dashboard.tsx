@@ -15,7 +15,8 @@ import {
   Eye,
   Trash2,
   MessageCircle,
-  Download
+  Download,
+  Calendar
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -51,6 +52,9 @@ interface Contract {
   preferred_payment_day?: number;
   created_at: string;
   status?: 'draft' | 'sent' | 'signed';
+  discount_percentage?: number;
+  adjusted_price?: number;
+  custom_notes?: string;
 }
 
 export default function Dashboard({ user, onNavigate }: DashboardProps) {
@@ -61,6 +65,11 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [profileData, setProfileData] = useState({
     name: '',
     business_name: '',
@@ -238,6 +247,42 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     window.open(whatsappUrl, '_blank');
   };
 
+  const openEditModal = (contract: Contract) => {
+    setEditingContract(contract);
+    setShowEditModal(true);
+  };
+
+  const saveEditedContract = async () => {
+    if (!editingContract) return;
+
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from('contratos')
+        .update({
+          discount_percentage: editingContract.discount_percentage || 0,
+          adjusted_price: editingContract.adjusted_price || editingContract.final_price || editingContract.package_price,
+          custom_notes: editingContract.custom_notes || null
+        })
+        .eq('id', editingContract.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setContracts(prev => prev.map(contract =>
+        contract.id === editingContract.id ? editingContract : contract
+      ));
+
+      setShowEditModal(false);
+      setEditingContract(null);
+    } catch (error) {
+      console.error('Erro ao salvar edições:', error);
+      alert('Erro ao salvar edições do contrato');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -381,30 +426,14 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Quick Action Button */}
+        <div className="mb-6">
           <button
             onClick={() => onNavigate('form')}
-            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-lg p-6 text-left transition-colors hover-lift"
+            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2"
           >
-            <div className="flex items-center justify-between mb-4">
-              <Plus className="h-8 w-8" />
-              <span className="text-sm opacity-75">Ação Rápida</span>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Novo Contrato</h3>
-            <p className="text-blue-100 dark:text-blue-200">Criar um novo contrato de evento</p>
-          </button>
-
-          <button
-            onClick={() => onNavigate('settings')}
-            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded-lg p-6 text-left transition-colors hover-lift"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <Settings className="h-8 w-8" />
-              <span className="text-sm opacity-75">Configurar</span>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Configurações</h3>
-            <p className="text-green-100 dark:text-green-200">Configurar sistema e tipos de eventos</p>
+            <Plus className="h-5 w-5" />
+            <span>Novo Contrato</span>
           </button>
         </div>
 
@@ -518,11 +547,28 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
                           <button
+                            onClick={() => {
+                              setSelectedContract(contract);
+                              setShowModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                            title="Ver detalhes"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => sendWhatsAppContract(contract)}
                             className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-1 rounded bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
                             title="Enviar WhatsApp"
                           >
                             <MessageCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openEditModal(contract)}
+                            className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 p-1 rounded bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
+                            title="Editar contrato"
+                          >
+                            <Edit2 className="w-4 h-4" />
                           </button>
                         </div>
                         
@@ -567,6 +613,188 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           )}
         </div>
       </main>
+
+      {/* Contract Details Modal */}
+      {showModal && selectedContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalhes do Contrato</h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Dados Pessoais */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                    <User className="w-5 h-5 mr-2" />
+                    Dados Pessoais
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome Completo</label>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedContract.nome_completo}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">CPF</label>
+                      <p className="text-sm text-gray-900 dark:text-white">{formatCPF(selectedContract.cpf)}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">E-mail</label>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedContract.email}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">WhatsApp</label>
+                      <p className="text-sm text-gray-900 dark:text-white">{formatWhatsApp(selectedContract.whatsapp)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dados do Evento */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                    <Calendar className="w-5 h-5 mr-2" />
+                    Dados do Evento
+                  </h3>
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Evento</label>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEventTypeColor(selectedContract.tipo_evento)}`}>
+                        {selectedContract.tipo_evento}
+                      </span>
+                    </div>
+                    {selectedContract.data_evento && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data do Evento</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedContract.data_evento)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Contract Modal */}
+      {showEditModal && editingContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Editar Contrato</h2>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingContract(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Desconto */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Desconto (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={editingContract.discount_percentage || 0}
+                    onChange={(e) => setEditingContract({
+                      ...editingContract,
+                      discount_percentage: parseFloat(e.target.value) || 0
+                    })}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                {/* Preço Ajustado */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Preço Final Ajustado
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editingContract.adjusted_price || editingContract.final_price || editingContract.package_price || 0}
+                    onChange={(e) => setEditingContract({
+                      ...editingContract,
+                      adjusted_price: parseFloat(e.target.value) || 0
+                    })}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                {/* Observações Personalizadas */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Observações Personalizadas
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={editingContract.custom_notes || ''}
+                    onChange={(e) => setEditingContract({
+                      ...editingContract,
+                      custom_notes: e.target.value
+                    })}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Observações que aparecerão no contrato..."
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-4">
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingContract(null);
+                  }}
+                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveEditedContract}
+                  disabled={savingEdit}
+                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                >
+                  {savingEdit ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  <span>{savingEdit ? 'Salvando...' : 'Salvar'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Profile Modal */}
       {showProfileModal && (
