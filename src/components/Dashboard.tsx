@@ -16,7 +16,8 @@ import {
   Trash2,
   MessageCircle,
   Download,
-  Calendar
+  Calendar,
+  DollarSign
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
