@@ -97,6 +97,28 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [discountError, setDiscountError] = useState(false);
   const [applyingDiscount, setApplyingDiscount] = useState(false);
 
+  const openDiscountModal = (contract: Contract) => {
+    setDiscountContract(contract);
+    setShowDiscountModal(true);
+    
+    // Initialize values
+    const originalPrice = contract.final_price || contract.package_price || 0;
+    const currentAdjustedPrice = contract.adjusted_price || originalPrice;
+    const currentDiscountPercentage = contract.discount_percentage || 0;
+    
+    setDiscountPercentage(currentDiscountPercentage.toString());
+    setFinalPrice(currentAdjustedPrice.toString());
+    setCustomNotes(contract.custom_notes || '');
+    
+    // Calculate discount value if there's a percentage
+    if (currentDiscountPercentage > 0) {
+      const discountAmount = originalPrice * (currentDiscountPercentage / 100);
+      setDiscountValue(discountAmount.toString());
+    } else {
+      setDiscountValue('');
+    }
+  };
+
   useEffect(() => {
     fetchContracts();
     fetchUserProfile();
