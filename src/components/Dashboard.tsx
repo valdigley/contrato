@@ -60,11 +60,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const updateContractStatus = async (contractId: string, status: 'sent' | 'signed') => {
     try {
-      // Temporarily disable status updates until column is added
-      console.log(`Status update requested for contract ${contractId}: ${status}`);
-      alert('Funcionalidade de status será habilitada em breve. A coluna "status" precisa ser adicionada ao banco de dados.');
-      return;
-      
       const { error } = await supabase
         .from('contratos')
         .update({ status })
@@ -85,6 +80,35 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       console.error('Erro ao atualizar status do contrato:', error);
       alert('Erro ao atualizar status do contrato');
     }
+  };
+
+  const sendWhatsAppContract = (contract: any, contractText?: string) => {
+    const phone = contract.whatsapp.replace(/\D/g, '');
+    const clientName = contract.nome_completo;
+    const eventType = contract.tipo_evento;
+    
+    let message = `Olá ${clientName}! 👋\n\n`;
+    message += `Segue o contrato para seu ${eventType}:\n\n`;
+    
+    if (contractText) {
+      // Se temos o texto do contrato, incluir uma versão resumida
+      message += `📋 *CONTRATO DE PRESTAÇÃO DE SERVIÇOS*\n\n`;
+      message += `Cliente: ${clientName}\n`;
+      message += `Evento: ${eventType}\n`;
+      if (contract.data_evento) {
+        message += `Data: ${formatDate(contract.data_evento)}\n`;
+      }
+      if (contract.final_price || contract.package_price) {
+        message += `Valor: R$ ${(contract.final_price || contract.package_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+      }
+      message += `\n📄 O contrato completo será enviado por email ou pode ser retirado pessoalmente.\n\n`;
+    }
+    
+    message += `Para confirmar, responda este WhatsApp! 📱\n\n`;
+    message += `Obrigado! 😊`;
+    
+    const whatsappUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   useEffect(() => {
@@ -524,20 +548,22 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         <div className="flex items-center space-x-2 mb-1">
                           <h3 className="font-semibold text-gray-900">{contract.nome_completo}</h3>
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            contract.tipo_evento === 'Casamento' ? 'bg-pink-100 text-pink-800' :
-                            contract.tipo_evento === 'Aniversário' ? 'bg-yellow-100 text-yellow-800' :
-                            contract.tipo_evento === 'Ensaio Fotográfico' ? 'bg-purple-100 text-purple-800' :
+                            contract.tipo_evento === 'Casamento' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
+                            contract.tipo_evento === 'Aniversário' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                            contract.tipo_evento === 'Ensaio Fotográfico' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
                             'bg-blue-100 text-blue-800'
                           }`}>
                             {contract.tipo_evento}
                           </span>
                           <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                            contract.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
-                            contract.status === 'sent' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                            'bg-gray-100 text-gray-600 border border-gray-200'
+                            contract.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-300' :
+                            contract.status === 'sent' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                            contract.status === 'cancelled' ? 'bg-red-100 text-red-800 border border-red-300' :
+                            'bg-gray-100 text-gray-600 border border-gray-300'
                           }`}>
                             {contract.status === 'signed' ? '✓ Assinado' :
                              contract.status === 'sent' ? '📤 Enviado' :
+                             contract.status === 'cancelled' ? '❌ Cancelado' :
                              '📝 Rascunho'}
                           </span>
                         </div>
@@ -599,6 +625,13 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                               <FileText className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => sendWhatsAppContract(contract)}
+                              className="text-green-600 hover:text-green-900 p-1.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
+                              title="Enviar WhatsApp"
+                            >
+                              <Phone className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => deleteContract(contract.id)}
                               className="text-red-600 hover:text-red-900 p-1.5 rounded bg-red-50 hover:bg-red-100 transition-colors"
                               title="Excluir"
@@ -637,6 +670,17 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                           title="Marcar como assinado"
                         >
                           ✓ Assinado
+                        </button>
+                        <button
+                          onClick={() => updateContractStatus(contract.id, 'cancelled')}
+                          className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                            contract.status === 'cancelled' 
+                              ? 'bg-red-500 text-white' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700'
+                          }`}
+                          title="Marcar como cancelado"
+                        >
+                          ❌ Cancelado
                         </button>
                         {contract.status !== 'draft' && (
                           <button
@@ -882,6 +926,13 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         >
                           <FileText className="w-4 h-4" />
                           <span>Imprimir</span>
+                        </button>
+                        <button
+                          onClick={() => sendWhatsAppContract(selectedContract, generatedContract)}
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                        >
+                          <Phone className="w-4 h-4" />
+                          <span>WhatsApp</span>
                         </button>
                         <button
                           onClick={() => setShowContractModal(false)}

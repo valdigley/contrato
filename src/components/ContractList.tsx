@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Trash2, Link, Calendar, MapPin, User, Phone, Mail, FileText, Copy, Check, Settings, Download, DollarSign, ArrowLeft, Home } from 'lucide-react';
+import { Search, Plus, Eye, Trash2, Link, Calendar, MapPin, User, Phone, Mail, FileText, Copy, Check, Settings, Download, DollarSign, ArrowLeft, Home, MessageCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Contract {
@@ -49,11 +49,6 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
 
   const updateContractStatus = async (contractId: string, status: 'draft' | 'sent' | 'signed') => {
     try {
-      // Temporarily disable status updates until column is added
-      console.log(`Status update requested for contract ${contractId}: ${status}`);
-      alert('Funcionalidade de status será habilitada em breve. A coluna "status" precisa ser adicionada ao banco de dados.');
-      return;
-      
       const { error } = await supabase
         .from('contratos')
         .update({ status })
@@ -71,6 +66,35 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
       console.error('Erro ao atualizar status do contrato:', error);
       alert('Erro ao atualizar status do contrato');
     }
+  };
+
+  const sendWhatsAppContract = (contract: Contract, contractText?: string) => {
+    const phone = contract.whatsapp.replace(/\D/g, '');
+    const clientName = contract.nome_completo;
+    const eventType = contract.tipo_evento;
+    
+    let message = `Olá ${clientName}! 👋\n\n`;
+    message += `Segue o contrato para seu ${eventType}:\n\n`;
+    
+    if (contractText) {
+      // Se temos o texto do contrato, incluir uma versão resumida
+      message += `📋 *CONTRATO DE PRESTAÇÃO DE SERVIÇOS*\n\n`;
+      message += `Cliente: ${clientName}\n`;
+      message += `Evento: ${eventType}\n`;
+      if (contract.data_evento) {
+        message += `Data: ${formatDate(contract.data_evento)}\n`;
+      }
+      if (contract.final_price || contract.package_price) {
+        message += `Valor: R$ ${(contract.final_price || contract.package_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+      }
+      message += `\n📄 O contrato completo será enviado por email ou pode ser retirado pessoalmente.\n\n`;
+    }
+    
+    message += `Para confirmar, responda este WhatsApp! 📱\n\n`;
+    message += `Obrigado! 😊`;
+    
+    const whatsappUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   useEffect(() => {
@@ -323,12 +347,12 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
 
   const getEventTypeColor = (type: string) => {
     const colors = {
-      'Casamento': 'bg-pink-100 text-pink-800',
-      'Aniversário': 'bg-yellow-100 text-yellow-800',
-      'Ensaio Fotográfico': 'bg-purple-100 text-purple-800',
-      'Formatura': 'bg-blue-100 text-blue-800'
+      'Casamento': 'bg-pink-100 text-pink-800 border border-pink-200',
+      'Aniversário': 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+      'Ensaio Fotográfico': 'bg-purple-100 text-purple-800 border border-purple-200',
+      'Formatura': 'bg-blue-100 text-blue-800 border border-blue-200'
     };
-    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800 border border-gray-200';
   };
 
   // Filter contracts based on search term and filter type
@@ -473,12 +497,14 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
                         </span>
                         <div className="mt-1">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            contract.status === 'signed' ? 'bg-green-100 text-green-800' :
-                            contract.status === 'sent' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
+                            contract.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-300' :
+                            contract.status === 'sent' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                            contract.status === 'cancelled' ? 'bg-red-100 text-red-800 border border-red-300' :
+                            'bg-gray-100 text-gray-800 border border-gray-300'
                           }`}>
                             {contract.status === 'signed' ? '✓ Assinado' :
                              contract.status === 'sent' ? '📤 Enviado' :
+                             contract.status === 'cancelled' ? '❌ Cancelado' :
                              '📝 Rascunho'}
                           </span>
                         </div>
@@ -498,48 +524,70 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => updateContractStatus(contract.id, contract.status === 'sent' ? 'draft' : 'sent')}
-                            className={`p-1 rounded transition-colors ${
-                              contract.status === 'sent' 
-                                ? 'text-yellow-600 hover:text-yellow-900 bg-yellow-50' 
-                                : 'text-gray-600 hover:text-yellow-600 bg-gray-50'
-                            }`}
-                            title={contract.status === 'sent' ? 'Marcar como rascunho' : 'Marcar como enviado'}
-                          >
-                            📤
-                          </button>
-                          <button
-                            onClick={() => updateContractStatus(contract.id, contract.status === 'signed' ? 'draft' : 'signed')}
-                            className={`p-1 rounded transition-colors ${
-                              contract.status === 'signed' 
-                                ? 'text-green-600 hover:text-green-900 bg-green-50' 
-                                : 'text-gray-600 hover:text-green-600 bg-gray-50'
-                            }`}
-                            title={contract.status === 'signed' ? 'Marcar como rascunho' : 'Marcar como assinado'}
-                          >
-                            ✓
-                          </button>
-                          <button
                             onClick={() => {
                               setSelectedContract(contract);
                               setShowModal(true);
                             }}
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
                             title="Ver detalhes"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => generateContract(contract)}
-                            className="text-green-600 hover:text-green-900 p-1 rounded"
+                            className="text-green-600 hover:text-green-900 p-1 rounded bg-green-50 hover:bg-green-100 transition-colors"
                             title="Gerar contrato"
                           >
                             <FileText className="w-4 h-4" />
                           </button>
                           <button
+                            onClick={() => sendWhatsAppContract(contract)}
+                            className="text-green-600 hover:text-green-900 p-1 rounded bg-green-50 hover:bg-green-100 transition-colors"
+                            title="Enviar WhatsApp"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
+                        {/* Status Controls */}
+                        <div className="flex space-x-1 mt-2">
+                          <button
+                            onClick={() => updateContractStatus(contract.id, 'sent')}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              contract.status === 'sent' 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-blue-100'
+                            }`}
+                            title="Marcar como enviado"
+                          >
+                            📤
+                          </button>
+                          <button
+                            onClick={() => updateContractStatus(contract.id, 'signed')}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              contract.status === 'signed' 
+                                ? 'bg-green-500 text-white' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-green-100'
+                            }`}
+                            title="Marcar como assinado"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => updateContractStatus(contract.id, 'cancelled')}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              contract.status === 'cancelled' 
+                                ? 'bg-red-500 text-white' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-red-100'
+                            }`}
+                            title="Marcar como cancelado"
+                          >
+                            ❌
+                          </button>
+                          <button
                             onClick={() => deleteContract(contract.id)}
-                            className="text-red-600 hover:text-red-900 p-1 rounded"
-                            title="Excluir"
+                            className="px-2 py-1 text-xs rounded bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                            title="Excluir contrato"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -777,6 +825,13 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
                   >
                     <FileText className="w-4 h-4" />
                     <span>Imprimir</span>
+                  </button>
+                  <button
+                    onClick={() => sendWhatsAppContract(selectedContract, generatedContract)}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>WhatsApp</span>
                   </button>
                   <button
                     onClick={() => setShowContractModal(false)}
