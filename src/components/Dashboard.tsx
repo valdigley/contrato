@@ -489,8 +489,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             <div className="p-6">
               <div className="space-y-4">
                 {stats.recentContracts.map((contract) => (
-                  <div key={contract.id} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="flex items-start justify-between mb-3 group">
+                  <div key={contract.id} className="p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-all">
+                    <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <h3 className="font-semibold text-gray-900">{contract.nome_completo}</h3>
@@ -541,30 +541,30 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                             <p className="text-xs text-gray-500">Cadastrado em</p>
                             <p className="text-sm text-gray-600">{formatDate(contract.created_at)}</p>
                           </div>
-                          <div className="flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex flex-col space-y-2">
                             <button
                               onClick={() => {
                                 setSelectedContract(contract);
                                 setShowModal(true);
                               }}
-                              className="text-blue-600 hover:text-blue-900 p-2 rounded-lg hover:bg-blue-50 transition-colors"
+                              className="text-blue-600 hover:text-blue-900 p-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
                               title="Ver detalhes"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => generateContract(contract)}
-                              className="text-green-600 hover:text-green-900 p-2 rounded-lg hover:bg-green-50 transition-colors"
+                              className="text-green-600 hover:text-green-900 p-2 rounded-lg bg-green-50 hover:bg-green-100 transition-colors"
                               title="Gerar contrato"
                             >
                               <FileText className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => deleteContract(contract.id)}
-                              className="text-red-600 hover:text-red-900 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                              className="text-red-600 hover:text-red-900 p-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors"
                               title="Excluir"
                             >
-                              <Trash2 className="w-4 w-4" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
