@@ -19,7 +19,8 @@ import {
   Eye,
   Trash2,
   Download,
-  Phone
+  Phone,
+  Edit2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -38,6 +39,12 @@ interface DashboardStats {
   recentContracts: any[];
   contractsThisMonth: number;
   averageContractValue: number;
+}
+
+interface ContractEdit {
+  discount_percentage: number;
+  custom_notes: string;
+  adjusted_price: number;
 }
 
 export default function Dashboard({ user, onNavigate }: DashboardProps) {
@@ -60,6 +67,13 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [generatedContract, setGeneratedContract] = useState('');
   const [templates, setTemplates] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
+  const [editingContract, setEditingContract] = useState(false);
+  const [contractEdit, setContractEdit] = useState<ContractEdit>({
+    discount_percentage: 0,
+    custom_notes: '',
+    adjusted_price: 0
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const updateContractStatus = async (contractId: string, status: 'sent' | 'signed') => {
     try {
@@ -83,6 +97,82 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       console.error('Erro ao atualizar status do contrato:', error);
       alert('Erro ao atualizar status do contrato');
     }
+  };
+
+  const saveContractEdits = async () => {
+    if (!selectedContract) return;
+
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from('contratos')
+        .update({
+          discount_percentage: contractEdit.discount_percentage,
+          custom_notes: contractEdit.custom_notes,
+          adjusted_price: contractEdit.adjusted_price
+        })
+        .eq('id', selectedContract.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setStats(prev => ({
+        ...prev,
+        recentContracts: prev.recentContracts.map(contract =>
+          contract.id === selectedContract.id 
+            ? { 
+                ...contract, 
+                discount_percentage: contractEdit.discount_percentage,
+                custom_notes: contractEdit.custom_notes,
+                adjusted_price: contractEdit.adjusted_price
+              } 
+            : contract
+        )
+      }));
+
+      setSelectedContract(prev => ({
+        ...prev,
+        discount_percentage: contractEdit.discount_percentage,
+        custom_notes: contractEdit.custom_notes,
+        adjusted_price: contractEdit.adjusted_price
+      }));
+
+      setEditingContract(false);
+      alert('Alterações salvas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar alterações:', error);
+      alert('Erro ao salvar alterações');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const startEditingContract = () => {
+    if (!selectedContract) return;
+    
+    const originalPrice = selectedContract.final_price || selectedContract.package_price || 0;
+    
+    setContractEdit({
+      discount_percentage: selectedContract.discount_percentage || 0,
+      custom_notes: selectedContract.custom_notes || '',
+      adjusted_price: selectedContract.adjusted_price || originalPrice
+    });
+    setEditingContract(true);
+  };
+
+  const calculateAdjustedPrice = (originalPrice: number, discountPercentage: number) => {
+    return originalPrice * (1 - discountPercentage / 100);
+  };
+
+  const handleDiscountChange = (discount: number) => {
+    const originalPrice = selectedContract?.final_price || selectedContract?.package_price || 0;
+    const adjustedPrice = calculateAdjustedPrice(originalPrice, discount);
+    
+    setContractEdit(prev => ({
+      ...prev,
+      discount_percentage: discount,
+      adjusted_price: adjustedPrice
+    }));
   };
 
   const sendWhatsAppContract = (contract: any, contractText?: string) => {
@@ -291,6 +381,11 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       // Replace variables in template
       let contractContent = template.content;
       
+      // Add custom notes if available
+      if (contract.custom_notes) {
+        contractContent = contractContent.replace(/\{\{custom_notes\}\}/g, contract.custom_notes);
+      }
+      
       // Personal data
       contractContent = contractContent.replace(/\{\{nome_completo\}\}/g, contract.nome_completo);
       contractContent = contractContent.replace(/\{\{cpf\}\}/g, contract.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'));
@@ -326,8 +421,20 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       // Package data
       if (packageData) {
         contractContent = contractContent.replace(/\{\{package_name\}\}/g, packageData.name);
+        
+        // Use adjusted price if available, otherwise use original price
+        const finalPrice = contract.adjusted_price || contract.final_price || contract.package_price || packageData.price;
         contractContent = contractContent.replace(/\{\{package_price\}\}/g, 
-          `R$ ${(contract.package_price || packageData.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+          `R$ ${finalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+        
+        // Add discount information if applicable
+        if (contract.discount_percentage > 0) {
+          const originalPrice = contract.final_price || contract.package_price || packageData.price;
+          contractContent = contractContent.replace(/\{\{discount_info\}\}/g, 
+            `Desconto aplicado: ${contract.discount_percentage}% (Valor original: R$ ${originalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`);
+        } else {
+          contractContent = contractContent.replace(/\{\{discount_info\}\}/g, '');
+        }
         
         // Package features
         if (packageData.features && packageData.features.length > 0) {
@@ -727,11 +834,89 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                     {(selectedContract.final_price || selectedContract.package_price) && (
                       <div>
                         <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Valor</label>
-                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                          {formatCurrency(selectedContract.final_price || selectedContract.package_price)}
-                        </p>
+                        {editingContract ? (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                Valor Original
+                              </label>
+                              <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                {formatCurrency(selectedContract.final_price || selectedContract.package_price)}
+                              </p>
+                            </div>
+                            
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                Desconto (%)
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={contractEdit.discount_percentage}
+                                onChange={(e) => handleDiscountChange(parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                placeholder="0"
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                Valor Final
+                              </label>
+                              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                {formatCurrency(contractEdit.adjusted_price)}
+                              </p>
+                              {contractEdit.discount_percentage > 0 && (
+                                <p className="text-xs text-red-600 dark:text-red-400">
+                                  Desconto de {contractEdit.discount_percentage}% aplicado
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                              {formatCurrency(selectedContract.adjusted_price || selectedContract.final_price || selectedContract.package_price)}
+                            </p>
+                            {selectedContract.discount_percentage > 0 && (
+                              <p className="text-xs text-red-600 dark:text-red-400">
+                                Desconto de {selectedContract.discount_percentage}% aplicado
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
+
+                    {/* Observações Personalizadas */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                        Observações Personalizadas
+                      </label>
+                      {editingContract ? (
+                        <textarea
+                          value={contractEdit.custom_notes}
+                          onChange={(e) => setContractEdit(prev => ({ ...prev, custom_notes: e.target.value }))}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                          rows={4}
+                          placeholder="Adicione observações personalizadas que aparecerão no contrato..."
+                        />
+                      ) : (
+                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 min-h-[80px]">
+                          {selectedContract.custom_notes ? (
+                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                              {selectedContract.custom_notes}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                              Nenhuma observação personalizada
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
                     {/* Status do Contrato */}
                     <div>
@@ -756,6 +941,38 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 {/* Actions */}
                 <div className="mt-8 flex justify-between">
                   <div className="flex space-x-4">
+                    {editingContract ? (
+                      <>
+                        <button
+                          onClick={saveContractEdits}
+                          disabled={savingEdit}
+                          className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 disabled:bg-green-300 dark:disabled:bg-green-800 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                        >
+                          {savingEdit ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          ) : (
+                            <CheckCircle className="h-4 w-4" />
+                          )}
+                          <span>{savingEdit ? 'Salvando...' : 'Salvar Alterações'}</span>
+                        </button>
+                        <button
+                          onClick={() => setEditingContract(false)}
+                          className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                        >
+                          <span>Cancelar</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={startEditingContract}
+                          className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                          <span>Editar Contrato</span>
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => {
                         generateContract(selectedContract);
