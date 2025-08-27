@@ -542,6 +542,21 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
             </div>
             <div className="p-6">
               <div className="space-y-4">
+                {stats.recentContracts.map((contract) => (
+                  <div key={contract.id} className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="font-semibold text-gray-900">{contract.nome_completo}</h3>
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            contract.tipo_evento === 'Casamento' ? 'bg-pink-100 text-pink-800' :
+                            contract.tipo_evento === 'Aniversário' ? 'bg-yellow-100 text-yellow-800' :
+                            contract.tipo_evento === 'Ensaio Fotográfico' ? 'bg-purple-100 text-purple-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {contract.tipo_evento}
+                          </span>
+                        </div>
                         {/* Dropdown de Status */}
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-500 mr-2">Status:</span>
