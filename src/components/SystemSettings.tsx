@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Save, Database, Key, Globe, ArrowLeft, Eye, EyeOff, CheckCircle, AlertCircle, Package, FileText, CreditCard, Plus, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { EventType, Package as PackageType, PaymentMethod, ContractTemplate } from '../types';
+import { useTheme } from '../hooks/useTheme';
 
 interface SystemSettingsProps {
   onBack: () => void;
@@ -13,6 +14,7 @@ interface SupabaseConfig {
 }
 
 export default function SystemSettings({ onBack }: SystemSettingsProps) {
+  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<'supabase' | 'event-types' | 'packages' | 'payment-methods' | 'templates'>('event-types');
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>({
     url: '',
@@ -314,16 +316,16 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   };
 
   const renderSupabaseConfig = () => (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
       <div className="flex items-center space-x-3 mb-6">
         <Database className="h-6 w-6 text-green-600" />
-        <h2 className="text-xl font-semibold text-gray-900">Configuração do Supabase</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Configuração do Supabase</h2>
       </div>
 
       <div className="space-y-6">
         {/* URL do Supabase */}
         <div>
-          <label htmlFor="supabase_url" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="supabase_url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             <Globe className="inline h-4 w-4 mr-1" />
             URL do Projeto Supabase *
           </label>
@@ -332,17 +334,17 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
             id="supabase_url"
             value={supabaseConfig.url}
             onChange={(e) => handleInputChange('url', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="https://seu-projeto.supabase.co"
           />
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Encontre esta URL no painel do Supabase em: Configurações → API → Project URL
           </p>
         </div>
 
         {/* Chave Anônima */}
         <div>
-          <label htmlFor="supabase_anon_key" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="supabase_anon_key" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             <Key className="inline h-4 w-4 mr-1" />
             Chave Anônima (anon key) *
           </label>
@@ -352,18 +354,18 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               id="supabase_anon_key"
               value={supabaseConfig.anonKey}
               onChange={(e) => handleInputChange('anonKey', e.target.value)}
-              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
             />
             <button
               type="button"
               onClick={() => setShowAnonKey(!showAnonKey)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
             >
               {showAnonKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Encontre esta chave no painel do Supabase em: Configurações → API → anon public
           </p>
         </div>
@@ -402,7 +404,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
           <button
             onClick={saveConfiguration}
             disabled={loading || !supabaseConfig.url || !supabaseConfig.anonKey}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 px-8 rounded-lg transition-colors flex items-center space-x-2"
+            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white font-semibold py-3 px-8 rounded-lg transition-colors flex items-center space-x-2"
           >
             {loading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -417,9 +419,9 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
       </div>
 
       {/* Instructions */}
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-blue-900 mb-4">Como obter as credenciais do Supabase:</h3>
-        <ol className="list-decimal list-inside space-y-2 text-blue-800">
+      <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">Como obter as credenciais do Supabase:</h3>
+        <ol className="list-decimal list-inside space-y-2 text-blue-800 dark:text-blue-200">
           <li>Acesse <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">https://supabase.com/dashboard</a></li>
           <li>Selecione seu projeto</li>
           <li>Vá em "Settings" (Configurações) no menu lateral</li>
@@ -429,8 +431,8 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
           <li>Clique em "Testar Conexão" para verificar se as credenciais estão corretas</li>
           <li>Se o teste for bem-sucedido, clique em "Salvar Configurações"</li>
         </ol>
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-          <p className="text-sm text-yellow-800">
+        <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
             <strong>Importante:</strong> Após salvar as configurações, será necessário recarregar a página para que as mudanças tenham efeito.
           </p>
         </div>
@@ -439,15 +441,15 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   );
 
   const renderEventTypes = () => (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
           <Settings className="h-6 w-6 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Tipos de Eventos</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Tipos de Eventos</h2>
         </div>
         <button
           onClick={() => openEditModal('event_types')}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+          className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
           <span>Adicionar Tipo</span>
@@ -456,23 +458,23 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
       <div className="space-y-4">
         {eventTypes.map((eventType) => (
-          <div key={eventType.id} className="border rounded-lg p-4 flex items-center justify-between">
+          <div key={eventType.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-900">{eventType.name}</h3>
-              <p className="text-sm text-gray-500">
+              <h3 className="font-medium text-gray-900 dark:text-white">{eventType.name}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Status: {eventType.is_active ? 'Ativo' : 'Inativo'}
               </p>
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => openEditModal('event_types', eventType)}
-                className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded"
               >
                 <Edit2 className="h-4 w-4" />
               </button>
               <button 
                 onClick={() => handleDelete('event_types', eventType.id)}
-                className="text-red-600 hover:text-red-900 p-1 rounded"
+                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1 rounded"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -484,15 +486,15 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   );
 
   const renderPackages = () => (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
           <Package className="h-6 w-6 text-green-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Pacotes</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pacotes</h2>
         </div>
         <button
           onClick={() => openEditModal('packages')}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+          className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
           <span>Adicionar Pacote</span>
@@ -501,29 +503,29 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
       <div className="space-y-4">
         {packages.map((pkg) => (
-          <div key={pkg.id} className="border rounded-lg p-4">
+          <div key={pkg.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-gray-900">{pkg.name}</h3>
+              <h3 className="font-medium text-gray-900 dark:text-white">{pkg.name}</h3>
               <div className="flex items-center space-x-2">
-                <span className="text-lg font-semibold text-green-600">
+                <span className="text-lg font-semibold text-green-600 dark:text-green-400">
                   R$ {pkg.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
                 <button
                   onClick={() => openEditModal('packages', pkg)}
-                  className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                  className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
                 <button 
                   onClick={() => handleDelete('packages', pkg.id)}
-                  className="text-red-600 hover:text-red-900 p-1 rounded"
+                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1 rounded"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-2">{pkg.description}</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{pkg.description}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Status: {pkg.is_active ? 'Ativo' : 'Inativo'}
             </p>
           </div>
@@ -533,15 +535,15 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   );
 
   const renderPaymentMethods = () => (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
           <CreditCard className="h-6 w-6 text-purple-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Formas de Pagamento</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Formas de Pagamento</h2>
         </div>
         <button
           onClick={() => openEditModal('payment_methods')}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+          className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
           <span>Adicionar Forma</span>
@@ -550,29 +552,29 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
       <div className="space-y-4">
         {paymentMethods.map((method) => (
-          <div key={method.id} className="border rounded-lg p-4">
+          <div key={method.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-gray-900">{method.name}</h3>
+              <h3 className="font-medium text-gray-900 dark:text-white">{method.name}</h3>
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 dark:text-gray-300">
                   {method.installments}x
                 </span>
                 <button
                   onClick={() => openEditModal('payment_methods', method)}
-                  className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                  className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
                 <button 
                   onClick={() => handleDelete('payment_methods', method.id)}
-                  className="text-red-600 hover:text-red-900 p-1 rounded"
+                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1 rounded"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-2">{method.description}</p>
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{method.description}</p>
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>Desconto: {method.discount_percentage}%</span>
               <span>Status: {method.is_active ? 'Ativo' : 'Inativo'}</span>
             </div>
@@ -583,15 +585,15 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   );
 
   const renderContractTemplates = () => (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
           <FileText className="h-6 w-6 text-orange-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Modelos de Contrato</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Modelos de Contrato</h2>
         </div>
         <button
           onClick={() => openEditModal('contract_templates')}
-          className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+          className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
           <span>Adicionar Modelo</span>
@@ -600,25 +602,25 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
       <div className="space-y-4">
         {contractTemplates.map((template) => (
-          <div key={template.id} className="border rounded-lg p-4">
+          <div key={template.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-gray-900">{template.name}</h3>
+              <h3 className="font-medium text-gray-900 dark:text-white">{template.name}</h3>
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => openEditModal('contract_templates', template)}
-                  className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                  className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
                 <button 
                   onClick={() => handleDelete('contract_templates', template.id)}
-                  className="text-red-600 hover:text-red-900 p-1 rounded"
+                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1 rounded"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Status: {template.is_active ? 'Ativo' : 'Inativo'}
             </p>
           </div>
@@ -628,37 +630,56 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Settings className="h-8 w-8 text-blue-600" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Configurações do Sistema</h1>
-                <p className="text-gray-600">Configure as conexões e parâmetros do sistema</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configurações do Sistema</h1>
+                <p className="text-gray-600 dark:text-gray-300">Configure as conexões e parâmetros do sistema</p>
               </div>
             </div>
-            <button
-              onClick={onBack}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Voltar</span>
-            </button>
+            <div className="flex items-center space-x-4">
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                title={theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'}
+              >
+                {theme === 'light' ? (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
+              </button>
+              
+              <button
+                onClick={onBack}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Voltar</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-6">
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('event-types')}
               className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'event-types'
                   ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
               }`}
             >
               <Settings className="h-4 w-4" />
@@ -670,7 +691,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'packages'
                   ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
               }`}
             >
               <Package className="h-4 w-4" />
@@ -682,7 +703,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'payment-methods'
                   ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
               }`}
             >
               <CreditCard className="h-4 w-4" />
@@ -694,7 +715,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'templates'
                   ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
               }`}
             >
               <FileText className="h-4 w-4" />
@@ -706,7 +727,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
               className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'supabase'
                   ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
               }`}
             >
               <Database className="h-4 w-4" />
@@ -721,10 +742,10 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
         {/* Add/Edit Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                     {editingItem ? 'Editar' : 'Adicionar'} {
                       activeTab === 'event_types' ? 'Tipo de Evento' :
                       activeTab === 'packages' ? 'Pacote' :
@@ -738,7 +759,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                       setEditingItem(null);
                       setFormData({});
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
                   >
                     ✕
                   </button>
@@ -762,14 +783,14 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                 {activeTab === 'event_types' && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Nome do Tipo de Evento *
                       </label>
                       <input
                         type="text"
                         value={formData.name || ''}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Ex: Casamento, Aniversário, Ensaio..."
                       />
                     </div>
@@ -791,13 +812,13 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                 {activeTab === 'packages' && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Tipo de Evento *
                       </label>
                       <select
                         value={formData.event_type_id || ''}
                         onChange={(e) => setFormData({...formData, event_type_id: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">Selecione o tipo de evento</option>
                         {eventTypes.map(type => (
@@ -806,31 +827,31 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Nome do Pacote *
                       </label>
                       <input
                         type="text"
                         value={formData.name || ''}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Ex: Pacote Básico, Premium..."
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Descrição
                       </label>
                       <textarea
                         value={formData.description || ''}
                         onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         rows={3}
                         placeholder="Descrição do pacote..."
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Preço *
                       </label>
                       <input
@@ -838,18 +859,18 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                         step="0.01"
                         value={formData.price || ''}
                         onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="0.00"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Recursos Inclusos (um por linha)
                       </label>
                       <textarea
                         value={Array.isArray(formData.features) ? formData.features.join('\n') : ''}
                         onChange={(e) => setFormData({...formData, features: e.target.value.split('\n').filter(f => f.trim())})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         rows={4}
                         placeholder="Ex:&#10;Sessão de fotos de 2 horas&#10;50 fotos editadas&#10;Álbum digital"
                       />
@@ -1000,7 +1021,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                       setEditingItem(null);
                       setFormData({});
                     }}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
                   >
                     Cancelar
                   </button>
@@ -1015,7 +1036,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                       handleSave(tableMap[activeTab as keyof typeof tableMap], formData);
                     }}
                     disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                   >
                     {saving ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
