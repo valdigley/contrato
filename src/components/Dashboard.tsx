@@ -162,7 +162,10 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   };
 
   const loadSystemData = async () => {
-    try {
+    try
+    }
+  }
+} {
       const [templatesRes, packagesRes] = await Promise.all([
         supabase.from('contract_templates').select('*').order('name'),
         supabase.from('packages').select('*').order('name')
