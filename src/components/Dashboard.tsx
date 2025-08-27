@@ -161,6 +161,153 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     }
   };
 
+  const loadSystemData = async () => {
+    try {
+      const [templatesRes, packagesRes] = await Promise.all([
+        supabase.from('contract_templates').select('*').order('name'),
+        supabase.from('packages').select('*').order('name')
+      ]);
+
+      if (!templatesRes.error) setTemplates(templatesRes.data || []);
+      if (!packagesRes.error) setPackages(packagesRes.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar dados do sistema:', error);
+    }
+  };
+
+  const generateContract = async (contract: Contract) => {
+    try {
+      // Buscar o template para o tipo de evento
+      const template = templates.find(t => t.event_type_id === contract.event_type_id);
+      
+      if (!template) {
+        alert('Modelo de contrato não encontrado para este tipo de evento');
+        return;
+      }
+
+      // Buscar dados do pacote se existir
+      const packageData = contract.package_id 
+        ? packages.find(p => p.id === contract.package_id)
+        : null;
+
+      // Substituir variáveis no template
+      let contractContent = template.content;
+      
+      // Dados pessoais
+      contractContent = contractContent.replace(/\{\{nome_completo\}\}/g, contract.nome_completo);
+      contractContent = contractContent.replace(/\{\{cpf\}\}/g, formatCPF(contract.cpf));
+      contractContent = contractContent.replace(/\{\{email\}\}/g, contract.email);
+      contractContent = contractContent.replace(/\{\{whatsapp\}\}/g, formatWhatsApp(contract.whatsapp));
+      contractContent = contractContent.replace(/\{\{endereco\}\}/g, contract.endereco);
+      contractContent = contractContent.replace(/\{\{cidade\}\}/g, contract.cidade);
+      contractContent = contractContent.replace(/\{\{data_nascimento\}\}/g, formatDate(contract.data_nascimento));
+      
+      // Dados do evento
+      contractContent = contractContent.replace(/\{\{tipo_evento\}\}/g, contract.tipo_evento);
+      contractContent = contractContent.replace(/\{\{data_evento\}\}/g, contract.data_evento ? formatDate(contract.data_evento) : '');
+      contractContent = contractContent.replace(/\{\{horario_evento\}\}/g, contract.horario_evento || '');
+      contractContent = contractContent.replace(/\{\{local_festa\}\}/g, contract.local_festa);
+      
+      // Dados opcionais
+      if (contract.nome_noivos) {
+        contractContent = contractContent.replace(/\{\{nome_noivos\}\}/g, contract.nome_noivos);
+      }
+      if (contract.nome_aniversariante) {
+        contractContent = contractContent.replace(/\{\{nome_aniversariante\}\}/g, contract.nome_aniversariante);
+      }
+      if (contract.local_pre_wedding) {
+        contractContent = contractContent.replace(/\{\{local_pre_wedding\}\}/g, contract.local_pre_wedding);
+      }
+      if (contract.local_making_of) {
+        contractContent = contractContent.replace(/\{\{local_making_of\}\}/g, contract.local_making_of);
+      }
+      if (contract.local_cerimonia) {
+        contractContent = contractContent.replace(/\{\{local_cerimonia\}\}/g, contract.local_cerimonia);
+      }
+      
+      // Dados do pacote
+      if (packageData) {
+        contractContent = contractContent.replace(/\{\{package_name\}\}/g, packageData.name);
+        contractContent = contractContent.replace(/\{\{package_price\}\}/g, 
+          `R$ ${(contract.package_price || packageData.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+        
+        // Features do pacote
+        if (packageData.features && packageData.features.length > 0) {
+          const featuresList = packageData.features.map((f: string) => `• ${f}`).join('\n');
+          contractContent = contractContent.replace(/\{\{package_features\}\}/g, featuresList);
+        }
+      }
+      
+      // Remover variáveis não substituídas (campos vazios)
+      contractContent = contractContent.replace(/\{\{[^}]+\}\}/g, '');
+      
+      setGeneratedContract(contractContent);
+      setShowContractModal(true);
+    } catch (error) {
+      console.error('Erro ao gerar contrato:', error);
+      alert('Erro ao gerar contrato');
+    }
+  };
+
+  const downloadContract = () => {
+    const element = document.createElement('a');
+    const file = new Blob([generatedContract], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    element.download = `contrato_${selectedContract?.nome_completo.replace(/\s+/g, '_')}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  const printContract = () => {
+    try {
+      const printContent = `
+        <html>
+          <head>
+            <title>Contrato - ${selectedContract?.nome_completo || 'Cliente'}</title>
+            <style>
+              body { 
+                font-family: Arial, sans-serif; 
+                line-height: 1.6; 
+                margin: 40px; 
+                color: #000;
+                font-size: 14px;
+              }
+              h2 {
+                text-align: center;
+                margin-bottom: 30px;
+                text-transform: uppercase;
+              }
+              .content {
+                white-space: pre-wrap;
+              }
+            </style>
+          </head>
+          <body>
+            <h2>CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h2>
+            <div class="content">${generatedContract.replace(/</g, '<').replace(/>/g, '>')}</div>
+          </body>
+        </html>
+      `;
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        
+        printWindow.onload = function() {
+          printWindow.print();
+          printWindow.close();
+        };
+      } else {
+        alert('Por favor, permita pop-ups para imprimir o contrato.');
+      }
+    } catch (error) {
+      console.error('Erro na impressão:', error);
+      alert('Erro ao imprimir. Tente novamente.');
+    }
+  };
+
   const fetchContracts = async () => {
     if (!user) return;
 
@@ -599,22 +746,29 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 {/* Ações do Contrato */}
                 <div className="flex flex-wrap gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                   <button
+                    onClick={() => generateContract(selectedContract)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Gerar Contrato</span>
+                  </button>
+                  <button
+                    onClick={() => openEditModal(selectedContract)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    <span>Aplicar Desconto</span>
+                  </button>
+                  <button
                     onClick={() => sendWhatsAppContract(selectedContract)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
                   >
                     <MessageCircle className="w-4 h-4" />
                     <span>Enviar WhatsApp</span>
                   </button>
                   <button
-                    onClick={() => openEditModal(selectedContract)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    <span>Editar Contrato</span>
-                  </button>
-                  <button
                     onClick={() => updateContractStatus(selectedContract.id, 'sent')}
-                    className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                    className={`px-3 py-2 rounded-lg flex items-center space-x-2 text-sm ${
                       selectedContract.status === 'sent' 
                         ? 'bg-blue-500 text-white' 
                         : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
@@ -624,22 +778,22 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                   </button>
                   <button
                     onClick={() => updateContractStatus(selectedContract.id, 'signed')}
-                    className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                    className={`px-3 py-2 rounded-lg flex items-center space-x-2 text-sm ${
                       selectedContract.status === 'signed' 
                         ? 'bg-green-500 text-white' 
                         : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/20'
-                    }`}
+                    className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition-colors text-sm"
                   >
                     <span>✓ Marcar como Assinado</span>
                   </button>
                   <button
                     onClick={() => {
                       if (confirm('Tem certeza que deseja excluir este contrato?')) {
-                        deleteContract(selectedContract.id);
+                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm"
                         setShowModal(false);
                       }
                     }}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                    className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition-colors text-sm"
                   >
                     <Trash2 className="w-4 h-4" />
                     <span>Excluir</span>
@@ -850,7 +1004,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition-colors text-sm"
                 >
                   Fechar
                 </button>
@@ -860,6 +1014,56 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         </div>
       )}
 
+      {/* Generated Contract Modal */}
+      {showContractModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contrato Gerado</h2>
+                <button
+                  onClick={() => setShowContractModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-6 max-h-96 overflow-y-auto">
+                <pre className="whitespace-pre-wrap text-sm font-mono text-gray-900 dark:text-white">{generatedContract}</pre>
+              </div>
+              <div className="flex space-x-4">
+                <button
+                  onClick={downloadContract}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Baixar</span>
+                </button>
+                <button
+                  onClick={printContract}
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Imprimir</span>
+                </button>
+                <button
+                  onClick={() => sendWhatsAppContract(selectedContract, generatedContract)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </button>
+                <button
+                  onClick={() => setShowContractModal(false)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Edit Contract Modal */}
       {showEditModal && editingContract && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
