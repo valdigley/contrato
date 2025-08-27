@@ -976,7 +976,7 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
                         placeholder="Digite o modelo do contrato aqui. Use variáveis como {{nome_completo}}, {{cpf}}, {{data_evento}}, etc."
                       />
                       <p className="mt-2 text-sm text-gray-500">
-                        Variáveis disponíveis: {{nome_completo}}, {{cpf}}, {{email}}, {{whatsapp}}, {{endereco}}, {{cidade}}, {{data_nascimento}}, {{tipo_evento}}, {{data_evento}}, {{horario_evento}}, {{local_festa}}, {{nome_noivos}}, {{nome_aniversariante}}, {{package_name}}, {{package_price}}, {{package_features}}
+                        Variáveis disponíveis: {'{{nome_completo}}'}, {'{{cpf}}'}, {'{{email}}'}, {'{{whatsapp}}'}, {'{{endereco}}'}, {'{{cidade}}'}, {'{{data_nascimento}}'}, {'{{tipo_evento}}'}, {'{{data_evento}}'}, {'{{horario_evento}}'}, {'{{local_festa}}'}, {'{{nome_noivos}}'}, {'{{nome_aniversariante}}'}, {'{{package_name}}'}, {'{{package_price}}'}, {'{{package_features}}'}
                       </p>
                     </div>
                     <div>
