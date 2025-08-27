@@ -1,4 +1,4 @@
-# 📸 Sistema de Controle para Fotógrafos
+# 📸 Gerenciador de Contratos
 
 Sistema completo para gestão de contratos fotográficos com integração ao Supabase.
 
