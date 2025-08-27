@@ -260,18 +260,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       const newPrice = Number(value);
       
       if (newPrice === originalPrice) {
-        newData.discountPercentage = 0;
-        newData.discountAmount = 0;
-      } else {
-        const percentage = ((originalPrice - newPrice) / originalPrice) * 100;
-        newData.discountPercentage = percentage;
-        newData.discountAmount = originalPrice - newPrice;
-      }
-    }
-
-    setDiscountData(newData);
-  };
-
   const applyDiscount = async () => {
     if (!discountContract) return;
 
