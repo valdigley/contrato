@@ -18,6 +18,9 @@ import {
   Download,
   Calendar,
   DollarSign
+  Link,
+  Copy,
+  Check
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -71,6 +74,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [profileData, setProfileData] = useState({
     name: '',
     business_name: '',
@@ -284,6 +288,13 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     }
   };
 
+  const copyClientLink = () => {
+    const clientLink = `${window.location.origin}?client=true`;
+    navigator.clipboard.writeText(clientLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -429,13 +440,32 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Action Button */}
         <div className="mb-6">
-          <button
-            onClick={() => onNavigate('form')}
-            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Novo Contrato</span>
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => onNavigate('form')}
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Novo Contrato</span>
+            </button>
+            
+            <button
+              onClick={copyClientLink}
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              {linkCopied ? (
+                <>
+                  <Check className="h-5 w-5" />
+                  <span>Link Copiado!</span>
+                </>
+              ) : (
+                <>
+                  <Link className="h-5 w-5" />
+                  <span>Link para Cliente</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
