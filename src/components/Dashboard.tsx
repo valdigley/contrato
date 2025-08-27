@@ -716,11 +716,16 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         {/* Valor */}
                         <div className="text-center">
                           <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {(contract.final_price || contract.package_price) 
-                              ? formatCurrency(contract.final_price || contract.package_price)
+                            {(contract.adjusted_price || contract.final_price || contract.package_price) 
+                              ? formatCurrency(contract.adjusted_price || contract.final_price || contract.package_price)
                               : 'Valor não definido'
                             }
                           </div>
+                          {contract.discount_percentage > 0 && (
+                            <div className="text-xs text-red-500 dark:text-red-400">
+                              {contract.discount_percentage}% desconto
+                            </div>
+                          )}
                           <div className="text-xs text-gray-500 dark:text-gray-400">Valor</div>
                         </div>
                       </div>
