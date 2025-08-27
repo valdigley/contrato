@@ -152,7 +152,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 <Camera className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Sistema de Controle Fotográfico</h1>
+                <h1 className="text-xl font-bold text-gray-900">Gerenciador de Contratos</h1>
                 <p className="text-sm text-gray-600">Bem-vindo, {user?.user_metadata?.name || user?.email}</p>
               </div>
             </div>
