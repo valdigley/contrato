@@ -26,6 +26,7 @@ interface Contract {
   final_price?: number;
   preferred_payment_day?: number;
   created_at: string;
+  status?: 'draft' | 'sent' | 'signed';
 }
 
 interface ContractListProps {
@@ -45,6 +46,27 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
   const [linkCopied, setLinkCopied] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
   const [generatedContract, setGeneratedContract] = useState('');
+
+  const updateContractStatus = async (contractId: string, status: 'draft' | 'sent' | 'signed') => {
+    try {
+      const { error } = await supabase
+        .from('contratos')
+        .update({ status })
+        .eq('id', contractId);
+
+      if (error) throw error;
+
+      // Update local state
+      setContracts(prev => prev.map(contract =>
+        contract.id === contractId ? { ...contract, status } : contract
+      ));
+
+      console.log(`Contrato ${contractId} marcado como ${status}`);
+    } catch (error) {
+      console.error('Erro ao atualizar status do contrato:', error);
+      alert('Erro ao atualizar status do contrato');
+    }
+  };
 
   useEffect(() => {
     fetchContracts();
@@ -444,6 +466,17 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEventTypeColor(contract.tipo_evento)}`}>
                           {contract.tipo_evento}
                         </span>
+                        <div className="mt-1">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            contract.status === 'signed' ? 'bg-green-100 text-green-800' :
+                            contract.status === 'sent' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {contract.status === 'signed' ? '✓ Assinado' :
+                             contract.status === 'sent' ? '📤 Enviado' :
+                             '📝 Rascunho'}
+                          </span>
+                        </div>
                         {contract.data_evento && (
                           <div className="text-xs text-gray-500 mt-1">
                             📅 {formatDate(contract.data_evento)}
@@ -459,6 +492,28 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
+                          <button
+                            onClick={() => updateContractStatus(contract.id, contract.status === 'sent' ? 'draft' : 'sent')}
+                            className={`p-1 rounded transition-colors ${
+                              contract.status === 'sent' 
+                                ? 'text-yellow-600 hover:text-yellow-900 bg-yellow-50' 
+                                : 'text-gray-600 hover:text-yellow-600 bg-gray-50'
+                            }`}
+                            title={contract.status === 'sent' ? 'Marcar como rascunho' : 'Marcar como enviado'}
+                          >
+                            📤
+                          </button>
+                          <button
+                            onClick={() => updateContractStatus(contract.id, contract.status === 'signed' ? 'draft' : 'signed')}
+                            className={`p-1 rounded transition-colors ${
+                              contract.status === 'signed' 
+                                ? 'text-green-600 hover:text-green-900 bg-green-50' 
+                                : 'text-gray-600 hover:text-green-600 bg-gray-50'
+                            }`}
+                            title={contract.status === 'signed' ? 'Marcar como rascunho' : 'Marcar como assinado'}
+                          >
+                            ✓
+                          </button>
                           <button
                             onClick={() => {
                               setSelectedContract(contract);
