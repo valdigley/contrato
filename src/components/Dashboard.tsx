@@ -15,14 +15,7 @@ import {
   LogOut,
   User,
   BarChart3,
-  Check,
-  Link,
-  Eye,
-  Trash2,
-  Download,
-  Phone,
-  Edit2
-} from 'lucide-react';
+import { DollarSign, Phone } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
