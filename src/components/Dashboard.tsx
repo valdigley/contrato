@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, Users, Calendar, TrendingUp, Plus, List, Settings, User, LogOut, FileText, Camera, Sun, Moon, Edit2, Save, X, Percent } from 'lucide-react';
+import {
   FileText, 
   Users, 
   Calendar, 
@@ -213,10 +214,14 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     window.open(whatsappUrl, '_blank');
   };
 
+  const fetchAllContracts = async () => {
+    // Implementation for fetching all contracts
+  };
+
   useEffect(() => {
     loadDashboardData();
+    fetchAllContracts();
   }, []);
-      fetchAllContracts();
 
   const getUniqueEventTypes = () => {
     const uniqueTypes = new Set(stats.recentContracts.map(c => c.tipo_evento));
@@ -635,6 +640,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-md p-4 border border-white/20 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
             <div className="flex items-center space-x-3">
               <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-2">
@@ -644,10 +650,9 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total</p>
                 <p className="text-lg font-bold text-gray-900 dark:text-white">{contracts.length} contratos</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {(contracts.reduce((sum, c) => sum + Number(c.final_price || c.package_price || 0), 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
-            </div>
             </div>
           </div>
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-md p-4 border border-white/20 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300">
@@ -657,9 +662,9 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Este Mês</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{monthlyContracts.length} contratos</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{stats.contractsThisMonth} contratos</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  R$ {monthlyValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {stats.monthlyContractsValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">valor total</p>
@@ -672,14 +677,18 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Este Ano</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{yearlyContracts.length} contratos</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{stats.contractsThisYear} contratos</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  R$ {yearlyValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {stats.yearlyContractsValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">valor médio</p>
             </div>
-              <div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mb-8">
           <div className="flex space-x-4">
             <button
               onClick={() => onNavigate('form')}
