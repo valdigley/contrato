@@ -106,16 +106,18 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     const currentAdjustedPrice = contract.adjusted_price || originalPrice;
     const currentDiscountPercentage = contract.discount_percentage || 0;
     
-    setDiscountPercentage(currentDiscountPercentage.toString());
-    setFinalPrice(currentAdjustedPrice.toString());
-    setCustomNotes(contract.custom_notes || '');
+    setDiscountData({
+      discountType: 'percentage',
+      discountPercentage: currentDiscountPercentage,
+      discountAmount: 0,
+      adjustedPrice: currentAdjustedPrice,
+      customNotes: contract.custom_notes || ''
+    });
     
     // Calculate discount value if there's a percentage
     if (currentDiscountPercentage > 0) {
       const discountAmount = originalPrice * (currentDiscountPercentage / 100);
-      setDiscountValue(discountAmount.toString());
-    } else {
-      setDiscountValue('');
+      setDiscountData(prev => ({ ...prev, discountAmount }));
     }
   };
 
@@ -213,18 +215,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     }
   };
 
-  const openDiscountModal = (contract: any) => {
-    setDiscountContract(contract);
-    setDiscountData({
-      discountType: 'percentage',
-      discountPercentage: contract.discount_percentage || 0,
-      discountAmount: 0,
-      adjustedPrice: contract.adjusted_price || contract.final_price || contract.package_price || 0,
-      customNotes: contract.custom_notes || ''
-    });
-    setShowDiscountModal(true);
-  };
-
   const handleDiscountChange = (field: string, value: string | number) => {
     const newData = { ...discountData, [field]: value };
     const originalPrice = discountContract?.final_price || discountContract?.package_price || 0;
@@ -260,6 +250,18 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       const newPrice = Number(value);
       
       if (newPrice === originalPrice) {
+        newData.discountPercentage = 0;
+        newData.discountAmount = 0;
+      } else {
+        const discountAmount = originalPrice - newPrice;
+        newData.discountAmount = discountAmount;
+        newData.discountPercentage = (discountAmount / originalPrice) * 100;
+      }
+    }
+    
+    setDiscountData(newData);
+  };
+
   const applyDiscount = async () => {
     if (!discountContract) return;
 
@@ -300,7 +302,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const generateContract = async (contract: Contract) => {
     try {
       // Buscar o template para o tipo de evento
-      const template = templates.find(t => t.event_type_id === contract.event_type_id);
+      const template = templates.find((t: any) => t.event_type_id === contract.event_type_id);
       
       if (!template) {
         alert('Modelo de contrato não encontrado para este tipo de evento');
@@ -309,11 +311,11 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
       // Buscar dados do pacote se existir
       const packageData = contract.package_id 
-        ? packages.find(p => p.id === contract.package_id)
+        ? packages.find((p: any) => p.id === contract.package_id)
         : null;
 
       // Substituir variáveis no template
-      let contractContent = template.content;
+      let contractContent = (template as any).content;
       
       // Dados pessoais
       contractContent = contractContent.replace(/\{\{nome_completo\}\}/g, contract.nome_completo);
@@ -349,13 +351,13 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       
       // Dados do pacote
       if (packageData) {
-        contractContent = contractContent.replace(/\{\{package_name\}\}/g, packageData.name);
+        contractContent = contractContent.replace(/\{\{package_name\}\}/g, (packageData as any).name);
         contractContent = contractContent.replace(/\{\{package_price\}\}/g, 
-          `R$ ${(contract.package_price || packageData.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+          `R$ ${(contract.package_price || (packageData as any).price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
         
         // Features do pacote
-        if (packageData.features && packageData.features.length > 0) {
-          const featuresList = packageData.features.map((f: string) => `• ${f}`).join('\n');
+        if ((packageData as any).features && (packageData as any).features.length > 0) {
+          const featuresList = (packageData as any).features.map((f: string) => `• ${f}`).join('\n');
           contractContent = contractContent.replace(/\{\{package_features\}\}/g, featuresList);
         }
       }
@@ -407,7 +409,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           </head>
           <body>
             <h2>CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h2>
-            <div class="content">${generatedContract.replace(/</g, '<').replace(/>/g, '>')}</div>
+            <div class="content">${generatedContract.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
           </body>
         </html>
       `;
@@ -848,7 +850,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         {formatCurrency(contract.adjusted_price || contract.final_price || contract.package_price || 0)}
-                        {contract.discount_percentage > 0 && (
+                        {(contract.discount_percentage || 0) > 0 && (
                           <div className="text-xs text-green-600 dark:text-green-400">
                             {contract.discount_percentage}% desconto
                           </div>
@@ -891,7 +893,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                     <span>Gerar Contrato</span>
                   </button>
                   <button
-                    onClick={() => openEditModal(selectedContract)}
+                    onClick={() => openDiscountModal(selectedContract)}
                     className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -1085,7 +1087,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                           </p>
                         </div>
                       )}
-                      {selectedContract.discount_percentage !== 0 && (
+                      {(selectedContract.discount_percentage || 0) !== 0 && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Desconto Aplicado</label>
                           <p className="text-sm text-green-600 dark:text-green-400 font-medium">
@@ -1185,7 +1187,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                   <span>Imprimir</span>
                 </button>
                 <button
-                  onClick={() => sendWhatsAppContract(selectedContract)}
+                  onClick={() => sendWhatsAppContract(selectedContract!)}
                   className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
                 >
                   <MessageCircle className="w-4 h-4" />
