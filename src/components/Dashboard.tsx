@@ -574,4 +574,4 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                           <select
                             value={contract.status || 'draft'}
                             onChange={(e) => updateContractStatus(contract.id, e.target.value as 'draft' | 'sent' | 'signed' | 'cancelled')}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
