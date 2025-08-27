@@ -94,6 +94,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [packages, setPackages] = useState([]);
   const [generatedContract, setGeneratedContract] = useState('');
   const [showContractModal, setShowContractModal] = useState(false);
+  const [discountError, setDiscountError] = useState(false);
+  const [applyingDiscount, setApplyingDiscount] = useState(false);
 
   useEffect(() => {
     fetchContracts();
@@ -1305,7 +1307,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm font-medium text-gray-700">Preço Original:</span>
-                      <span className="text-sm text-gray-600">R$ {originalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-sm text-gray-600">R$ {(discountContract.final_price || discountContract.package_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </div>
                     {(discountData.discountPercentage > 0 || discountData.discountAmount > 0) && (
                       <div className="flex justify-between">
@@ -1313,7 +1315,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                           Desconto ({discountData.discountPercentage.toFixed(2)}%):
                         </span>
                         <span className="text-sm text-red-600">
-                          -R$ {(originalPrice - discountData.adjustedPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          -R$ {((discountContract.final_price || discountContract.package_price || 0) - discountData.adjustedPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
                     )}
@@ -1350,3 +1352,113 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                   onClick={applyDiscount}
                   disabled={applyingDiscount}
                   className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                >
+                  {applyingDiscount ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Aplicando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Aplicar Desconto</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Editar Perfil</h2>
+                <button
+                  onClick={() => setShowProfileModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome Completo
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    value={profileData.name}
+                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Seu nome completo"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="business_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome do Negócio
+                  </label>
+                  <input
+                    type="text"
+                    id="business_name"
+                    value={profileData.business_name}
+                    onChange={(e) => setProfileData({ ...profileData, business_name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nome do seu estúdio/empresa"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Telefone
+                  </label>
+                  <input
+                    type="text"
+                    id="phone"
+                    value={profileData.phone}
+                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowProfileModal(false)}
+                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveProfile}
+                  disabled={savingProfile}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
+                >
+                  {savingProfile ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Salvar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
