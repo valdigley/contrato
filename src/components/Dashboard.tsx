@@ -570,15 +570,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         </div>
                       </div>
                     </div>
-                    {contract.local_festa && (
-                      <div className="pt-2 border-t border-gray-200">
-                        <div className="flex items-center space-x-1 text-sm text-gray-600">
-                          <span>📍</span>
-                          <span className="font-medium">Local:</span>
-                          <span>{contract.local_festa}</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
