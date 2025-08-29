@@ -18,6 +18,8 @@ interface ContractData {
   cidade: string;
   data_nascimento: string;
   tipo_evento: string;
+  data_evento: string;
+  horario_evento: string;
   local_pre_wedding: string;
   local_making_of: string;
   local_cerimonia: string;
@@ -392,15 +394,52 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     setSubmitStatus('idle');
 
     try {
-      // Get photographer ID
-      const photographerId = await getPhotographerId();
+      let photographerId;
       
-      if (!photographerId) {
-        if (isClientMode) {
-          throw new Error('Link inválido. Entre em contato com o fotógrafo para obter o link correto.');
+      // Check if we're in client mode
+      if (isClientMode) {
+        // Get photographer_id from URL parameters
+        const photographerIdParam = urlParams.get('photographer_id');
+        console.log('Photographer ID from URL:', photographerIdParam);
+        console.log('URL atual:', window.location.href);
+        console.log('Parâmetros da URL:', Object.fromEntries(urlParams));
+        
+        if (photographerIdParam) {
+          photographerId = photographerIdParam;
+        } else if (user) {
+          // Fallback: use logged user's photographer profile
+          console.log('Photographer ID não encontrado na URL, usando usuário logado como fallback');
+          const { data: photographerData, error: photographerError } = await supabase
+            .from('photographers')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+
+          if (photographerError) {
+            throw new Error('Perfil de fotógrafo não encontrado. Entre em contato com o fotógrafo para obter o link correto.');
+          }
+          
+          photographerId = photographerData.id;
         } else {
+          throw new Error('ID do fotógrafo não encontrado no link. Verifique se o link está completo.');
+        }
+      } else {
+        // Normal mode - get photographer_id from authenticated user
+        if (!user) {
+          throw new Error('Usuário não autenticado');
+        }
+
+        const { data: photographerData, error: photographerError } = await supabase
+          .from('photographers')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (photographerError) {
           throw new Error('Perfil de fotógrafo não encontrado. Crie seu perfil primeiro.');
         }
+        
+        photographerId = photographerData.id;
       }
 
       // Debug: Log dos valores antes de salvar
@@ -637,7 +676,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             </div>
 
             <div>
-              <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 WhatsApp *
               </label>
               <input
@@ -658,7 +697,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             </div>
 
             <div>
-              <label htmlFor="data_nascimento" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="data_nascimento" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Data de Nascimento *
               </label>
               <input
@@ -685,7 +724,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             </div>
 
             <div>
-              <label htmlFor="endereco" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="endereco" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Endereço Completo *
               </label>
               <input
@@ -705,7 +744,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             </div>
 
             <div>
-              <label htmlFor="cidade" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="cidade" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Cidade *
               </label>
               <input
@@ -733,7 +772,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             </div>
 
             <div>
-              <label htmlFor="event_type_id" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="event_type_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Tipo de Evento *
               </label>
               <select
@@ -760,7 +799,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             {/* Seleção de Pacote */}
             {formData.event_type_id && (
               <div>
-                <label htmlFor="package_id" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="package_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Pacote *
                 </label>
                 <select
@@ -812,7 +851,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             {/* Seleção de Forma de Pagamento */}
             {formData.package_id && (
               <div>
-                <label htmlFor="payment_method_id" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="payment_method_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Forma de Pagamento (Opcional)
                 </label>
                 
@@ -914,7 +953,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 {/* Seleção do Dia de Pagamento */}
                 {formData.payment_method_id && (
                   <div>
-                    <label htmlFor="preferred_payment_day" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="preferred_payment_day" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Dia do Mês para Pagamento *
                     </label>
                     <select
@@ -942,7 +981,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
             {/* Data e Horário do Evento */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="data_evento" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="data_evento" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Data do Evento *
                 </label>
                 <input
@@ -961,7 +1000,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
               </div>
 
               <div>
-                <label htmlFor="horario_evento" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="horario_evento" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Horário do Evento *
                 </label>
                 <input
@@ -979,8 +1018,6 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                 )}
               </div>
             </div>
-
-            {/* Debug: Mostrar informações para verificar */}
           </div>
 
           {/* Detalhes do Evento */}
@@ -994,7 +1031,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
               {/* Nome dos Noivos - apenas para casamentos */}
               {isCasamento && (
                 <div>
-                  <label htmlFor="nome_noivos" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="nome_noivos" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Nome dos Noivos
                   </label>
                   <input
@@ -1012,7 +1049,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
               {/* Nome do Aniversariante - apenas para aniversários */}
               {isAniversario && (
                 <div>
-                  <label htmlFor="nome_aniversariante" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="nome_aniversariante" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Nome do(a) Aniversariante
                   </label>
                   <input
@@ -1031,7 +1068,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
               {isCasamento && (
                 <>
                   <div>
-                    <label htmlFor="local_pre_wedding" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="local_pre_wedding" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Local do Pré-Wedding
                     </label>
                     <input
@@ -1046,7 +1083,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                   </div>
 
                   <div>
-                    <label htmlFor="local_making_of" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="local_making_of" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Local do Making Of
                     </label>
                     <input
@@ -1061,7 +1098,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                   </div>
 
                   <div>
-                    <label htmlFor="local_cerimonia" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="local_cerimonia" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Local da Cerimônia
                     </label>
                     <input
@@ -1079,7 +1116,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
 
               {/* Local da Festa - obrigatório para todos */}
               <div>
-                <label htmlFor="local_festa" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="local_festa" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {isEnsaio ? 'Local do Ensaio' : 'Local da Festa'}
                 </label>
                 <input
