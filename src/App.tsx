@@ -53,31 +53,7 @@ function App() {
   // Supabase not configured
   if (!supabaseConfigured) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-100 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
-          <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-              <AlertCircle className="h-8 w-8 text-red-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Configuração Necessária
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Configure as credenciais do Supabase para usar o sistema.
-            </p>
-            <button
-              onClick={() => {
-                console.log('Botão clicado - indo para configurações');
-                setCurrentView('settings');
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
-            >
-              <Settings className="h-5 w-5" />
-              <span>Configurar Supabase</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <SupabaseConfigScreen onConfigured={() => window.location.reload()} />
     );
   }
 
