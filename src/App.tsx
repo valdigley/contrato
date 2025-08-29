@@ -7,7 +7,6 @@ import ContractList from './components/ContractList';
 import FinancialDashboard from './components/FinancialDashboard';
 import SystemSettings from './components/SystemSettings';
 import UserProfile from './components/UserProfile';
-import SupabaseConfigScreen from './components/SupabaseConfigScreen';
 import { AlertCircle, Database, Settings } from 'lucide-react';
 
 function App() {
@@ -19,22 +18,15 @@ function App() {
   // Check Supabase configuration
   useEffect(() => {
     const checkSupabaseConfig = () => {
-      try {
-        const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
-        
-        const isConfigured = supabaseUrl && supabaseKey && 
-                            supabaseUrl.includes('supabase.co') && 
-                            supabaseKey.length > 20;
-        
-        console.log('Supabase configured:', isConfigured);
-        setSupabaseConfigured(isConfigured);
-      } catch (error) {
-        console.error('Error checking Supabase config:', error);
-        setSupabaseConfigured(false);
-      } finally {
-        setCheckingConfig(false);
-      }
+      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      const isConfigured = supabaseUrl && supabaseKey && 
+                          supabaseUrl.includes('supabase.co') && 
+                          supabaseKey.length > 20;
+      
+      setSupabaseConfigured(isConfigured);
+      setCheckingConfig(false);
     };
 
     checkSupabaseConfig();
@@ -61,7 +53,31 @@ function App() {
   // Supabase not configured
   if (!supabaseConfigured) {
     return (
-      <SupabaseConfigScreen onConfigured={() => window.location.reload()} />
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+          <div className="text-center">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Configuração Necessária
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Configure as credenciais do Supabase para usar o sistema.
+            </p>
+            <button
+              onClick={() => {
+                console.log('Botão clicado - indo para configurações');
+                setCurrentView('settings');
+              }}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+            >
+              <Settings className="h-5 w-5" />
+              <span>Configurar Supabase</span>
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -108,12 +124,6 @@ function App() {
     );
   }
 
-  // Financial dashboard view
-  if (currentView === 'financial') {
-    return (
-      <FinancialDashboard onBack={() => setCurrentView('dashboard')} />
-    );
-  }
 
   // Main dashboard
   return (
