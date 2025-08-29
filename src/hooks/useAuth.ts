@@ -16,7 +16,17 @@ export function useAuth() {
         
         if (error) {
           console.error('Erro ao verificar sessão:', error);
-          setError(error.message);
+          
+          // Se o token de refresh é inválido, limpar a sessão
+          if (error.message.includes('Refresh Token Not Found') || 
+              error.message.includes('Invalid Refresh Token')) {
+            console.log('Token de refresh inválido, limpando sessão...');
+            await supabase.auth.signOut();
+            setUser(null);
+            setError(null);
+          } else {
+            setError(error.message);
+          }
         } else {
           console.log('Sessão verificada:', session?.user?.email || 'Nenhum usuário logado');
           setUser(session?.user ?? null);
@@ -24,7 +34,18 @@ export function useAuth() {
         }
       } catch (err) {
         console.error('Erro inesperado ao verificar sessão:', err);
-        setError('Erro ao verificar autenticação');
+        
+        // Verificar se é erro de token inválido
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (errorMessage.includes('Refresh Token Not Found') || 
+            errorMessage.includes('Invalid Refresh Token')) {
+          console.log('Token de refresh inválido detectado, limpando sessão...');
+          await supabase.auth.signOut();
+          setUser(null);
+          setError(null);
+        } else {
+          setError('Erro ao verificar autenticação');
+        }
       } finally {
         setLoading(false);
       }
