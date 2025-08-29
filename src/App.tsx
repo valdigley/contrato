@@ -66,7 +66,10 @@ function App() {
               Configure as credenciais do Supabase para usar o sistema.
             </p>
             <button
-              onClick={() => setCurrentView('settings')}
+              onClick={() => {
+                console.log('Botão clicado - indo para configurações');
+                setCurrentView('settings');
+              }}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
             >
               <Settings className="h-5 w-5" />

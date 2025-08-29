@@ -110,17 +110,20 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
   const saveConfiguration = async () => {
     if (!supabaseConfig.url || !supabaseConfig.anonKey) {
-      alert('Preencha todos os campos obrigatórios');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
       return;
     }
 
     if (!validateSupabaseUrl(supabaseConfig.url)) {
-      alert('URL do Supabase inválida. Use o formato: https://seu-projeto.supabase.co');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
       return;
     }
 
     if (!validateSupabaseKey(supabaseConfig.anonKey)) {
-      alert('Chave anônima do Supabase inválida. Verifique se copiou a chave correta.');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
       return;
     }
 
@@ -401,6 +404,20 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
         {/* Action Buttons */}
         <div className="flex justify-center">
+          <button
+            onClick={testConnection}
+            disabled={testStatus === 'testing' || !supabaseConfig.url || !supabaseConfig.anonKey}
+            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 disabled:bg-green-300 dark:disabled:bg-green-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center space-x-2 mr-4"
+          >
+            {testStatus === 'testing' ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            ) : (
+              <>
+                <Database className="h-5 w-5" />
+                <span>Testar Conexão</span>
+              </>
+            )}
+          </button>
           <button
             onClick={saveConfiguration}
             disabled={loading || !supabaseConfig.url || !supabaseConfig.anonKey}
