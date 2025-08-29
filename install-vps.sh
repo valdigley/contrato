@@ -79,17 +79,11 @@ log "5. Criando diretório do projeto..."
 mkdir -p $PROJECT_DIR
 cd $PROJECT_DIR
 
-# 6. Copiar arquivos do projeto atual
-log "6. Copiando arquivos do projeto..."
-# Se você está executando de dentro do projeto, copie os arquivos
-if [ -f "../package.json" ]; then
-    cp -r ../* . 2>/dev/null || true
-    cp -r ../.[^.]* . 2>/dev/null || true
-elif [ -f "./package.json" ]; then
-    log "Arquivos já estão no diretório correto"
-else
-    error "Arquivos do projeto não encontrados. Execute o script no diretório do projeto."
-fi
+# 6. Clonar o projeto do GitHub
+log "6. Clonando projeto do GitHub..."
+git clone https://github.com/valdigley/controle.git . || {
+  error "Erro ao clonar repositório. Verifique se o repositório existe e é público."
+}
 
 # 7. Instalar dependências
 log "7. Instalando dependências..."
