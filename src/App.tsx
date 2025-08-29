@@ -7,6 +7,7 @@ import ContractList from './components/ContractList';
 import FinancialDashboard from './components/FinancialDashboard';
 import SystemSettings from './components/SystemSettings';
 import UserProfile from './components/UserProfile';
+import SupabaseConfigScreen from './components/SupabaseConfigScreen';
 import { AlertCircle, Database, Settings } from 'lucide-react';
 
 function App() {
@@ -18,15 +19,22 @@ function App() {
   // Check Supabase configuration
   useEffect(() => {
     const checkSupabaseConfig = () => {
-      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      const isConfigured = supabaseUrl && supabaseKey && 
-                          supabaseUrl.includes('supabase.co') && 
-                          supabaseKey.length > 20;
-      
-      setSupabaseConfigured(isConfigured);
-      setCheckingConfig(false);
+      try {
+        const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        const isConfigured = supabaseUrl && supabaseKey && 
+                            supabaseUrl.includes('supabase.co') && 
+                            supabaseKey.length > 20;
+        
+        console.log('Supabase configured:', isConfigured);
+        setSupabaseConfigured(isConfigured);
+      } catch (error) {
+        console.error('Error checking Supabase config:', error);
+        setSupabaseConfigured(false);
+      } finally {
+        setCheckingConfig(false);
+      }
     };
 
     checkSupabaseConfig();
@@ -100,6 +108,12 @@ function App() {
     );
   }
 
+  // Financial dashboard view
+  if (currentView === 'financial') {
+    return (
+      <FinancialDashboard onBack={() => setCurrentView('dashboard')} />
+    );
+  }
 
   // Main dashboard
   return (
