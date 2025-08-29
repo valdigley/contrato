@@ -77,6 +77,30 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
   const isClientMode = urlParams.get('client') === 'true';
   const editId = urlParams.get('edit');
 
+  // Get photographer ID from current user if not in URL
+  const getPhotographerId = async () => {
+    const photographerIdParam = urlParams.get('photographer_id');
+    
+    if (photographerIdParam) {
+      return photographerIdParam;
+    }
+    
+    // If no photographer_id in URL, try to get from current user
+    if (user) {
+      const { data: photographerData, error } = await supabase
+        .from('photographers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (!error && photographerData) {
+        return photographerData.id;
+      }
+    }
+    
+    return null;
+  };
+
   React.useEffect(() => {
     fetchEventTypesAndPackages();
   }, []);
@@ -368,36 +392,15 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     setSubmitStatus('idle');
 
     try {
-      let photographerId;
+      // Get photographer ID
+      const photographerId = await getPhotographerId();
       
-      // Check if we're in client mode
-      if (isClientMode) {
-        // Get photographer_id from URL parameters
-        const photographerIdParam = urlParams.get('photographer_id');
-        console.log('Photographer ID from URL:', photographerIdParam);
-        photographerId = photographerIdParam;
-        if (!photographerId) {
-          console.error('URL atual:', window.location.href);
-          console.error('Parâmetros da URL:', Object.fromEntries(urlParams.entries()));
-          throw new Error('ID do fotógrafo não encontrado no link. Verifique se o link está completo.');
-        }
-      } else {
-        // Normal mode - get photographer_id from authenticated user
-        if (!user) {
-          throw new Error('Usuário não autenticado');
-        }
-
-        const { data: photographerData, error: photographerError } = await supabase
-          .from('photographers')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (photographerError) {
+      if (!photographerId) {
+        if (isClientMode) {
+          throw new Error('Link inválido. Entre em contato com o fotógrafo para obter o link correto.');
+        } else {
           throw new Error('Perfil de fotógrafo não encontrado. Crie seu perfil primeiro.');
         }
-        
-        photographerId = photographerData.id;
       }
 
       // Debug: Log dos valores antes de salvar
