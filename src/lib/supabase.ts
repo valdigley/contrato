@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 const isValidUrl = (url: string): boolean => {
   try {
     new URL(url);
-    return url.startsWith('https://') && url.includes('.supabase.co') && !url.includes('iisejjtimakkwjrbmzvj');
+    return url.startsWith('https://') && url.includes('.supabase.co');
   } catch {
     return false;
   }
@@ -12,28 +12,14 @@ const isValidUrl = (url: string): boolean => {
 
 // Priorizar credenciais do localStorage (configurações do sistema)
 const getSupabaseUrl = () => {
-  const url = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL || '';
-  
-  // Block the old project URL
-  if (url.includes('iisejjtimakkwjrbmzvj')) {
-    console.warn('Old Supabase project URL detected and blocked');
-    localStorage.removeItem('supabase_url');
-    return '';
-  }
+  const url = localStorage.getItem('supabase_url') || '';
   
   console.log('Supabase URL:', url ? 'Configurado' : 'Não configurado');
   return isValidUrl(url) ? url : '';
 };
 
 const getSupabaseAnonKey = () => {
-  const key = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  
-  // Clear key if it was associated with the old project
-  const url = localStorage.getItem('supabase_url') || '';
-  if (url.includes('iisejjtimakkwjrbmzvj')) {
-    localStorage.removeItem('supabase_anon_key');
-    return '';
-  }
+  const key = localStorage.getItem('supabase_anon_key') || '';
   
   console.log('Supabase Key:', key ? 'Configurado' : 'Não configurado');
   return key && key.length > 20 ? key : '';
