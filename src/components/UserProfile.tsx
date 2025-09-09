@@ -58,14 +58,21 @@ export default function UserProfile({ onBack }: UserProfileProps) {
       if (userError) throw userError;
 
       // Buscar dados do fotógrafo
-      const { data: photographerResponse, error: photographerError } = await supabase
-        .from('photographers')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (photographerError && photographerError.code !== 'PGRST116') {
-        console.error('Erro ao buscar dados do fotógrafo:', photographerError);
+      let photographerResponse = null;
+      try {
+        const { data, error } = await supabase
+          .from('photographers')
+          .select('*')
+          .eq('user_id', user?.id)
+          .single();
+        
+        if (error && error.code !== 'PGRST116' && error.code !== 'PGRST205') {
+          console.error('Erro ao buscar dados do fotógrafo:', error);
+        } else if (!error) {
+          photographerResponse = data;
+        }
+      } catch (err) {
+        console.info('Tabela photographers não encontrada, continuando sem dados do fotógrafo');
       }
 
       setUserData(userResponse);
