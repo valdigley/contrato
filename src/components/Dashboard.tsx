@@ -132,11 +132,11 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
     try {
       // Buscar dados do usuário
-      const { data: userData } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('name')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       // Buscar dados do fotógrafo
       const { data: photographerData } = await supabase
