@@ -45,7 +45,7 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         .from('users')
         .select('*')
         .eq('id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (userError) {
         console.error('Error fetching user data:', userError);
