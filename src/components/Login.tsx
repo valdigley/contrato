@@ -168,11 +168,10 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           let photographerError = null;
           
           if (existingPhotographer) {
-      }
     } catch (error) {
       console.error('Error loading business info:', error);
+    }
 
-              .update({
                 business_name: businessName,
                 phone: phone,
                 settings: {}
