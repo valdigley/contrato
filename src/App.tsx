@@ -11,15 +11,30 @@ import { AlertCircle, Database, Settings } from 'lucide-react';
 
 function App() {
   const { user, loading, error: authError, isAuthenticated } = useAuth();
-  const [supabaseConfigured, setSupabaseConfigured] = useState(true);
-  const [checkingConfig, setCheckingConfig] = useState(false);
+  const [supabaseConfigured, setSupabaseConfigured] = useState(false);
+  const [checkingConfig, setCheckingConfig] = useState(true);
   const [currentView, setCurrentView] = useState('dashboard');
+
+  // Check Supabase configuration
+  useEffect(() => {
+    const checkSupabaseConfig = () => {
+      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      const isConfigured = supabaseUrl && supabaseKey && 
+                          supabaseUrl.includes('supabase.co') && 
+                          supabaseKey.length > 20;
+      
+      setSupabaseConfigured(isConfigured);
+      setCheckingConfig(false);
+    };
+
+    checkSupabaseConfig();
+  }, []);
 
   // Check URL parameters for client mode
   const urlParams = new URLSearchParams(window.location.search);
   const isClientMode = urlParams.get('client') === 'true';
-
-  console.log('App render:', { hasUser: !!user, loading, isAuthenticated, currentView });
 
   // Loading state
   if (checkingConfig || loading) {
@@ -75,8 +90,6 @@ function App() {
   if (!isAuthenticated) {
     return <Login onLogin={() => setCurrentView('dashboard')} />;
   }
-
-  console.log('Authenticated, showing:', currentView);
 
   // Settings view
   if (currentView === 'settings') {

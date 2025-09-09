@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Building2, Phone, Mail, Save, ArrowLeft, CheckCircle, AlertCircle, Settings, Camera, MapPin, Instagram } from 'lucide-react';
+import { User, Building2, Phone, Mail, Save, ArrowLeft, CheckCircle, AlertCircle, Settings, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -7,78 +7,80 @@ interface UserProfileProps {
   onBack: () => void;
 }
 
-interface BusinessData {
+interface UserData {
   id: string;
-  nome_estudio: string;
-  address?: string;
-  whatsapp?: string;
   email: string;
-  city?: string;
-  state?: string;
-  instagram?: string;
-  document?: string;
-  zip_code?: string;
+  name: string;
+  role: string;
   created_at: string;
-  updated_at: string;
+}
+
+interface PhotographerData {
+  id: string;
+  user_id: string;
+  business_name: string;
+  phone: string;
+  settings: any;
+  created_at: string;
 }
 
 export default function UserProfile({ onBack }: UserProfileProps) {
   const { user } = useAuth();
-  const [businessData, setBusinessData] = useState<BusinessData | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [photographerData, setPhotographerData] = useState<PhotographerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [formData, setFormData] = useState({
-    nome_estudio: '',
-    address: '',
-    whatsapp: '',
-    email: '',
-    city: '',
-    state: '',
-    instagram: '',
-    document: '',
-    zip_code: ''
+    name: '',
+    business_name: '',
+    phone: '',
+    email: ''
   });
 
   useEffect(() => {
     if (user) {
-      fetchBusinessData();
+      fetchUserData();
     }
   }, [user]);
 
-  const fetchBusinessData = async () => {
+  const fetchUserData = async () => {
     try {
       setLoading(true);
       
-      // Fetch business data
-      const { data: businessResponse, error: businessError } = await supabase
-        .from('business_info')
+      // Buscar dados do usuário
+      const { data: userResponse, error: userError } = await supabase
+        .from('users')
         .select('*')
-        .limit(1)
-        .maybeSingle();
+        .eq('id', user?.id)
+        .single();
 
-      if (businessError) {
-        console.error('Error fetching business data:', businessError);
-        setBusinessData(null);
-      } else {
-        setBusinessData(businessResponse);
+      if (userError) throw userError;
+
+      // Buscar dados do fotógrafo
+      const { data: photographerResponse, error: photographerError } = await supabase
+        .from('photographers')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (photographerError && photographerError.code !== 'PGRST116') {
+        console.error('Erro ao buscar dados do fotógrafo:', photographerError);
       }
 
-      // Fill form with business data
+      setUserData(userResponse);
+      setPhotographerData(photographerResponse || null);
+
+      // Preencher formulário
       setFormData({
-        nome_estudio: businessResponse?.nome_estudio || '',
-        address: businessResponse?.address || '',
-        whatsapp: businessResponse?.whatsapp || '',
-        email: businessResponse?.email || '',
-        city: businessResponse?.city || '',
-        state: businessResponse?.state || '',
-        instagram: businessResponse?.instagram || '',
-        document: businessResponse?.document || '',
-        zip_code: businessResponse?.zip_code || ''
+        name: userResponse?.name || '',
+        business_name: photographerResponse?.business_name || '',
+        phone: photographerResponse?.phone || '',
+        email: userResponse?.email || ''
       });
 
     } catch (error) {
-      console.error('Error loading business data:', error);
+      console.error('Erro ao carregar dados do usuário:', error);
     } finally {
       setLoading(false);
     }
@@ -99,48 +101,47 @@ export default function UserProfile({ onBack }: UserProfileProps) {
     setSaveStatus('idle');
 
     try {
-      if (businessData) {
-        // Update existing business info
-        const { error: updateError } = await supabase
-          .from('business_info')
+      // Atualizar dados do usuário
+      const { error: userError } = await supabase
+        .from('users')
+        .update({
+          name: formData.name
+        })
+        .eq('id', user.id);
+
+      if (userError) throw userError;
+
+      // Atualizar ou criar dados do fotógrafo
+      if (photographerData) {
+        // Atualizar
+        const { error: photographerError } = await supabase
+          .from('photographers')
           .update({
-            nome_estudio: formData.nome_estudio,
-            address: formData.address,
-            whatsapp: formData.whatsapp,
-            email: formData.email,
-            city: formData.city,
-            state: formData.state,
-            instagram: formData.instagram,
-            document: formData.document,
-            zip_code: formData.zip_code
+            business_name: formData.business_name,
+            phone: formData.phone
           })
-          .eq('id', businessData.id);
+          .eq('user_id', user.id);
 
-        if (updateError) throw updateError;
+        if (photographerError) throw photographerError;
       } else {
-        // Create new business info
-        const { error: insertError } = await supabase
-          .from('business_info')
-          .insert({
-            nome_estudio: formData.nome_estudio,
-            address: formData.address,
-            whatsapp: formData.whatsapp,
-            email: formData.email,
-            city: formData.city,
-            state: formData.state,
-            instagram: formData.instagram,
-            document: formData.document,
-            zip_code: formData.zip_code
-          });
+        // Criar
+        const { error: photographerError } = await supabase
+          .from('photographers')
+          .insert([{
+            user_id: user.id,
+            business_name: formData.business_name,
+            phone: formData.phone,
+            settings: {}
+          }]);
 
-        if (insertError) throw insertError;
+        if (photographerError) throw photographerError;
       }
 
       setSaveStatus('success');
-      await fetchBusinessData(); // Reload data
+      await fetchUserData(); // Recarregar dados
 
     } catch (error) {
-      console.error('Error saving profile:', error);
+      console.error('Erro ao salvar perfil:', error);
       setSaveStatus('error');
     } finally {
       setSaving(false);
@@ -166,11 +167,11 @@ export default function UserProfile({ onBack }: UserProfileProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="bg-blue-100 rounded-full p-3">
-                <Building2 className="h-6 w-6 text-blue-600" />
+                <User className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Informações do Negócio</h1>
-                <p className="text-gray-600">Gerencie as informações da sua empresa</p>
+                <h1 className="text-2xl font-bold text-gray-900">Meu Perfil</h1>
+                <p className="text-gray-600">Gerencie suas informações pessoais e profissionais</p>
               </div>
             </div>
             <button
@@ -188,70 +189,43 @@ export default function UserProfile({ onBack }: UserProfileProps) {
           {saveStatus === 'success' && (
             <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center">
               <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
-              <span className="text-green-700">Informações atualizadas com sucesso!</span>
+              <span className="text-green-700">Perfil atualizado com sucesso!</span>
             </div>
           )}
 
           {saveStatus === 'error' && (
             <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
               <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
-              <span className="text-red-700">Erro ao salvar informações. Tente novamente.</span>
+              <span className="text-red-700">Erro ao salvar perfil. Tente novamente.</span>
             </div>
           )}
 
           <div className="space-y-6">
-            {/* Dados da Empresa */}
+            {/* Dados Pessoais */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Building2 className="h-5 w-5 mr-2 text-blue-600" />
-                Dados da Empresa
+                <User className="h-5 w-5 mr-2 text-blue-600" />
+                Dados Pessoais
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="nome_estudio" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nome do Estúdio
-                  </label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                      type="text"
-                      id="nome_estudio"
-                      value={formData.nome_estudio}
-                      onChange={(e) => handleInputChange('nome_estudio', e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Digite o nome do estúdio"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="document" className="block text-sm font-medium text-gray-700 mb-2">
-                    CNPJ/CPF
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome Completo
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                     <input
                       type="text"
-                      id="document"
-                      value={formData.document}
-                      onChange={(e) => handleInputChange('document', e.target.value)}
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="00.000.000/0000-00"
+                      placeholder="Digite seu nome completo"
                     />
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Dados de Contato */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Phone className="h-5 w-5 mr-2 text-green-600" />
-                Dados de Contato
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                     E-mail
@@ -262,146 +236,86 @@ export default function UserProfile({ onBack }: UserProfileProps) {
                       type="email"
                       id="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      disabled
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                      placeholder="E-mail não pode ser alterado"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    O e-mail não pode ser alterado após o cadastro
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Dados Profissionais */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Camera className="h-5 w-5 mr-2 text-green-600" />
+                Dados Profissionais
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="business_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome do Negócio/Empresa
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      type="text"
+                      id="business_name"
+                      value={formData.business_name}
+                      onChange={(e) => handleInputChange('business_name', e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="contato@empresa.com"
+                      placeholder="Ex: João Silva Fotografia"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-2">
-                    WhatsApp
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                    Telefone/WhatsApp
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                     <input
                       type="text"
-                      id="whatsapp"
-                      value={formData.whatsapp}
-                      onChange={(e) => handleInputChange('whatsapp', e.target.value)}
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="(11) 99999-9999"
                     />
                   </div>
                 </div>
-
-                <div className="md:col-span-2">
-                  <label htmlFor="instagram" className="block text-sm font-medium text-gray-700 mb-2">
-                    Instagram
-                  </label>
-                  <div className="relative">
-                    <Instagram className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                      type="text"
-                      id="instagram"
-                      value={formData.instagram}
-                      onChange={(e) => handleInputChange('instagram', e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="@suaempresa"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Endereço */}
+            {/* Informações da Conta */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <MapPin className="h-5 w-5 mr-2 text-purple-600" />
-                Endereço
+                <Settings className="h-5 w-5 mr-2 text-purple-600" />
+                Informações da Conta
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-                    Endereço Completo
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                      type="text"
-                      id="address"
-                      value={formData.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Rua, número, bairro"
-                    />
-                  </div>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-700">ID da Conta:</span>
+                  <span className="text-sm text-gray-600 font-mono">{userData?.id}</span>
                 </div>
-
-                <div>
-                  <label htmlFor="zip_code" className="block text-sm font-medium text-gray-700 mb-2">
-                    CEP
-                  </label>
-                  <input
-                    type="text"
-                    id="zip_code"
-                    value={formData.zip_code}
-                    onChange={(e) => handleInputChange('zip_code', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="00000-000"
-                  />
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-700">Tipo de Conta:</span>
+                  <span className="text-sm text-gray-600 capitalize">{userData?.role}</span>
                 </div>
-
-                <div>
-                  <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                    Cidade
-                  </label>
-                  <input
-                    type="text"
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Sua cidade"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
-                    Estado
-                  </label>
-                  <input
-                    type="text"
-                    id="state"
-                    value={formData.state}
-                    onChange={(e) => handleInputChange('state', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="SP"
-                  />
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-700">Membro desde:</span>
+                  <span className="text-sm text-gray-600">
+                    {userData?.created_at ? new Date(userData.created_at).toLocaleDateString('pt-BR') : '-'}
+                  </span>
                 </div>
               </div>
             </div>
-
-            {/* Informações do Sistema */}
-            {businessData && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Settings className="h-5 w-5 mr-2 text-purple-600" />
-                  Informações do Sistema
-                </h3>
-                
-                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-700">ID do Registro:</span>
-                    <span className="text-sm text-gray-600 font-mono">{businessData.id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-700">Criado em:</span>
-                    <span className="text-sm text-gray-600">
-                      {new Date(businessData.created_at).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-700">Última atualização:</span>
-                    <span className="text-sm text-gray-600">
-                      {new Date(businessData.updated_at).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Save Button */}
             <div className="flex justify-end">
