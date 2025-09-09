@@ -6,6 +6,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     // Verificar sessão atual
@@ -46,10 +47,13 @@ export function useAuth() {
         }
       } finally {
         setLoading(false);
+        setInitialized(true);
       }
     };
 
-    getSession();
+    if (!initialized) {
+      getSession();
+    }
 
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -58,11 +62,12 @@ export function useAuth() {
         setUser(session?.user ?? null);
         setLoading(false);
         setError(null);
+        setInitialized(true);
       }
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [initialized]);
 
   const signOut = async () => {
     try {
@@ -73,7 +78,9 @@ export function useAuth() {
         setError(error.message);
       } else {
         console.log('Logout realizado com sucesso');
+        setUser(null);
         setError(null);
+        setInitialized(true);
       }
     } catch (err) {
       console.error('Erro inesperado no logout:', err);
@@ -86,6 +93,6 @@ export function useAuth() {
     loading,
     error,
     signOut,
-    isAuthenticated: !!user
+    isAuthenticated: !!user && initialized
   };
 }

@@ -19,6 +19,8 @@ function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const isClientMode = urlParams.get('client') === 'true';
 
+  console.log('App state:', { user: !!user, loading, isAuthenticated, currentView });
+
   // Loading state
   if (checkingConfig || loading) {
     return (
@@ -71,8 +73,11 @@ function App() {
 
   // Not authenticated - show login
   if (!isAuthenticated) {
+    console.log('Mostrando tela de login');
     return <Login onLogin={() => setCurrentView('dashboard')} />;
   }
+
+  console.log('Usuário autenticado, mostrando:', currentView);
 
   // Settings view
   if (currentView === 'settings') {
@@ -109,6 +114,7 @@ function App() {
 
 
   // Main dashboard
+  console.log('Renderizando Dashboard');
   return (
     <Dashboard 
       user={user}
