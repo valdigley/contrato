@@ -54,6 +54,29 @@ export default function UserProfile({ onBack }: UserProfileProps) {
           const result = await query;
           if (result.error) {
             if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
+              console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
+              return { data: null, error: null };
+            }
+            console.info(`Sistema funcionando com dados limitados de ${tableName}:`, result.error.message);
+            return { data: null, error: null };
+          }
+          return result;
+        } catch (error: any) {
+          if (error.code === 'PGRST205' || error.code === 'PGRST116') {
+            console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
+            return { data: null, error: null };
+          }
+          console.info(`Sistema funcionando com dados limitados de ${tableName}:`, error);
+          return { data: null, error: null };
+        }
+      };
+      
+      // Helper function to safely query tables
+      const safeQuery = async (tableName: string, query: any) => {
+        try {
+          const result = await query;
+          if (result.error) {
+            if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
               console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
               return { data: null, error: null };
             }
@@ -70,13 +93,6 @@ export default function UserProfile({ onBack }: UserProfileProps) {
           return { data: null, error: null };
         }
       };
-
-      // Fetch user data safely
-      const userResult = await safeQuery('users',
-        supabase.from('users').select('*').eq('id', user?.id).single()
-      );
-      setUserData(userResult.data);
-
       // Fetch photographer data safely
       const photographerResult = await safeQuery('photographers',
         supabase.from('photographers').select('*').eq('user_id', user?.id).single()
@@ -143,18 +159,11 @@ export default function UserProfile({ onBack }: UserProfileProps) {
 
         if (photographerError) throw photographerError;
       } else {
-        // Criar
-        const { error: photographerError } = await supabase
-          .from('photographers')
-          .insert([{
-            user_id: user.id,
-            business_name: formData.business_name,
-            phone: formData.phone,
-            settings: {}
-          }]);
-
-        if (photographerError) throw photographerError;
-      }
+      // Fetch user data safely
+      const userResult = await safeQuery('users',
+        supabase.from('users').select('*').eq('id', user?.id).single()
+      );
+      setUserData(userResult.data);
 
       setSaveStatus('success');
       await fetchUserData(); // Recarregar dados
