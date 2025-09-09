@@ -434,76 +434,20 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const fetchContracts = async () => {
     if (!user) return;
-    
 
-      // Try to fetch contracts, handle missing table gracefully
-      const { data: contracts, error } = await supabase
+    try {
+      // Check if Supabase is properly configured
+
       // Check if contratos table exists
       const { data, error } = await supabase
         .from('contratos')
         .select('*')
         .order('created_at', { ascending: false })
-        .order('created_at', { ascending: false });
+        .limit(1);
 
-      if (error) {
-        if (error.code === 'PGRST205') {
-          // Table doesn't exist - this is expected in a new project
-          console.info('Tabela contratos não encontrada. Sistema funcionando sem dados.');
-          setContracts([]);
-          setLoading(false);
-          return;
-        }
-        throw error;
-      }
-
-      setContracts(contracts?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
-
-    } catch (error: any) {
-      console.info('Sistema funcionando sem dados de contratos:', error.message);
-      setContracts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPhotographerInfo = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('photographers')
-        .select('business_name, phone')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST205') {
-          // Table doesn't exist - this is expected in a new project
-          console.info('Tabela photographers não encontrada. Sistema funcionando sem dados.');
-          setPhotographerInfo(null);
-          return;
-        }
-        if (error.code === 'PGRST116') {
-          // No rows returned - user doesn't have photographer profile yet
-          setPhotographerInfo(null);
-          return;
-        }
-        throw error;
-      }
-
-      setPhotographerInfo(data);
-    } catch (error: any) {
-      console.info('Sistema funcionando sem dados de fotógrafo:', error.message);
-      setPhotographerInfo(null);
-    }
-  };
-
-  useEffect(() => {
-    fetchContracts();
-    if (user) {
-      fetchPhotographerInfo();
-    }
-  }, [user]);
+      if (error && error.code === 'PGRST205') {
+        // Table doesn't exist
+        console.warn('Tabela contratos não encontrada. Sistema funcionando sem dados.');
         setContracts([]);
         return;
       }
