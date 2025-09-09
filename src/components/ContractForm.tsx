@@ -542,6 +542,13 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
         setTimeout(() => {
           onBackToList();
         }, 2000);
+    } catch (error) {
+      console.error('Erro ao salvar contrato:', error);
+      setSubmitStatus('error');
+      setError(error instanceof Error ? error.message : 'Erro desconhecido ao salvar contrato');
+    } finally {
+      setSubmitting(false);
+    }
       } else if (isClientMode) {
         // Em modo cliente, mostrar mensagem de sucesso por mais tempo
         setTimeout(() => {
