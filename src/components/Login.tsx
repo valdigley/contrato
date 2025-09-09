@@ -143,11 +143,25 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     fetchUserProfile();
     loadSystemData();
   }, [user]);
+  const fetchBusinessInfo = async () => {
     try {
       const { data, error } = await supabase
         .from('business_info')
         .select('*')
         .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching business info:', error);
+      } else {
+        // Handle business info data here if needed
+        console.log('Business info:', data);
+      }
+    } catch (error) {
+      console.error('Error loading business info:', error);
+    }
+  };
+
+  fetchBusinessInfo();
 
       if (error) {
 
