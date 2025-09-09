@@ -902,3 +902,346 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                         )}
                       </td>
                     </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Editar Perfil
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nome
+                </label>
+                <input
+                  type="text"
+                  value={profileData.name}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nome do Negócio
+                </label>
+                <input
+                  type="text"
+                  value={profileData.business_name}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, business_name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Telefone
+                </label>
+                <input
+                  type="text"
+                  value={profileData.phone}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveProfile}
+                disabled={savingProfile}
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+              >
+                {savingProfile ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contract Details Modal */}
+      {showModal && selectedContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Detalhes do Contrato
+              </h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 dark:text-white">Dados Pessoais</h4>
+                <div className="space-y-2">
+                  <p><span className="font-medium">Nome:</span> {selectedContract.nome_completo}</p>
+                  <p><span className="font-medium">CPF:</span> {formatCPF(selectedContract.cpf)}</p>
+                  <p><span className="font-medium">Email:</span> {selectedContract.email}</p>
+                  <p><span className="font-medium">WhatsApp:</span> {formatWhatsApp(selectedContract.whatsapp)}</p>
+                  <p><span className="font-medium">Endereço:</span> {selectedContract.endereco}</p>
+                  <p><span className="font-medium">Cidade:</span> {selectedContract.cidade}</p>
+                  <p><span className="font-medium">Data de Nascimento:</span> {formatDate(selectedContract.data_nascimento)}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 dark:text-white">Dados do Evento</h4>
+                <div className="space-y-2">
+                  <p><span className="font-medium">Tipo:</span> {selectedContract.tipo_evento}</p>
+                  <p><span className="font-medium">Data:</span> {selectedContract.data_evento ? formatDate(selectedContract.data_evento) : 'Não definida'}</p>
+                  <p><span className="font-medium">Horário:</span> {selectedContract.horario_evento || 'Não definido'}</p>
+                  <p><span className="font-medium">Local da Festa:</span> {selectedContract.local_festa}</p>
+                  {selectedContract.nome_noivos && (
+                    <p><span className="font-medium">Noivos:</span> {selectedContract.nome_noivos}</p>
+                  )}
+                  {selectedContract.nome_aniversariante && (
+                    <p><span className="font-medium">Aniversariante:</span> {selectedContract.nome_aniversariante}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Valores</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Valor Original</p>
+                  <p className="text-lg font-semibold">
+                    {formatCurrency(selectedContract.final_price || selectedContract.package_price || 0)}
+                  </p>
+                </div>
+                {selectedContract.discount_percentage && (
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Desconto</p>
+                    <p className="text-lg font-semibold text-green-600">
+                      {selectedContract.discount_percentage}%
+                    </p>
+                  </div>
+                )}
+                {selectedContract.adjusted_price && (
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Valor Final</p>
+                    <p className="text-lg font-semibold text-blue-600">
+                      {formatCurrency(selectedContract.adjusted_price)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => generateContract(selectedContract)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+              >
+                <FileText className="h-4 w-4" />
+                <span>Gerar Contrato</span>
+              </button>
+              
+              <button
+                onClick={() => sendWhatsAppContract(selectedContract)}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span>WhatsApp</span>
+              </button>
+              
+              <button
+                onClick={() => openDiscountModal(selectedContract)}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+              >
+                <DollarSign className="h-4 w-4" />
+                <span>Aplicar Desconto</span>
+              </button>
+              
+              <button
+                onClick={() => deleteContract(selectedContract.id)}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Excluir</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discount Modal */}
+      {showDiscountModal && discountContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Aplicar Desconto
+              </h3>
+              <button
+                onClick={() => setShowDiscountModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Valor Original
+                </label>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(discountContract.final_price || discountContract.package_price || 0)}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tipo de Desconto
+                </label>
+                <select
+                  value={discountData.discountType}
+                  onChange={(e) => handleDiscountChange('discountType', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="percentage">Percentual (%)</option>
+                  <option value="fixed">Valor Fixo (R$)</option>
+                </select>
+              </div>
+
+              {discountData.discountType === 'percentage' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Percentual de Desconto (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={discountData.discountPercentage}
+                    onChange={(e) => handleDiscountChange('discountPercentage', parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Valor do Desconto (R$)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={discountData.discountAmount}
+                    onChange={(e) => handleDiscountChange('discountAmount', parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Valor Final
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={discountData.adjustedPrice}
+                  onChange={(e) => handleDiscountChange('adjustedPrice', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Observações Personalizadas
+                </label>
+                <textarea
+                  value={discountData.customNotes}
+                  onChange={(e) => handleDiscountChange('customNotes', e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Observações que aparecerão no contrato..."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowDiscountModal(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={applyDiscount}
+                disabled={applyingDiscount}
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+              >
+                {applyingDiscount ? 'Aplicando...' : 'Aplicar Desconto'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generated Contract Modal */}
+      {showContractModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Contrato Gerado
+              </h3>
+              <button
+                onClick={() => setShowContractModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-6 max-h-96 overflow-y-auto">
+              <pre className="whitespace-pre-wrap text-sm text-gray-900 dark:text-white">
+                {generatedContract}
+              </pre>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={downloadContract}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>Baixar</span>
+              </button>
+              <button
+                onClick={printContract}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+              >
+                <FileText className="h-4 w-4" />
+                <span>Imprimir</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
