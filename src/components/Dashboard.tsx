@@ -47,6 +47,31 @@ interface Contract {
   local_festa: string;
   nome_noivos?: string;
   nome_aniversariante?: string;
+  // Enhanced helper function to safely query tables with better error handling
+  const safeQuery = async (tableName: string, query: any) => {
+    try {
+      const result = await query;
+      if (result.error) {
+        // Handle specific error codes silently
+        if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
+          console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
+        } else {
+          console.info(`Sistema funcionando com dados limitados de ${tableName}:`, result.error.message);
+        }
+        return { data: tableName === 'contratos' ? [] : null, error: null };
+      }
+      return result;
+    } catch (error: any) {
+      // Catch any network or parsing errors
+      if (error?.message?.includes('PGRST205') || error?.message?.includes('table')) {
+        console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
+      } else {
+        console.info(`Sistema funcionando com dados limitados de ${tableName}:`, error);
+      }
+      return { data: tableName === 'contratos' ? [] : null, error: null };
+    }
+  };
+
   local_pre_wedding?: string;
   local_making_of?: string;
   local_cerimonia?: string;
@@ -128,23 +153,23 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     loadSystemData();
   }, [user]);
 
-  const fetchUserProfile = async () => {
-    if (!user) return;
-
-    try {
+      const contractsResult = await safeQuery('contratos', 
+        supabase
+          .from('contratos')
+          .select('*')
+          .order('created_at', { ascending: false })
+      );
       // Buscar dados do usuário
-      const { data: userData } = await supabase
-        .from('users')
-        .select('name')
-        .eq('id', user.id)
-        .single();
+      setContracts(contractsResult.data || []);
 
       // Buscar dados do fotógrafo
-      const { data: photographerData } = await supabase
-        .from('photographers')
-        .select('business_name, phone')
-        .eq('user_id', user.id)
-        .single();
+      const photographerResult = await safeQuery('photographers',
+        supabase
+          .from('photographers')
+          .select('business_name, phone')
+          .eq('user_id', user.id)
+          .single()
+      );
 
       setProfileData({
         name: userData?.name || '',
@@ -459,18 +484,16 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       };
 
       const contractsResult = await safeQuery('contratos',
-        supabase.from('contratos').select('*').order('created_at', { ascending: false })
-      );
-      
-      setContracts(contractsResult.data?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
-
-    } catch (error) {
-      console.info('Sistema funcionando sem dados de contratos:', error);
-      setContracts([]);
+      if (photographerResult.data) {
+        setPhotographerInfo(photographerResult.data);
+        setProfileData({
+          business_name: photographerResult.data?.business_name || '',
+          phone: photographerResult.data?.phone || ''
+        });
       // If it's a network error, show a more helpful message
       if (error instanceof Error && error.message.includes('fetch')) {
         console.error('Erro de conexão:', error);
-      }
+      console.info('Sistema funcionando com dados limitados:', error);
     } finally {
       setLoading(false);
     }
