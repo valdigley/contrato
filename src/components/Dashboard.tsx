@@ -47,31 +47,6 @@ interface Contract {
   local_festa: string;
   nome_noivos?: string;
   nome_aniversariante?: string;
-  // Enhanced helper function to safely query tables with better error handling
-  const safeQuery = async (tableName: string, query: any) => {
-    try {
-      const result = await query;
-      if (result.error) {
-        // Handle specific error codes silently
-        if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
-          console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
-        } else {
-          console.info(`Sistema funcionando com dados limitados de ${tableName}:`, result.error.message);
-        }
-        return { data: tableName === 'contratos' ? [] : null, error: null };
-      }
-      return result;
-    } catch (error: any) {
-      // Catch any network or parsing errors
-      if (error?.message?.includes('PGRST205') || error?.message?.includes('table')) {
-        console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
-      } else {
-        console.info(`Sistema funcionando com dados limitados de ${tableName}:`, error);
-      }
-      return { data: tableName === 'contratos' ? [] : null, error: null };
-    }
-  };
-
   local_pre_wedding?: string;
   local_making_of?: string;
   local_cerimonia?: string;
@@ -123,6 +98,31 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [applyingDiscount, setApplyingDiscount] = useState(false);
   const [photographerInfo, setPhotographerInfo] = useState<any>(null);
 
+  // Enhanced helper function to safely query tables with better error handling
+  const safeQuery = async (tableName: string, query: any) => {
+    try {
+      const result = await query;
+      if (result.error) {
+        // Handle specific error codes silently
+        if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
+          console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
+        } else {
+          console.info(`Sistema funcionando com dados limitados de ${tableName}:`, result.error.message);
+        }
+        return { data: tableName === 'contratos' ? [] : null, error: null };
+      }
+      return result;
+    } catch (error: any) {
+      // Catch any network or parsing errors
+      if (error?.message?.includes('PGRST205') || error?.message?.includes('table')) {
+        console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
+      } else {
+        console.info(`Sistema funcionando com dados limitados de ${tableName}:`, error);
+      }
+      return { data: tableName === 'contratos' ? [] : null, error: null };
+    }
+  };
+
   const openDiscountModal = (contract: Contract) => {
     setDiscountContract(contract);
     setShowDiscountModal(true);
@@ -153,6 +153,17 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     loadSystemData();
   }, [user]);
 
+  const fetchUserProfile = async () => {
+    if (!user) return;
+
+    try {
+      // Buscar dados do usuário
+      const { data: userData } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
       const contractsResult = await safeQuery('contratos', 
         supabase
           .from('contratos')
@@ -173,8 +184,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
       setProfileData({
         name: userData?.name || '',
-        business_name: photographerData?.business_name || '',
-        phone: photographerData?.phone || ''
+        business_name: photographerResult.data?.business_name || '',
+        phone: photographerResult.data?.phone || ''
       });
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
@@ -462,38 +473,21 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     try {
       setLoading(true);
       
-      // Safe query helper to handle missing tables
-      const safeQuery = async (tableName: string, query: any) => {
-        try {
-          const result = await query;
-          if (result.error) {
-            if (result.error.code === 'PGRST205') {
-              console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
-              return { data: [], error: null };
-            }
-            throw result.error;
-          }
-          return result;
-        } catch (error: any) {
-          if (error.code === 'PGRST205') {
-            console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
-            return { data: [], error: null };
-          }
-          throw error;
-        }
-      };
-
       const contractsResult = await safeQuery('contratos',
-      if (photographerResult.data) {
-        setPhotographerInfo(photographerResult.data);
-        setProfileData({
-          business_name: photographerResult.data?.business_name || '',
-          phone: photographerResult.data?.phone || ''
-        });
+        supabase
+          .from('contratos')
+          .select('*')
+          .order('created_at', { ascending: false })
+      );
+      
+      setContracts(contractsResult.data || []);
+    } catch (error) {
       // If it's a network error, show a more helpful message
       if (error instanceof Error && error.message.includes('fetch')) {
         console.error('Erro de conexão:', error);
-      console.info('Sistema funcionando com dados limitados:', error);
+      } else {
+        console.info('Sistema funcionando com dados limitados:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -503,36 +497,18 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     if (!user) return;
     
     try {
-      // Safe query helper to handle missing tables
-      const safeQuery = async (tableName: string, query: any) => {
-        try {
-          const result = await query;
-          if (result.error) {
-            if (result.error.code === 'PGRST205') {
-              console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
-              return { data: null, error: null };
-            }
-            if (result.error.code === 'PGRST116') {
-              console.info(`Nenhum registro encontrado em ${tableName}`);
-              return { data: null, error: null };
-            }
-            throw result.error;
-          }
-          return result;
-        } catch (error: any) {
-          if (error.code === 'PGRST205') {
-            console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
-            return { data: null, error: null };
-          }
-          throw error;
-        }
-      };
-
       const photographerResult = await safeQuery('photographers',
         supabase.from('photographers').select('business_name, phone').eq('user_id', user.id).single()
       );
       
-      setPhotographerInfo(photographerResult.data);
+      if (photographerResult.data) {
+        setPhotographerInfo(photographerResult.data);
+        setProfileData({
+          name: profileData.name,
+          business_name: photographerResult.data?.business_name || '',
+          phone: photographerResult.data?.phone || ''
+        });
+      }
     } catch (error) {
       console.info('Sistema funcionando sem dados do fotógrafo:', error);
     }
