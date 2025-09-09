@@ -12,13 +12,13 @@ const isValidUrl = (url: string): boolean => {
 
 // Priorizar credenciais do localStorage (configurações do sistema)
 const getSupabaseUrl = () => {
-  const url = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL || 'https://bdzvqewxciiozkppwsyk.supabase.co';
+  const url = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL || '';
   console.log('Supabase URL:', url ? 'Configurado' : 'Não configurado');
   return isValidUrl(url) ? url : '';
 };
 
 const getSupabaseAnonKey = () => {
-  const key = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkenZxZXd4Y2lpb3prcHB3c3lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MDAxMjcsImV4cCI6MjA3MjI3NjEyN30.jxW6hUABrXTVGNPBB38IO4EyxSPLD6FTYqwbKGnqfYw';
+  const key = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
   console.log('Supabase Key:', key ? 'Configurado' : 'Não configurado');
   return key && key.length > 20 ? key : '';
 };

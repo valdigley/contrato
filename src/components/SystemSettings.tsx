@@ -51,40 +51,17 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
   const loadSystemData = async () => {
     try {
-      // Enhanced helper function to safely query tables with better error handling
-      const safeQuery = async (tableName: string, setter: (data: any[]) => void) => {
-        try {
-          const { data, error } = await supabase.from(tableName).select('*').order('name');
-          if (error) {
-            // Handle specific error codes silently
-            if (error.code === 'PGRST205' || error.code === 'PGRST116') {
-              console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
-            } else {
-              console.info(`Sistema funcionando com dados limitados de ${tableName}:`, error.message);
-            }
-            setter([]);
-            return;
-          }
-          setter(data || []);
-        } catch (error: any) {
-          // Catch any network or parsing errors
-          if (error?.message?.includes('PGRST205') || error?.message?.includes('table')) {
-            console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
-          } else {
-            console.info(`Sistema funcionando com dados limitados de ${tableName}:`, error);
-          }
-          setter([]);
-        }
-      };
-
-      // Load all tables safely
-      await Promise.all([
-        safeQuery('event_types', setEventTypes),
-        safeQuery('packages', setPackages),
-        safeQuery('payment_methods', setPaymentMethods),
-        safeQuery('contract_templates', setContractTemplates)
+      const [eventTypesRes, packagesRes, paymentMethodsRes, templatesRes] = await Promise.all([
+        supabase.from('event_types').select('*').order('name'),
+        supabase.from('packages').select('*').order('name'),
+        supabase.from('payment_methods').select('*').order('name'),
+        supabase.from('contract_templates').select('*').order('name')
       ]);
-      
+
+      if (!eventTypesRes.error) setEventTypes(eventTypesRes.data || []);
+      if (!packagesRes.error) setPackages(packagesRes.data || []);
+      if (!paymentMethodsRes.error) setPaymentMethods(paymentMethodsRes.data || []);
+      if (!templatesRes.error) setContractTemplates(templatesRes.data || []);
     } catch (error) {
       console.error('Erro ao carregar dados do sistema:', error);
     }

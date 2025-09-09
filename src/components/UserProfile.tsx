@@ -1,354 +1,341 @@
-import React, { useState } from 'react';
-import { User, Lock, Mail, Eye, EyeOff, LogIn, UserPlus, Building2, Phone, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Building2, Phone, Mail, Save, ArrowLeft, CheckCircle, AlertCircle, Settings, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useTheme } from '../hooks/useTheme';
+import { useAuth } from '../hooks/useAuth';
 
-interface LoginProps {
-  onLogin: () => void;
+interface UserProfileProps {
+  onBack: () => void;
 }
 
-export default function Login({ onLogin }: LoginProps) {
-  const { theme, toggleTheme } = useTheme();
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [businessName, setBusinessName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [debugInfo, setDebugInfo] = useState('');
+interface UserData {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  created_at: string;
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-    setDebugInfo('');
+interface PhotographerData {
+  id: string;
+  user_id: string;
+  business_name: string;
+  phone: string;
+  settings: any;
+  created_at: string;
+}
 
+export default function UserProfile({ onBack }: UserProfileProps) {
+  const { user } = useAuth();
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [photographerData, setPhotographerData] = useState<PhotographerData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [formData, setFormData] = useState({
+    name: '',
+    business_name: '',
+    phone: '',
+    email: ''
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchUserData();
+    }
+  }, [user]);
+
+  const fetchUserData = async () => {
     try {
-      setDebugInfo('Iniciando processo de autenticação...');
+      setLoading(true);
       
-      if (isLogin) {
-        // Login
-        setDebugInfo('Tentando fazer login...');
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      // Buscar dados do usuário
+      const { data: userResponse, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
 
-        if (error) throw error;
+      if (userError) throw userError;
 
-        if (data.user) {
-          setDebugInfo('Login realizado com sucesso!');
-          setSuccess('Login realizado com sucesso!');
-          setTimeout(() => {
-            onLogin();
-          }, 1000);
-        }
-      } else {
-        // Cadastro
-        setDebugInfo('Tentando criar conta...');
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name: name,
-            }
-          }
-        });
+      // Buscar dados do fotógrafo
+      const { data: photographerResponse, error: photographerError } = await supabase
+        .from('photographers')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
 
-        if (error) throw error;
-        setDebugInfo('Conta criada no Supabase Auth, criando perfil...');
-
-        if (data.user) {
-          // Inserir dados na tabela users e photographers
-          setDebugInfo('Inserindo dados na tabela users...');
-          
-          // Helper function to safely insert data
-          const safeInsert = async (tableName: string, data: any, debugMessage: string) => {
-            try {
-              const result = await supabase.from(tableName).insert([data]).select().single();
-              if (result.error) {
-                if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
-                  console.info(`Tabela ${tableName} não encontrada - continuando sem dados`);
-                  setDebugInfo(`Tabela ${tableName} não encontrada, continuando...`);
-                  return result;
-                }
-                console.info(`Continuando sem dados de ${tableName}:`, result.error.message);
-                setDebugInfo(`Continuando sem dados de ${tableName}...`);
-                return result;
-              }
-              setDebugInfo(debugMessage);
-              return result;
-            } catch (error: any) {
-              if (error.code === 'PGRST205' || error.code === 'PGRST116') {
-                console.info(`Tabela ${tableName} não encontrada - continuando sem dados`);
-                setDebugInfo(`Tabela ${tableName} não encontrada, continuando...`);
-                return { data: null, error: null };
-              }
-              console.info(`Continuando sem dados de ${tableName}:`, error);
-              setDebugInfo(`Continuando sem dados de ${tableName}...`);
-              return { data: null, error: null };
-            }
-          };
-
-          // Insert user data safely
-          await safeInsert('users', {
-            id: data.user.id,
-            email: data.user.email,
-            name: name,
-            role: 'photographer'
-          }, 'Perfil de usuário criado com sucesso!');
-
-          setDebugInfo('Usuário criado, criando perfil de fotógrafo...');
-          
-          // Insert photographer data safely
-          await safeInsert('photographers', {
-            user_id: data.user.id,
-            business_name: businessName,
-            phone: phone,
-            settings: {}
-          }, 'Perfil de fotógrafo criado com sucesso!');
-
-          setDebugInfo('Cadastro concluído com sucesso!');
-          setSuccess('Conta criada com sucesso! Você pode fazer login agora.');
-          setIsLogin(true);
-          // Clear form
-          setTimeout(() => {
-            setEmail('');
-            setPassword('');
-            setName('');
-            setBusinessName('');
-            setPhone('');
-          }, 2000);
-        }
+      if (photographerError && photographerError.code !== 'PGRST116') {
+        console.error('Erro ao buscar dados do fotógrafo:', photographerError);
       }
-    } catch (error: any) {
-      console.error('Erro de autenticação:', error);
-      setDebugInfo(`Erro: ${error.message}`);
-      setError(error.message || 'Erro ao processar solicitação');
+
+      setUserData(userResponse);
+      setPhotographerData(photographerResponse || null);
+
+      // Preencher formulário
+      setFormData({
+        name: userResponse?.name || '',
+        business_name: photographerResponse?.business_name || '',
+        phone: photographerResponse?.phone || '',
+        email: userResponse?.email || ''
+      });
+
+    } catch (error) {
+      console.error('Erro ao carregar dados do usuário:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setSaveStatus('idle');
+  };
+
+  const saveProfile = async () => {
+    if (!user) return;
+
+    setSaving(true);
+    setSaveStatus('idle');
+
+    try {
+      // Atualizar dados do usuário
+      const { error: userError } = await supabase
+        .from('users')
+        .update({
+          name: formData.name
+        })
+        .eq('id', user.id);
+
+      if (userError) throw userError;
+
+      // Atualizar ou criar dados do fotógrafo
+      if (photographerData) {
+        // Atualizar
+        const { error: photographerError } = await supabase
+          .from('photographers')
+          .update({
+            business_name: formData.business_name,
+            phone: formData.phone
+          })
+          .eq('user_id', user.id);
+
+        if (photographerError) throw photographerError;
+      } else {
+        // Criar
+        const { error: photographerError } = await supabase
+          .from('photographers')
+          .insert([{
+            user_id: user.id,
+            business_name: formData.business_name,
+            phone: formData.phone,
+            settings: {}
+          }]);
+
+        if (photographerError) throw photographerError;
+      }
+
+      setSaveStatus('success');
+      await fetchUserData(); // Recarregar dados
+
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+      setSaveStatus('error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 transition-colors duration-300">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full">
-        {/* Theme Toggle */}
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={toggleTheme}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-            title={theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'}
-          >
-            {theme === 'light' ? (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            )}
-          </button>
-        </div>
-        
-        <div className="text-center mb-8">
-          <div className="bg-blue-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <User className="h-8 w-8 text-blue-600" />
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-blue-100 rounded-full p-3">
+                <User className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Meu Perfil</h1>
+                <p className="text-gray-600">Gerencie suas informações pessoais e profissionais</p>
+              </div>
+            </div>
+            <button
+              onClick={onBack}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Voltar</span>
+            </button>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {isLogin ? 'Entrar' : 'Criar Conta'}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            {isLogin 
-              ? 'Acesse sua conta para gerenciar contratos' 
-              : 'Crie sua conta para começar a usar o sistema'
-            }
-          </p>
         </div>
 
-        {error && (
-          <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-300 text-sm">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-green-700 dark:text-green-300 text-sm">
-            <CheckCircle className="inline w-4 h-4 mr-2" />
-            {success}
-          </div>
-        )}
-
-        {debugInfo && (
-          <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-blue-700 dark:text-blue-300 text-sm">
-            <div className="flex items-start">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2 mt-0.5"></div>
-              <span>{debugInfo}</span>
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {!isLogin && (
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nome Completo
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Digite seu nome completo"
-                  required={!isLogin}
-                />
-              </div>
+        {/* Profile Form */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          {saveStatus === 'success' && (
+            <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center">
+              <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+              <span className="text-green-700">Perfil atualizado com sucesso!</span>
             </div>
           )}
 
-          {!isLogin && (
-            <div>
-              <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nome do Negócio/Empresa
-              </label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  id="businessName"
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Ex: João Silva Fotografia"
-                  required={!isLogin}
-                />
-              </div>
+          {saveStatus === 'error' && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
+              <span className="text-red-700">Erro ao salvar perfil. Tente novamente.</span>
             </div>
           )}
 
-          {!isLogin && (
+          <div className="space-y-6">
+            {/* Dados Pessoais */}
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Telefone/WhatsApp
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="(11) 99999-9999"
-                  required={!isLogin}
-                />
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <User className="h-5 w-5 mr-2 text-blue-600" />
+                Dados Pessoais
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome Completo
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      type="text"
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Digite seu nome completo"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    E-mail
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      type="email"
+                      id="email"
+                      value={formData.email}
+                      disabled
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                      placeholder="E-mail não pode ser alterado"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    O e-mail não pode ser alterado após o cadastro
+                  </p>
+                </div>
               </div>
             </div>
-          )}
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              E-mail
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="Digite seu e-mail"
-                required
-              />
+            {/* Dados Profissionais */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Camera className="h-5 w-5 mr-2 text-green-600" />
+                Dados Profissionais
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="business_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome do Negócio/Empresa
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      type="text"
+                      id="business_name"
+                      value={formData.business_name}
+                      onChange={(e) => handleInputChange('business_name', e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Ex: João Silva Fotografia"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                    Telefone/WhatsApp
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      type="text"
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Senha
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="Digite sua senha"
-                required
-                minLength={6}
-              />
+            {/* Informações da Conta */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Settings className="h-5 w-5 mr-2 text-purple-600" />
+                Informações da Conta
+              </h3>
+              
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-700">ID da Conta:</span>
+                  <span className="text-sm text-gray-600 font-mono">{userData?.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-700">Tipo de Conta:</span>
+                  <span className="text-sm text-gray-600 capitalize">{userData?.role}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-700">Membro desde:</span>
+                  <span className="text-sm text-gray-600">
+                    {userData?.created_at ? new Date(userData.created_at).toLocaleDateString('pt-BR') : '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
               <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
+                onClick={saveProfile}
+                disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center space-x-2"
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {saving ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    <Save className="h-5 w-5" />
+                    <span>Salvar Alterações</span>
+                  </>
+                )}
               </button>
             </div>
-            {!isLogin && (
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                A senha deve ter pelo menos 6 caracteres
-              </p>
-            )}
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
-          >
-            {loading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            ) : (
-              <>
-                {isLogin ? <LogIn className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
-                <span>{isLogin ? 'Entrar' : 'Criar Conta'}</span>
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-              setSuccess('');
-              setEmail('');
-              setPassword('');
-              setName('');
-              setBusinessName('');
-              setPhone('');
-            }}
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
-          >
-            {isLogin 
-              ? 'Não tem uma conta? Criar conta' 
-              : 'Já tem uma conta? Fazer login'
-            }
-          </button>
         </div>
-
-        {isLogin && (
-          <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Esqueceu sua senha? Entre em contato com o suporte.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

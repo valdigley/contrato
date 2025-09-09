@@ -67,52 +67,43 @@ export default function Login({ onLogin }: LoginProps) {
         if (data.user) {
           // Inserir dados na tabela users e photographers
           setDebugInfo('Inserindo dados na tabela users...');
-          
-          // Helper function to safely insert data
-          const safeInsert = async (tableName: string, data: any, debugMessage: string) => {
-            try {
-              const result = await supabase.from(tableName).insert([data]).select().single();
-              if (result.error) {
-                if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
-                  console.info(`Tabela ${tableName} não encontrada - continuando sem dados`);
-                  setDebugInfo(`Tabela ${tableName} não encontrada, continuando...`);
-                  return result;
-                }
-                console.info(`Continuando sem dados de ${tableName}:`, result.error.message);
-                setDebugInfo(`Continuando sem dados de ${tableName}...`);
-                return result;
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .insert([
+              {
+                id: data.user.id,
+                email: data.user.email,
+                name: name,
+                role: 'photographer'
               }
-              setDebugInfo(debugMessage);
-              return result;
-            } catch (error: any) {
-              if (error.code === 'PGRST205' || error.code === 'PGRST116') {
-                console.info(`Tabela ${tableName} não encontrada - continuando sem dados`);
-                setDebugInfo(`Tabela ${tableName} não encontrada, continuando...`);
-                return { data: null, error: null };
-              }
-              console.info(`Continuando sem dados de ${tableName}:`, error);
-              setDebugInfo(`Continuando sem dados de ${tableName}...`);
-              return { data: null, error: null };
-            }
-          };
+            ])
+            .select()
+            .single();
 
-          // Insert user data safely
-          await safeInsert('users', {
-            id: data.user.id,
-            email: data.user.email,
-            name: name,
-            role: 'photographer'
-          }, 'Perfil de usuário criado com sucesso!');
+          if (userError) {
+            console.error('Erro ao criar perfil do usuário:', userError);
+            setDebugInfo(`Erro na tabela users: ${userError.message}`);
+            throw userError;
+          }
 
           setDebugInfo('Usuário criado, criando perfil de fotógrafo...');
-          
-          // Insert photographer data safely
-          await safeInsert('photographers', {
-            user_id: data.user.id,
-            business_name: businessName,
-            phone: phone,
-            settings: {}
-          }, 'Perfil de fotógrafo criado com sucesso!');
+          // Criar perfil de fotógrafo
+          const { error: photographerError } = await supabase
+            .from('photographers')
+            .insert([
+              {
+                user_id: data.user.id,
+                business_name: businessName,
+                phone: phone,
+                settings: {}
+              }
+            ]);
+
+          if (photographerError) {
+            console.error('Erro ao criar perfil do fotógrafo:', photographerError);
+            setDebugInfo(`Erro na tabela photographers: ${photographerError.message}`);
+            // Não fazer throw aqui para não bloquear o cadastro
+          }
 
           setDebugInfo('Cadastro concluído com sucesso!');
           setSuccess('Conta criada com sucesso! Você pode fazer login agora.');
