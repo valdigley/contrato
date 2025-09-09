@@ -483,6 +483,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
       setContracts(contracts?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
 
+
     } catch (error) {
       console.error('Erro ao buscar contratos:', error);
       setContracts([]);
