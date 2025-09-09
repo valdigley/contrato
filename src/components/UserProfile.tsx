@@ -54,11 +54,35 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         setUserData(userResponse);
       }
 
+      // Fetch photographer data (if exists)
+      const { data: photographerResponse, error: photographerError } = await supabase
+        .from('photographers')
+        .select('business_name, phone')
+        .eq('user_id', user?.id)
+        .limit(1);
+
+      let photographerData = null;
+      if (!photographerError && photographerResponse && photographerResponse.length > 0) {
+        photographerData = photographerResponse[0];
+      }
+
+      // Fetch photographer data (if exists)
+      const { data: photographerResponse, error: photographerError } = await supabase
+        .from('photographers')
+        .select('business_name, phone')
+        .eq('user_id', user?.id)
+        .limit(1);
+
+      let photographerData = null;
+      if (!photographerError && photographerResponse && photographerResponse.length > 0) {
+        photographerData = photographerResponse[0];
+      }
+
       // Fill form with user data
       setFormData({
         name: userResponse?.name || '',
-        business_name: userResponse?.business_name || '',
-        phone: userResponse?.phone || '',
+        business_name: photographerData?.business_name || userResponse?.business_name || '',
+        phone: photographerData?.phone || userResponse?.phone || '',
         email: userResponse?.email || ''
       });
 
@@ -88,13 +112,75 @@ export default function UserProfile({ onBack }: UserProfileProps) {
       const { error: userError } = await supabase
         .from('users')
         .update({
-          name: formData.name,
-          business_name: formData.business_name,
-          phone: formData.phone
-        })
-        .eq('id', user.id);
+          name: formData.name
 
       if (userError) throw userError;
+
+      // Check if photographer profile exists
+      const { data: existingPhotographer } = await supabase
+        .from('photographers')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      if (existingPhotographer && existingPhotographer.length > 0) {
+        // Update existing photographer profile
+        const { error: photographerError } = await supabase
+          .from('photographers')
+          .update({
+            business_name: formData.business_name,
+            phone: formData.phone
+          })
+          .eq('user_id', user.id);
+
+        if (photographerError) throw photographerError;
+      } else {
+        // Create new photographer profile if business_name or phone is provided
+        if (formData.business_name || formData.phone) {
+          const { error: photographerError } = await supabase
+            .from('photographers')
+            .insert({
+              user_id: user.id,
+              business_name: formData.business_name || '',
+              phone: formData.phone || ''
+            });
+
+          if (photographerError) throw photographerError;
+        }
+      }
+
+      // Check if photographer profile exists
+      const { data: existingPhotographer } = await supabase
+        .from('photographers')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      if (existingPhotographer && existingPhotographer.length > 0) {
+        // Update existing photographer profile
+        const { error: photographerError } = await supabase
+          .from('photographers')
+          .update({
+            business_name: formData.business_name,
+            phone: formData.phone
+          })
+          .eq('user_id', user.id);
+
+        if (photographerError) throw photographerError;
+      } else {
+        // Create new photographer profile if business_name or phone is provided
+        if (formData.business_name || formData.phone) {
+          const { error: photographerError } = await supabase
+            .from('photographers')
+            .insert({
+              user_id: user.id,
+              business_name: formData.business_name || '',
+              phone: formData.phone || ''
+            });
+
+          if (photographerError) throw photographerError;
+        }
+      }
 
       setSaveStatus('success');
       await fetchUserData(); // Reload data
