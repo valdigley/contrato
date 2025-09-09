@@ -22,6 +22,8 @@ export function useAuth() {
             await supabase.auth.signOut();
             setUser(null);
             setError(null);
+            // Recarregar a página para limpar completamente o estado
+            window.location.reload();
           } else {
             console.error('Erro ao verificar sessão:', error);
             setError(error.message);
@@ -40,6 +42,8 @@ export function useAuth() {
           await supabase.auth.signOut();
           setUser(null);
           setError(null);
+          // Recarregar a página para limpar completamente o estado
+          window.location.reload();
         } else {
           console.error('Erro inesperado ao verificar sessão:', err);
           setError('Erro ao verificar autenticação');
