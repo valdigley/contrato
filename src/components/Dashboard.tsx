@@ -10,7 +10,7 @@ interface DashboardProps {
 
 interface BusinessInfo {
   id: string;
-  name: string;
+  nome_estudio: string;
   address?: string;
   whatsapp?: string;
   email?: string;
@@ -199,7 +199,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Bem-vindo{businessInfo?.name ? ` ao ${businessInfo.name}` : ' ao Sistema de Contratos'}!
+                Bem-vindo{businessInfo?.nome_estudio ? ` ao ${businessInfo.nome_estudio}` : ' ao Sistema de Contratos'}!
               </h1>
               <p className="text-gray-600 mt-2">
                 {businessInfo?.city && businessInfo?.state 
