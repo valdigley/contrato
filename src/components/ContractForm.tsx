@@ -20,6 +20,8 @@ interface ContractData {
   tipo_evento: string;
   data_evento: string;
   horario_evento: string;
+  data_evento: string;
+  horario_evento: string;
   local_pre_wedding: string;
   local_making_of: string;
   local_cerimonia: string;
@@ -341,6 +343,10 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       newErrors.horario_evento = 'Horário do evento é obrigatório';
     }
 
+    if (!formData.local_festa.trim()) {
+      newErrors.local_festa = 'Local do evento é obrigatório';
+    }
+
     if (formData.payment_method_id && !formData.preferred_payment_day) {
       newErrors.preferred_payment_day = 'Dia do pagamento é obrigatório quando uma forma de pagamento é selecionada';
     }
@@ -398,29 +404,69 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       
       // Check if we're in client mode
       if (isClientMode) {
-        // Get photographer_id from URL parameters
-        const photographerIdParam = urlParams.get('photographer_id');
-        console.log('Photographer ID from URL:', photographerIdParam);
-        console.log('URL atual:', window.location.href);
-        console.log('Parâmetros da URL:', Object.fromEntries(urlParams));
+        // Em modo cliente, usar o primeiro fotógrafo disponível ou criar um padrão
+        console.log('Modo cliente detectado, buscando fotógrafo...');
         
-        if (photographerIdParam) {
-          photographerId = photographerIdParam;
-        } else if (user) {
-          // Fallback: use logged user's photographer profile
-          console.log('Photographer ID não encontrado na URL, usando usuário logado como fallback');
-          const { data: photographerData, error: photographerError } = await supabase
-            .from('photographers')
+        const { data: photographerData, error: photographerError } = await supabase
+          .from('photographers')
+          .select('id')
+          .limit(1)
+          .single();
+
+        if (photographerError || !photographerData) {
+          // Se não há fotógrafo, criar um padrão para modo cliente
+          console.log('Criando fotógrafo padrão para modo cliente...');
+          
+          // Primeiro criar um usuário padrão se não existir
+          const { data: defaultUser, error: userError } = await supabase
+            .from('users')
             .select('id')
-            .eq('user_id', user.id)
+            .eq('email', 'cliente@sistema.com')
             .single();
 
-          if (photographerError) {
-            throw new Error('Perfil de fotógrafo não encontrado. Entre em contato com o fotógrafo para obter o link correto.');
+          let defaultUserId;
+          if (userError || !defaultUser) {
+            // Criar usuário padrão
+            const { data: newUser, error: createUserError } = await supabase
+              .from('users')
+              .insert([{
+                email: 'cliente@sistema.com',
+                name: 'Sistema Cliente',
+                role: 'photographer'
+              }])
+              .select()
+              .single();
+
+            if (createUserError) {
+              console.error('Erro ao criar usuário padrão:', createUserError);
+              throw new Error('Erro interno do sistema. Tente novamente.');
+            }
+            defaultUserId = newUser.id;
+          } else {
+            defaultUserId = defaultUser.id;
+          }
+
+          // Criar fotógrafo padrão
+          const { data: newPhotographer, error: createPhotographerError } = await supabase
+            .from('photographers')
+            .insert([{
+              user_id: defaultUserId,
+              business_name: 'Sistema de Contratos',
+              phone: '(00) 00000-0000',
+              settings: {}
+            }])
+            .select()
+            .single();
+
+          if (createPhotographerError) {
+            console.error('Erro ao criar fotógrafo padrão:', createPhotographerError);
+            throw new Error('Erro interno do sistema. Tente novamente.');
           }
           
-          photographerId = photographerData.id;
+          photographerId = newPhotographer.id;
         } else {
+          photographerId = photographerData.id;
+        }
           throw new Error('ID do fotógrafo não encontrado no link. Verifique se o link está completo.');
         }
       } else {
@@ -444,10 +490,16 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
 
       // Debug: Log dos valores antes de salvar
       console.log('Valores do formulário:', {
+        photographerId,
         package_price: formData.package_price,
         final_price: formData.final_price,
         payment_method_id: formData.payment_method_id
       });
+
+      // Validar campos obrigatórios antes de salvar
+      if (!formData.local_festa.trim()) {
+        throw new Error('Local do evento é obrigatório');
+      }
 
       const { data, error } = await supabase
         .from('contratos')
@@ -475,7 +527,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
           local_festa: formData.local_festa,
           nome_noivos: formData.nome_noivos || null,
           nome_aniversariante: formData.nome_aniversariante || null,
-          created_at: new Date().toISOString()
+          status: 'draft'
         }]);
 
       if (error) throw error;
@@ -494,36 +546,41 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
         // Em modo cliente, mostrar mensagem de sucesso por mais tempo
         setTimeout(() => {
           setSubmitStatus('idle');
+          // Limpar formulário após sucesso
+          setFormData({
+            nome_completo: '',
+            cpf: '',
+            email: '',
+            whatsapp: '',
+            endereco: '',
+            cidade: '',
+            data_nascimento: '',
+            tipo_evento: '',
+            data_evento: '',
+            horario_evento: '',
+            local_pre_wedding: '',
+            local_making_of: '',
+            local_cerimonia: '',
+            local_festa: '',
+            nome_noivos: '',
+            nome_aniversariante: '',
+            event_type_id: '',
+            package_id: '',
+            package_price: 0,
+            payment_method_id: '',
+            final_price: 0,
+            preferred_payment_day: '',
+          });
         }, 5000);
       }
-      
-      setFormData({
-        nome_completo: '',
-        cpf: '',
-        email: '',
-        whatsapp: '',
-        endereco: '',
-        cidade: '',
-        data_nascimento: '',
-        tipo_evento: '',
-        data_evento: '',
-        horario_evento: '',
-        local_pre_wedding: '',
-        local_making_of: '',
-        local_cerimonia: '',
-        local_festa: '',
-        nome_noivos: '',
-        nome_aniversariante: '',
-        event_type_id: '',
-        package_id: '',
-        package_price: 0,
-        payment_method_id: '',
-        final_price: 0,
-        preferred_payment_day: '',
-      });
     } catch (error) {
       console.error('Erro ao salvar contrato:', error);
       setSubmitStatus('error');
+      
+      // Mostrar erro específico para o usuário
+      if (error instanceof Error) {
+        console.log('Mensagem de erro:', error.message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1118,6 +1175,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
               <div>
                 <label htmlFor="local_festa" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {isEnsaio ? 'Local do Ensaio' : 'Local da Festa'}
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
                   type="text"
@@ -1125,7 +1183,9 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                   name="local_festa"
                   value={formData.local_festa}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.local_festa ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   placeholder={
                     isCasamento 
                       ? "Local da recepção/festa de casamento"
@@ -1135,7 +1195,11 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
                       ? "Local onde será realizado o ensaio fotográfico"
                       : "Local onde será realizado o evento"
                   }
+                  required
                 />
+                {errors.local_festa && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.local_festa}</p>
+                )}
               </div>
             </div>
           )}
