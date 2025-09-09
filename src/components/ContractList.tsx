@@ -108,15 +108,19 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
         try {
           const result = await query;
           if (result.error) {
-            if (result.error.code === 'PGRST205') {
+            if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
               console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
-            } else {
-              console.info(`Sistema funcionando sem dados de ${tableName}:`, result.error.message);
+              return { data: [], error: null };
             }
+            console.info(`Sistema funcionando sem dados de ${tableName}:`, result.error.message);
             return { data: [], error: null };
           }
           return result;
-        } catch (error) {
+        } catch (error: any) {
+          if (error.code === 'PGRST205' || error.code === 'PGRST116') {
+            console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
+            return { data: [], error: null };
+          }
           console.info(`Sistema funcionando sem dados de ${tableName}:`, error);
           return { data: [], error: null };
         }

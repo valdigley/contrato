@@ -73,18 +73,23 @@ export default function Login({ onLogin }: LoginProps) {
             try {
               const result = await supabase.from(tableName).insert([data]).select().single();
               if (result.error) {
-                if (result.error.code === 'PGRST205') {
+                if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
                   console.info(`Tabela ${tableName} não encontrada - continuando sem dados`);
                   setDebugInfo(`Tabela ${tableName} não encontrada, continuando...`);
-                } else {
-                  console.info(`Continuando sem dados de ${tableName}:`, result.error.message);
-                  setDebugInfo(`Continuando sem dados de ${tableName}...`);
+                  return result;
                 }
-              } else {
-                setDebugInfo(debugMessage);
+                console.info(`Continuando sem dados de ${tableName}:`, result.error.message);
+                setDebugInfo(`Continuando sem dados de ${tableName}...`);
+                return result;
               }
+              setDebugInfo(debugMessage);
               return result;
-            } catch (error) {
+            } catch (error: any) {
+              if (error.code === 'PGRST205' || error.code === 'PGRST116') {
+                console.info(`Tabela ${tableName} não encontrada - continuando sem dados`);
+                setDebugInfo(`Tabela ${tableName} não encontrada, continuando...`);
+                return { data: null, error: null };
+              }
               console.info(`Continuando sem dados de ${tableName}:`, error);
               setDebugInfo(`Continuando sem dados de ${tableName}...`);
               return { data: null, error: null };

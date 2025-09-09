@@ -434,31 +434,43 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   };
 
   const fetchContracts = async () => {
-    if (!user) return;
-    
     try {
-      // Check if contratos table exists
-      const { data, error } = await supabase
-        .from('contratos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        if (error.code === 'PGRST205') {
-          // Table doesn't exist - this is expected in a new project
-          console.info('Tabela contratos não encontrada. Sistema funcionando sem dados.');
-          setContracts([]);
-          setLoading(false);
-          return;
+      setLoading(true);
+      
+      // Safe query helper to handle missing tables
+      const safeQuery = async (tableName: string, query: any) => {
+        try {
+          const result = await query;
+          if (result.error) {
+            if (result.error.code === 'PGRST205') {
+              console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
+              return { data: [], error: null };
+            }
+            throw result.error;
+          }
+          return result;
+        } catch (error: any) {
+          if (error.code === 'PGRST205') {
+            console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
+            return { data: [], error: null };
+          }
+          throw error;
         }
-        throw error;
-      }
+      };
 
-      setContracts(data?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
+      const contractsResult = await safeQuery('contratos',
+        supabase.from('contratos').select('*').order('created_at', { ascending: false })
+      );
+      
+      setContracts(contractsResult.data?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
 
-    } catch (error: any) {
-      console.info('Sistema funcionando sem dados de contratos:', error.message);
+    } catch (error) {
+      console.info('Sistema funcionando sem dados de contratos:', error);
       setContracts([]);
+      // If it's a network error, show a more helpful message
+      if (error instanceof Error && error.message.includes('fetch')) {
+        console.error('Erro de conexão:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -466,33 +478,40 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const fetchPhotographerInfo = async () => {
     if (!user) return;
-
+    
     try {
-      const { data, error } = await supabase
-        .from('photographers')
-        .select('business_name, phone')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST205') {
-          // Table doesn't exist - this is expected in a new project
-          console.info('Tabela photographers não encontrada. Sistema funcionando sem dados.');
-          setPhotographerInfo(null);
-          return;
+      // Safe query helper to handle missing tables
+      const safeQuery = async (tableName: string, query: any) => {
+        try {
+          const result = await query;
+          if (result.error) {
+            if (result.error.code === 'PGRST205') {
+              console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
+              return { data: null, error: null };
+            }
+            if (result.error.code === 'PGRST116') {
+              console.info(`Nenhum registro encontrado em ${tableName}`);
+              return { data: null, error: null };
+            }
+            throw result.error;
+          }
+          return result;
+        } catch (error: any) {
+          if (error.code === 'PGRST205') {
+            console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
+            return { data: null, error: null };
+          }
+          throw error;
         }
-        if (error.code === 'PGRST116') {
-          // No rows returned - user doesn't have photographer profile yet
-          setPhotographerInfo(null);
-          return;
-        }
-        throw error;
-      }
+      };
 
-      setPhotographerInfo(data);
-    } catch (error: any) {
-      console.info('Sistema funcionando sem dados de fotógrafo:', error.message);
-      setPhotographerInfo(null);
+      const photographerResult = await safeQuery('photographers',
+        supabase.from('photographers').select('business_name, phone').eq('user_id', user.id).single()
+      );
+      
+      setPhotographerInfo(photographerResult.data);
+    } catch (error) {
+      console.info('Sistema funcionando sem dados do fotógrafo:', error);
     }
   };
 
@@ -853,641 +872,4 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {contract.tipo_evento}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {contract.nome_completo}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {contract.data_evento ? formatDate(contract.data_evento) : 'Não definida'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {contract.cidade}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {formatCurrency(contract.adjusted_price || contract.final_price || contract.package_price || 0)}
-                        {(contract.discount_percentage || 0) > 0 && (
-                          <div className="text-xs text-green-600 dark:text-green-400">
-                            {contract.discount_percentage}% desconto
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </main>
-
-      {/* Contract Details Modal */}
-      {showModal && selectedContract && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Contrato - {selectedContract.nome_completo}
-                </h2>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Ações do Contrato */}
-                <div className="flex flex-wrap gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <button
-                    onClick={() => generateContract(selectedContract)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>Gerar Contrato</span>
-                  </button>
-                  <button
-                    onClick={() => openDiscountModal(selectedContract)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    <span>Aplicar Desconto</span>
-                  </button>
-                  <button
-                    onClick={() => sendWhatsAppContract(selectedContract)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Enviar WhatsApp</span>
-                  </button>
-                  <button
-                    onClick={() => updateContractStatus(selectedContract.id, 'sent')}
-                    className={`px-3 py-2 rounded-lg flex items-center space-x-2 text-sm ${
-                      selectedContract.status === 'sent' 
-                        ? 'bg-blue-500 text-white' 
-                        : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
-                    }`}
-                  >
-                    <span>📤 Marcar como Enviado</span>
-                  </button>
-                  <button
-                    onClick={() => updateContractStatus(selectedContract.id, 'signed')}
-                    className={`px-3 py-2 rounded-lg flex items-center space-x-2 text-sm ${
-                      selectedContract.status === 'signed' 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/20'
-                    }`}
-                  >
-                    <span>✓ Marcar como Assinado</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm('Tem certeza que deseja excluir este contrato?')) {
-                        deleteContract(selectedContract.id);
-                        setShowModal(false);
-                      }
-                    }}
-                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Excluir</span>
-                  </button>
-                </div>
-
-                {/* Dados Pessoais */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-                    <User className="w-5 h-5 mr-2" />
-                    Dados Pessoais
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome Completo</label>
-                      <p className="text-sm text-gray-900 dark:text-white">{selectedContract.nome_completo}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">CPF</label>
-                      <p className="text-sm text-gray-900 dark:text-white">{formatCPF(selectedContract.cpf)}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data de Nascimento</label>
-                      <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedContract.data_nascimento)}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Cidade</label>
-                      <p className="text-sm text-gray-900 dark:text-white">{selectedContract.cidade}</p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Endereço</label>
-                      <p className="text-sm text-gray-900 dark:text-white">{selectedContract.endereco}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">E-mail</label>
-                      <p className="text-sm text-gray-900 dark:text-white">{selectedContract.email}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">WhatsApp</label>
-                      <p className="text-sm text-gray-900 dark:text-white">{formatWhatsApp(selectedContract.whatsapp)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Dados do Evento */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-                    <Calendar className="w-5 h-5 mr-2" />
-                    Dados do Evento
-                  </h3>
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Evento</label>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEventTypeColor(selectedContract.tipo_evento)}`}>
-                        {selectedContract.tipo_evento}
-                      </span>
-                    </div>
-
-                    {(selectedContract.data_evento || selectedContract.horario_evento) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {selectedContract.data_evento && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data do Evento</label>
-                            <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedContract.data_evento)}</p>
-                          </div>
-                        )}
-                        {selectedContract.horario_evento && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Horário do Evento</label>
-                            <p className="text-sm text-gray-900 dark:text-white">{selectedContract.horario_evento}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {selectedContract.nome_noivos && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome dos Noivos</label>
-                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.nome_noivos}</p>
-                      </div>
-                    )}
-
-                    {selectedContract.nome_aniversariante && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome do(a) Aniversariante</label>
-                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.nome_aniversariante}</p>
-                      </div>
-                    )}
-
-                    {selectedContract.local_festa && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {selectedContract.tipo_evento === 'Ensaio Fotográfico' ? 'Local do Ensaio' : 'Local da Festa'}
-                        </label>
-                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.local_festa}</p>
-                      </div>
-                    )}
-
-                    {selectedContract.local_pre_wedding && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Local do Pré-Wedding</label>
-                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.local_pre_wedding}</p>
-                      </div>
-                    )}
-
-                    {selectedContract.local_making_of && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Local do Making Of</label>
-                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.local_making_of}</p>
-                      </div>
-                    )}
-
-                    {selectedContract.local_cerimonia && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Local da Cerimônia</label>
-                        <p className="text-sm text-gray-900 dark:text-white">{selectedContract.local_cerimonia}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Dados Financeiros */}
-                {(selectedContract.package_price || selectedContract.final_price || selectedContract.preferred_payment_day) && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-                      <DollarSign className="w-5 h-5 mr-2" />
-                      Dados Financeiros
-                    </h3>
-                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
-                      {selectedContract.package_price && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preço do Pacote</label>
-                          <p className="text-sm text-gray-900 dark:text-white">
-                            {formatCurrency(selectedContract.package_price)}
-                          </p>
-                        </div>
-                      )}
-                      {selectedContract.final_price && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preço Final</label>
-                          <p className="text-sm text-gray-900 dark:text-white">
-                            {formatCurrency(selectedContract.final_price)}
-                          </p>
-                        </div>
-                      )}
-                      {selectedContract.adjusted_price && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preço Ajustado</label>
-                          <p className="text-sm text-gray-900 dark:text-white">
-                            {formatCurrency(selectedContract.adjusted_price)}
-                          </p>
-                        </div>
-                      )}
-                      {(selectedContract.discount_percentage || 0) !== 0 && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Desconto Aplicado</label>
-                          <p className="text-sm text-green-600 dark:text-green-400 font-medium">
-                            {selectedContract.discount_percentage}%
-                          </p>
-                        </div>
-                      )}
-                      {selectedContract.preferred_payment_day && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dia Preferido para Pagamento</label>
-                          <p className="text-sm text-gray-900 dark:text-white">Dia {selectedContract.preferred_payment_day} de cada mês</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Observações Personalizadas */}
-                {selectedContract.custom_notes && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-                      <FileText className="w-5 h-5 mr-2" />
-                      Observações Personalizadas
-                    </h3>
-                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                      <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-                        {selectedContract.custom_notes}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Data de Cadastro */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-                    <Calendar className="w-5 h-5 mr-2" />
-                    Informações do Sistema
-                  </h3>
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data de Cadastro</label>
-                      <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedContract.created_at)}</p>
-                    </div>
-                    <div className="mt-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedContract.status)}`}>
-                        {getStatusText(selectedContract.status)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition-colors text-sm"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Generated Contract Modal */}
-      {showContractModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contrato Gerado</h2>
-                <button
-                  onClick={() => setShowContractModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-6 max-h-96 overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm font-mono text-gray-900 dark:text-white">{generatedContract}</pre>
-              </div>
-              <div className="flex space-x-4">
-                <button
-                  onClick={downloadContract}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Baixar</span>
-                </button>
-                <button
-                  onClick={printContract}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Imprimir</span>
-                </button>
-                <button
-                  onClick={() => sendWhatsAppContract(selectedContract!)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>WhatsApp</span>
-                </button>
-                <button
-                  onClick={() => setShowContractModal(false)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Discount Modal */}
-      {showDiscountModal && discountContract && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Aplicar Desconto</h2>
-                <button
-                  onClick={() => setShowDiscountModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {discountError && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <span className="text-red-700">Erro ao aplicar desconto. Tente novamente.</span>
-                  </div>
-                )}
-
-                {/* Tipo de Desconto */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo de Desconto
-                  </label>
-                  <div className="flex space-x-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="discountType"
-                        value="percentage"
-                        checked={discountData.discountType === 'percentage'}
-                        onChange={(e) => handleDiscountChange('discountType', e.target.value)}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-700">Percentual (%)</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="discountType"
-                        value="fixed"
-                        checked={discountData.discountType === 'fixed'}
-                        onChange={(e) => handleDiscountChange('discountType', e.target.value)}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-700">Valor Fixo (R$)</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Campo de Desconto Percentual */}
-                {discountData.discountType === 'percentage' && (
-                  <div>
-                    <label htmlFor="discountPercentage" className="block text-sm font-medium text-gray-700 mb-2">
-                      Desconto (%)
-                    </label>
-                    <input
-                      type="number"
-                      id="discountPercentage"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={discountData.discountPercentage}
-                      onChange={(e) => handleDiscountChange('discountPercentage', parseFloat(e.target.value) || 0)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="0.00"
-                    />
-                  </div>
-                )}
-
-                {/* Campo de Desconto em Valor Fixo */}
-                {discountData.discountType === 'fixed' && (
-                  <div>
-                    <label htmlFor="discountAmount" className="block text-sm font-medium text-gray-700 mb-2">
-                      Valor do Desconto (R$)
-                    </label>
-                    <input
-                      type="number"
-                      id="discountAmount"
-                      step="0.01"
-                      min="0"
-                      value={discountData.discountAmount}
-                      onChange={(e) => handleDiscountChange('discountAmount', parseFloat(e.target.value) || 0)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="0.00"
-                    />
-                  </div>
-                )}
-
-                {/* Preço Final */}
-                <div>
-                  <label htmlFor="adjustedPrice" className="block text-sm font-medium text-gray-700 mb-2">
-                    Preço Final (R$)
-                  </label>
-                  <input
-                    type="number"
-                    id="adjustedPrice"
-                    step="0.01"
-                    min="0"
-                    value={discountData.adjustedPrice}
-                    onChange={(e) => handleDiscountChange('adjustedPrice', parseFloat(e.target.value) || 0)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                {/* Resumo do Desconto */}
-                {discountContract && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-700">Preço Original:</span>
-                      <span className="text-sm text-gray-600">R$ {(discountContract.final_price || discountContract.package_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    {(discountData.discountPercentage > 0 || discountData.discountAmount > 0) && (
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-700">
-                          Desconto ({discountData.discountPercentage.toFixed(2)}%):
-                        </span>
-                        <span className="text-sm text-red-600">
-                          -R$ {((discountContract.final_price || discountContract.package_price || 0) - discountData.adjustedPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between pt-2 border-t border-gray-200">
-                      <span className="text-sm font-semibold text-gray-900">Preço Final:</span>
-                      <span className="text-sm font-semibold text-gray-900">R$ {discountData.adjustedPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label htmlFor="customNotes" className="block text-sm font-medium text-gray-700 mb-2">
-                    Observações Personalizadas
-                  </label>
-                  <textarea
-                    id="customNotes"
-                    rows={3}
-                    value={discountData.customNotes}
-                    onChange={(e) => handleDiscountChange('customNotes', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="Observações que aparecerão no contrato..."
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-4">
-                <button
-                  onClick={() => setShowDiscountModal(false)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={applyDiscount}
-                  disabled={applyingDiscount}
-                  className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
-                >
-                  {applyingDiscount ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Aplicando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      <span>Aplicar Desconto</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Profile Modal */}
-      {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Editar Perfil</h2>
-                <button
-                  onClick={() => setShowProfileModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Nome Completo
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    value={profileData.name}
-                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Seu nome completo"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="business_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Nome do Negócio
-                  </label>
-                  <input
-                    type="text"
-                    id="business_name"
-                    value={profileData.business_name}
-                    onChange={(e) => setProfileData({ ...profileData, business_name: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Nome do seu estúdio/empresa"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Telefone
-                  </label>
-                  <input
-                    type="text"
-                    id="phone"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-4">
-                <button
-                  onClick={() => setShowProfileModal(false)}
-                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={saveProfile}
-                  disabled={savingProfile}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm"
-                >
-                  {savingProfile ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Salvando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      <span>Salvar</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                          {contract.tipo
