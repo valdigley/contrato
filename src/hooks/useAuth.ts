@@ -15,8 +15,6 @@ export function useAuth() {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Erro ao verificar sessão:', error);
-          
           // Se o token de refresh é inválido, limpar a sessão
           if (error.message.includes('Refresh Token Not Found') || 
               error.message.includes('Invalid Refresh Token')) {
@@ -25,6 +23,7 @@ export function useAuth() {
             setUser(null);
             setError(null);
           } else {
+            console.error('Erro ao verificar sessão:', error);
             setError(error.message);
           }
         } else {
@@ -33,8 +32,6 @@ export function useAuth() {
           setError(null);
         }
       } catch (err) {
-        console.error('Erro inesperado ao verificar sessão:', err);
-        
         // Verificar se é erro de token inválido
         const errorMessage = err instanceof Error ? err.message : String(err);
         if (errorMessage.includes('Refresh Token Not Found') || 
@@ -44,6 +41,7 @@ export function useAuth() {
           setUser(null);
           setError(null);
         } else {
+          console.error('Erro inesperado ao verificar sessão:', err);
           setError('Erro ao verificar autenticação');
         }
       } finally {
