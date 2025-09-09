@@ -71,29 +71,6 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         }
       };
       
-      // Helper function to safely query tables
-      const safeQuery = async (tableName: string, query: any) => {
-        try {
-          const result = await query;
-          if (result.error) {
-            if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
-              console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
-              return { data: null, error: null };
-            }
-            console.info(`Sistema funcionando sem dados de ${tableName}:`, result.error.message);
-            return { data: null, error: null };
-          }
-          return result;
-        } catch (error: any) {
-          if (error.code === 'PGRST205' || error.code === 'PGRST116') {
-            console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
-            return { data: null, error: null };
-          }
-          console.info(`Sistema funcionando sem dados de ${tableName}:`, error);
-          return { data: null, error: null };
-        }
-      };
-
       // Fetch user data safely
       const userResult = await safeQuery('users',
         supabase.from('users').select('*').eq('id', user?.id).single()
@@ -171,9 +148,14 @@ export default function UserProfile({ onBack }: UserProfileProps) {
       setPhotographerData(photographerResult.data);
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
-      console.info('Sistema funcionando com dados limitados:', error.message);
-      setContracts([]);
-      setPhotographerData(null);
+      console.info('Sistema funcionando com dados limitados:', error);
+      // Fill form with basic user data from auth
+      setFormData({
+        name: user?.user_metadata?.name || '',
+        business_name: '',
+        phone: '',
+        email: user?.email || ''
+      });
     } finally {
       setSaving(false);
     }
