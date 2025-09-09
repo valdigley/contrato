@@ -55,7 +55,16 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         .eq('id', user?.id)
         .single();
 
-      if (userError) throw userError;
+      if (userError) {
+        if (userError.code === 'PGRST205') {
+          console.warn('Tabela users não encontrada');
+          setUserData(null);
+        } else {
+          throw userError;
+        }
+      } else {
+        setUserData(userResponse);
+      }
 
       // Buscar dados do fotógrafo
       const { data: photographerResponse, error: photographerError } = await supabase
@@ -64,19 +73,22 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         .eq('user_id', user?.id)
         .single();
 
-      if (photographerError && photographerError.code !== 'PGRST116') {
+      if (photographerError && photographerError.code !== 'PGRST116' && photographerError.code !== 'PGRST205') {
         console.error('Erro ao buscar dados do fotógrafo:', photographerError);
+      } else if (photographerError && photographerError.code === 'PGRST205') {
+        console.warn('Tabela photographers não encontrada');
+        setPhotographerData(null);
+      } else {
+        setPhotographerData(photographerResponse || null);
       }
 
-      setUserData(userResponse);
-      setPhotographerData(photographerResponse || null);
 
       // Preencher formulário
       setFormData({
-        name: userResponse?.name || '',
+        name: userResponse?.name || user?.user_metadata?.name || '',
         business_name: photographerResponse?.business_name || '',
         phone: photographerResponse?.phone || '',
-        email: userResponse?.email || ''
+        email: userResponse?.email || user?.email || ''
       });
 
     } catch (error) {

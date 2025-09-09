@@ -103,30 +103,64 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
 
   const fetchContracts = async () => {
     try {
-      // Fetch all contracts (removed photographer dependency)
+      // Check if contratos table exists first
       const contractsResponse = await supabase
         .from('contratos')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (contractsResponse.error && contractsResponse.error.code === 'PGRST205') {
+        console.warn('Tabela contratos não encontrada. Sistema funcionando sem dados.');
+        setContracts([]);
+        setLoading(false);
+        return;
+      }
       
       if (contractsResponse.error) {
         console.error('Erro ao buscar contratos:', contractsResponse.error);
         setContracts([]);
+        setLoading(false);
+        return;
+      }
+      
+      // If table exists, fetch all contracts
+      const allContractsResponse = await supabase
+        .from('contratos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (allContractsResponse.error) {
+        console.error('Erro ao buscar todos os contratos:', allContractsResponse.error);
+        setContracts([]);
       } else {
-        setContracts(contractsResponse.data || []);
+        setContracts(allContractsResponse.data || []);
       }
       
       // Carregar templates e packages separadamente para não bloquear a listagem
       const [templatesResponse, packagesResponse] = await Promise.all([
-        supabase.from('contract_templates').select('*').eq('is_active', true),
-        supabase.from('packages').select('*').eq('is_active', true)
+        supabase.from('contract_templates').select('*').eq('is_active', true).limit(1),
+        supabase.from('packages').select('*').eq('is_active', true).limit(1)
       ]);
       
-      if (!templatesResponse.error) setTemplates(templatesResponse.data || []);
-      if (!packagesResponse.error) setPackages(packagesResponse.data || []);
+      // Only load full data if tables exist
+      if (!templatesResponse.error && templatesResponse.error?.code !== 'PGRST205') {
+        const fullTemplatesResponse = await supabase.from('contract_templates').select('*').eq('is_active', true);
+        if (!fullTemplatesResponse.error) setTemplates(fullTemplatesResponse.data || []);
+      } else {
+        setTemplates([]);
+      }
+      
+      if (!packagesResponse.error && packagesResponse.error?.code !== 'PGRST205') {
+        const fullPackagesResponse = await supabase.from('packages').select('*').eq('is_active', true);
+        if (!fullPackagesResponse.error) setPackages(fullPackagesResponse.data || []);
+      } else {
+        setPackages([]);
+      }
       
     } catch (error) {
       console.error('Erro ao buscar contratos:', error);
+      setContracts([]);
     } finally {
       setLoading(false);
     }

@@ -51,17 +51,64 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
   const loadSystemData = async () => {
     try {
-      const [eventTypesRes, packagesRes, paymentMethodsRes, templatesRes] = await Promise.all([
-        supabase.from('event_types').select('*').order('name'),
-        supabase.from('packages').select('*').order('name'),
-        supabase.from('payment_methods').select('*').order('name'),
-        supabase.from('contract_templates').select('*').order('name')
-      ]);
+      // Check each table individually and handle missing tables gracefully
+      
+      // Event Types
+      try {
+        const eventTypesRes = await supabase.from('event_types').select('*').order('name');
+        if (!eventTypesRes.error) {
+          setEventTypes(eventTypesRes.data || []);
+        } else if (eventTypesRes.error.code === 'PGRST205') {
+          console.warn('Tabela event_types não encontrada');
+          setEventTypes([]);
+        }
+      } catch (error) {
+        console.warn('Erro ao carregar event_types:', error);
+        setEventTypes([]);
+      }
 
-      if (!eventTypesRes.error) setEventTypes(eventTypesRes.data || []);
-      if (!packagesRes.error) setPackages(packagesRes.data || []);
-      if (!paymentMethodsRes.error) setPaymentMethods(paymentMethodsRes.data || []);
-      if (!templatesRes.error) setContractTemplates(templatesRes.data || []);
+      // Packages
+      try {
+        const packagesRes = await supabase.from('packages').select('*').order('name');
+        if (!packagesRes.error) {
+          setPackages(packagesRes.data || []);
+        } else if (packagesRes.error.code === 'PGRST205') {
+          console.warn('Tabela packages não encontrada');
+          setPackages([]);
+        }
+      } catch (error) {
+        console.warn('Erro ao carregar packages:', error);
+        setPackages([]);
+      }
+
+      // Payment Methods
+      try {
+        const paymentMethodsRes = await supabase.from('payment_methods').select('*').order('name');
+        if (!paymentMethodsRes.error) {
+          setPaymentMethods(paymentMethodsRes.data || []);
+        } else if (paymentMethodsRes.error.code === 'PGRST205') {
+          console.warn('Tabela payment_methods não encontrada');
+          setPaymentMethods([]);
+        }
+      } catch (error) {
+        console.warn('Erro ao carregar payment_methods:', error);
+        setPaymentMethods([]);
+      }
+
+      // Contract Templates
+      try {
+        const templatesRes = await supabase.from('contract_templates').select('*').order('name');
+        if (!templatesRes.error) {
+          setContractTemplates(templatesRes.data || []);
+        } else if (templatesRes.error.code === 'PGRST205') {
+          console.warn('Tabela contract_templates não encontrada');
+          setContractTemplates([]);
+        }
+      } catch (error) {
+        console.warn('Erro ao carregar contract_templates:', error);
+        setContractTemplates([]);
+      }
+      
     } catch (error) {
       console.error('Erro ao carregar dados do sistema:', error);
     }

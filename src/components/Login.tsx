@@ -67,42 +67,58 @@ export default function Login({ onLogin }: LoginProps) {
         if (data.user) {
           // Inserir dados na tabela users e photographers
           setDebugInfo('Inserindo dados na tabela users...');
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .insert([
-              {
-                id: data.user.id,
-                email: data.user.email,
-                name: name,
-                role: 'photographer'
-              }
-            ])
-            .select()
-            .single();
+          
+          try {
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .insert([
+                {
+                  id: data.user.id,
+                  email: data.user.email,
+                  name: name,
+                  role: 'photographer'
+                }
+              ])
+              .select()
+              .single();
 
-          if (userError) {
-            console.error('Erro ao criar perfil do usuário:', userError);
-            setDebugInfo(`Erro na tabela users: ${userError.message}`);
-            throw userError;
+            if (userError && userError.code === 'PGRST205') {
+              console.warn('Tabela users não encontrada, pulando criação de perfil');
+              setDebugInfo('Tabela users não encontrada, continuando sem perfil...');
+            } else if (userError) {
+              console.error('Erro ao criar perfil do usuário:', userError);
+              setDebugInfo(`Erro na tabela users: ${userError.message}`);
+              // Don't throw error, continue without user profile
+            }
+          } catch (error) {
+            console.warn('Erro ao criar perfil de usuário:', error);
+            setDebugInfo('Continuando sem perfil de usuário...');
           }
 
           setDebugInfo('Usuário criado, criando perfil de fotógrafo...');
-          // Criar perfil de fotógrafo
-          const { error: photographerError } = await supabase
-            .from('photographers')
-            .insert([
-              {
-                user_id: data.user.id,
-                business_name: businessName,
-                phone: phone,
-                settings: {}
-              }
-            ]);
+          
+          try {
+            const { error: photographerError } = await supabase
+              .from('photographers')
+              .insert([
+                {
+                  user_id: data.user.id,
+                  business_name: businessName,
+                  phone: phone,
+                  settings: {}
+                }
+              ]);
 
-          if (photographerError) {
-            console.error('Erro ao criar perfil do fotógrafo:', photographerError);
-            setDebugInfo(`Erro na tabela photographers: ${photographerError.message}`);
-            // Não fazer throw aqui para não bloquear o cadastro
+            if (photographerError && photographerError.code === 'PGRST205') {
+              console.warn('Tabela photographers não encontrada, pulando criação de perfil');
+              setDebugInfo('Tabela photographers não encontrada, continuando...');
+            } else if (photographerError) {
+              console.error('Erro ao criar perfil do fotógrafo:', photographerError);
+              setDebugInfo(`Erro na tabela photographers: ${photographerError.message}`);
+            }
+          } catch (error) {
+            console.warn('Erro ao criar perfil de fotógrafo:', error);
+            setDebugInfo('Continuando sem perfil de fotógrafo...');
           }
 
           setDebugInfo('Cadastro concluído com sucesso!');

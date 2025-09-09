@@ -435,18 +435,40 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const fetchContracts = async () => {
     if (!user) return;
       // Check if Supabase is properly configured
-      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey || !supabaseUrl.includes('supabase.co') || supabaseKey.length < 20) {
-        console.log('Supabase não configurado corretamente');
+
+      // Check if contratos table exists
+      const { data, error } = await supabase
+        .from('contratos')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error && error.code === 'PGRST205') {
+        // Table doesn't exist
+        console.warn('Tabela contratos não encontrada. Sistema funcionando sem dados.');
         setContracts([]);
-        setLoading(false);
         return;
       }
 
+      if (error) {
+        console.error('Erro ao buscar contratos:', error);
+        setContracts([]);
+        return;
+      }
 
-    try {
+      // If successful, fetch all contracts
+      const { data: allContracts, error: allError } = await supabase
+        .from('contratos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (allError) {
+        console.error('Erro ao buscar todos os contratos:', allError);
+        setContracts([]);
+        return;
+      }
+
+      setContracts(allContracts || []);
       // Fetch all contracts (removed photographer dependency)
       const { data: contracts, error: contractsError } = await supabase
         .from('contratos')
@@ -463,6 +485,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
     } catch (error) {
       console.error('Erro ao buscar contratos:', error);
+      setContracts([]);
       // If it's a network error, show a more helpful message
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         console.log('Erro de conexão - verifique as configurações do Supabase');
