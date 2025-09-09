@@ -1,14 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, User, Mail, Phone, MapPin, Calendar, Clock, Heart, Gift, Camera, DollarSign, CreditCard, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, FileText, MapPin, Calendar, Camera, Send, CheckCircle, AlertCircle, ArrowLeft, CreditCard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { EventType, Package, PaymentMethod, PackagePaymentMethod, ContractData } from '../types';
+import { EventType, Package, PaymentMethod, PackagePaymentMethod } from '../types';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 
 interface ContractFormProps {
-  onBackToList: () => void;
+  onBackToList?: () => void;
+}
+
+interface ContractData {
+  nome_completo: string;
+  cpf: string;
+  email: string;
+  whatsapp: string;
+  endereco: string;
+  cidade: string;
+  data_nascimento: string;
+  tipo_evento: string;
+  data_evento: string;
+  horario_evento: string;
+  data_evento: string;
+  horario_evento: string;
+  local_pre_wedding: string;
+  local_making_of: string;
+  local_cerimonia: string;
+  local_festa: string;
+  nome_noivos: string;
+  nome_aniversariante: string;
+  event_type_id: string;
+  package_id: string;
+  package_price: number;
+  payment_method_id: string;
+  final_price: number;
+  preferred_payment_day: string;
 }
 
 export default function ContractForm({ onBackToList }: ContractFormProps) {
-  // Form state
+  const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [availablePackages, setAvailablePackages] = useState<Package[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [packagePaymentMethods, setPackagePaymentMethods] = useState<PackagePaymentMethod[]>([]);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PackagePaymentMethod[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
   const [formData, setFormData] = useState<ContractData>({
     nome_completo: '',
     cpf: '',
@@ -18,61 +56,43 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     cidade: '',
     data_nascimento: '',
     tipo_evento: '',
-    local_festa: '',
-    event_type_id: '',
-    package_id: '',
-    package_price: 0,
-    payment_method_id: '',
-    final_price: 0,
-    preferred_payment_day: 5,
     data_evento: '',
     horario_evento: '',
     local_pre_wedding: '',
     local_making_of: '',
     local_cerimonia: '',
+    local_festa: '',
     nome_noivos: '',
     nome_aniversariante: '',
-    adjusted_price: 0,
-    discount_percentage: 0,
-    custom_notes: ''
+    event_type_id: '',
+    package_id: '',
+    package_price: 0,
+    payment_method_id: '',
+    final_price: 0,
+    preferred_payment_day: '',
   });
 
-  // System data
-  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [packagePaymentMethods, setPackagePaymentMethods] = useState<PackagePaymentMethod[]>([]);
-  const [filteredPaymentMethods, setFilteredPaymentMethods] = useState<PackagePaymentMethod[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errors, setErrors] = useState<Partial<ContractData>>({});
 
-  // UI state
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Check if we're in client mode or editing mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const isClientMode = urlParams.get('client') === 'true';
+  const editId = urlParams.get('edit');
 
-  useEffect(() => {
-    loadSystemData();
+  // Get photographer ID from current user if not in URL
+  const getPhotographerId = async () => {
+    const photographerIdParam = urlParams.get('photographer_id');
+  };
+
+  React.useEffect(() => {
+    fetchEventTypesAndPackages();
   }, []);
 
-  useEffect(() => {
-    if (formData.package_id) {
-      filterPaymentMethodsForPackage(formData.package_id);
-    } else {
-      setFilteredPaymentMethods([]);
-    }
-  }, [formData.package_id, packagePaymentMethods]);
-
-  useEffect(() => {
-    if (formData.package_id && formData.payment_method_id) {
-      calculateFinalPrice();
-    }
-  }, [formData.package_id, formData.payment_method_id, formData.discount_percentage]);
-
-  const loadSystemData = async () => {
+  const fetchEventTypesAndPackages = async () => {
     try {
-      setLoading(true);
-      
-      const [eventTypesRes, packagesRes, paymentMethodsRes, packagePaymentRes] = await Promise.all([
+      const [eventTypesResponse, packagesResponse, paymentMethodsResponse, packagePaymentMethodsResponse] = await Promise.all([
         supabase.from('event_types').select('*').eq('is_active', true).order('name'),
         supabase.from('packages').select('*').eq('is_active', true).order('name'),
         supabase.from('payment_methods').select('*').eq('is_active', true).order('name'),
@@ -82,254 +102,469 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
         `).order('created_at')
       ]);
 
-      if (eventTypesRes.error) throw eventTypesRes.error;
-      if (packagesRes.error) throw packagesRes.error;
-      if (paymentMethodsRes.error) throw paymentMethodsRes.error;
-      if (packagePaymentRes.error) throw packagePaymentRes.error;
+      if (eventTypesResponse.error) throw eventTypesResponse.error;
+      if (packagesResponse.error) throw packagesResponse.error;
+      if (paymentMethodsResponse.error) throw paymentMethodsResponse.error;
+      if (packagePaymentMethodsResponse.error) throw packagePaymentMethodsResponse.error;
 
-      setEventTypes(eventTypesRes.data || []);
-      setPackages(packagesRes.data || []);
-      setPaymentMethods(paymentMethodsRes.data || []);
-      setPackagePaymentMethods(packagePaymentRes.data || []);
-
+      setEventTypes(eventTypesResponse.data || []);
+      setPackages(packagesResponse.data || []);
+      setPaymentMethods(paymentMethodsResponse.data || []);
+      setPackagePaymentMethods(packagePaymentMethodsResponse.data || []);
     } catch (error) {
-      console.error('Erro ao carregar dados do sistema:', error);
-      setSaveStatus('error');
+      console.error('Erro ao carregar tipos de eventos e pacotes:', error);
     } finally {
-      setLoading(false);
+      setLoadingData(false);
     }
   };
 
-  const filterPaymentMethodsForPackage = (packageId: string) => {
-    const filtered = packagePaymentMethods.filter(ppm => ppm.package_id === packageId);
-    setFilteredPaymentMethods(filtered);
-    console.log('Formas de pagamento filtradas para o pacote:', filtered);
-    
-    // Reset payment method if current selection is not available for this package
-    if (formData.payment_method_id && !filtered.some(ppm => ppm.payment_method_id === formData.payment_method_id)) {
-      setFormData(prev => ({ ...prev, payment_method_id: '', final_price: 0 }));
+  // Update available packages when event type changes
+  React.useEffect(() => {
+    if (formData.event_type_id) {
+      const filtered = packages.filter(pkg => pkg.event_type_id === formData.event_type_id);
+      setAvailablePackages(filtered);
+      // Reset package selection when event type changes
+      setFormData(prev => ({ ...prev, package_id: '', package_price: 0, payment_method_id: '', final_price: 0 }));
+    } else {
+      setAvailablePackages([]);
+      setAvailablePaymentMethods([]);
     }
-  };
+  }, [formData.event_type_id, packages]);
 
-  const calculateFinalPrice = () => {
-    const selectedPackage = packages.find(p => p.id === formData.package_id);
-    const selectedPaymentMethod = filteredPaymentMethods.find(ppm => ppm.payment_method_id === formData.payment_method_id);
-    
-    if (selectedPackage && selectedPaymentMethod) {
-      let basePrice = selectedPaymentMethod.final_price;
-      
-      // Apply discount if any
-      if (formData.discount_percentage && formData.discount_percentage > 0) {
-        const discountAmount = (basePrice * formData.discount_percentage) / 100;
-        basePrice = basePrice - discountAmount;
-      }
-      
-      setFormData(prev => ({
-        ...prev,
-        package_price: selectedPackage.price,
-        final_price: basePrice,
-        adjusted_price: basePrice
-      }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    // Required fields
-    if (!formData.nome_completo.trim()) newErrors.nome_completo = 'Nome completo é obrigatório';
-    if (!formData.cpf.trim()) newErrors.cpf = 'CPF é obrigatório';
-    if (!formData.email.trim()) newErrors.email = 'E-mail é obrigatório';
-    if (!formData.whatsapp.trim()) newErrors.whatsapp = 'WhatsApp é obrigatório';
-    if (!formData.endereco.trim()) newErrors.endereco = 'Endereço é obrigatório';
-    if (!formData.cidade.trim()) newErrors.cidade = 'Cidade é obrigatória';
-    if (!formData.data_nascimento) newErrors.data_nascimento = 'Data de nascimento é obrigatória';
-    if (!formData.tipo_evento.trim()) newErrors.tipo_evento = 'Tipo de evento é obrigatório';
-    if (!formData.local_festa.trim()) newErrors.local_festa = 'Local é obrigatório';
-
-    // Email validation
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'E-mail inválido';
-    }
-
-    // CPF validation (basic)
-    if (formData.cpf && formData.cpf.replace(/\D/g, '').length !== 11) {
-      newErrors.cpf = 'CPF deve ter 11 dígitos';
-    }
-
-    // WhatsApp validation (basic)
-    if (formData.whatsapp && formData.whatsapp.replace(/\D/g, '').length < 10) {
-      newErrors.whatsapp = 'WhatsApp inválido';
-    }
-
-    // Event-specific validations
-    if (formData.tipo_evento === 'Casamento' && !formData.nome_noivos?.trim()) {
-      newErrors.nome_noivos = 'Nome dos noivos é obrigatório para casamentos';
-    }
-
-    if (formData.tipo_evento === 'Aniversário' && !formData.nome_aniversariante?.trim()) {
-      newErrors.nome_aniversariante = 'Nome do aniversariante é obrigatório';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (field: keyof ContractData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-    
-    // Reset save status
-    setSaveStatus('idle');
-
-    // Handle event type change
-    if (field === 'event_type_id') {
-      const selectedEventType = eventTypes.find(et => et.id === value);
-      if (selectedEventType) {
-        setFormData(prev => ({ 
-          ...prev, 
-          event_type_id: value,
-          tipo_evento: selectedEventType.name,
-          package_id: '', // Reset package selection
-          payment_method_id: '', // Reset payment method
-          final_price: 0
-        }));
-      }
-    }
-
-    // Handle package change
-    if (field === 'package_id') {
-      const selectedPackage = packages.find(p => p.id === value);
+  // Update available payment methods when package changes
+  React.useEffect(() => {
+    if (formData.package_id) {
+      const selectedPackage = packages.find(pkg => pkg.id === formData.package_id);
       if (selectedPackage) {
-        setFormData(prev => ({ 
-          ...prev, 
-          package_id: value,
-          package_price: selectedPackage.price,
-          payment_method_id: '', // Reset payment method
-          final_price: 0
-        }));
+        setFormData(prev => ({ ...prev, package_price: selectedPackage.price }));
+        
+        // Filter payment methods for this package
+        const filtered = packagePaymentMethods.filter(ppm => {
+          return ppm.package_id === formData.package_id;
+        });
+        
+        console.log('Formas de pagamento filtradas para o pacote:', filtered);
+        
+        // Se não há formas de pagamento para este pacote, criar automaticamente
+        if (filtered.length === 0) {
+          console.log('Criando formas de pagamento automaticamente...');
+          createPackagePaymentMethods(formData.package_id, selectedPackage.price);
+        } else {
+          setAvailablePaymentMethods(filtered);
+        }
+        
+        // Reset payment method selection
+        setFormData(prev => ({ ...prev, payment_method_id: '', final_price: 0 }));
       }
+    } else {
+      setAvailablePaymentMethods([]);
+    }
+  }, [formData.package_id, packages, packagePaymentMethods]);
+
+  // Update final price when payment method changes
+  React.useEffect(() => {
+    if (formData.payment_method_id && formData.package_id) {
+      const selectedPaymentMethod = availablePaymentMethods.find(ppm => ppm.payment_method_id === formData.payment_method_id);
+      if (selectedPaymentMethod) {
+        setFormData(prev => ({ ...prev, final_price: selectedPaymentMethod.final_price }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, final_price: 0 }));
+    }
+  }, [formData.payment_method_id, availablePaymentMethods]);
+
+  const createPackagePaymentMethods = async (packageId: string, packagePrice: number) => {
+    try {
+      console.log('Criando associações de pagamento para pacote:', packageId);
+      
+      // First, delete existing associations for this package
+      await supabase
+        .from('package_payment_methods')
+        .delete()
+        .eq('package_id', packageId);
+
+      // Get all active payment methods
+      const { data: activePaymentMethods, error: paymentMethodsError } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .eq('is_active', true);
+
+      if (paymentMethodsError) throw paymentMethodsError;
+
+      if (activePaymentMethods && activePaymentMethods.length > 0) {
+        console.log('Métodos de pagamento ativos encontrados:', activePaymentMethods.length);
+        
+        // Create new associations with calculated prices
+        const associations = activePaymentMethods.map(method => {
+          // Se discount_percentage for positivo, é acréscimo; se negativo, é desconto
+          const discountMultiplier = 1 + (Number(method.discount_percentage || 0) / 100);
+          const finalPrice = packagePrice * discountMultiplier;
+          
+          console.log(`Método: ${method.name}, Desconto: ${method.discount_percentage}%, Preço final: ${finalPrice}`);
+          
+          return {
+            package_id: packageId,
+            payment_method_id: method.id,
+            final_price: finalPrice
+          };
+        });
+
+        const { data: insertedData, error: insertError } = await supabase
+          .from('package_payment_methods')
+          .insert(associations)
+          .select(`
+            *,
+            payment_method:payment_methods(*)
+          `);
+
+        if (insertError) throw insertError;
+        
+        // Update local state with new associations
+        if (insertedData) {
+          console.log('Associações criadas com sucesso:', insertedData.length);
+          setPackagePaymentMethods(prev => [...prev, ...insertedData]);
+          setAvailablePaymentMethods(insertedData);
+        } else {
+          console.log('Nenhuma associação foi criada');
+        }
+      } else {
+        console.log('Nenhum método de pagamento ativo encontrado');
+      }
+    } catch (error) {
+      console.error('Erro ao criar associações de pagamento:', error);
     }
   };
 
   const formatCPF = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  const validateCPF = (cpf: string): boolean => {
+    const cleanCPF = cpf.replace(/\D/g, '');
+    return cleanCPF.length === 11;
   };
 
   const formatWhatsApp = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length <= 10) {
-      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  };
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateWhatsApp = (whatsapp: string): boolean => {
+    const cleanWhatsApp = whatsapp.replace(/\D/g, '');
+    return cleanWhatsApp.length === 11;
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<ContractData> = {};
+
+    if (!formData.nome_completo.trim()) {
+      newErrors.nome_completo = 'Nome completo é obrigatório';
     }
-    return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+
+    if (!formData.cpf.trim()) {
+      newErrors.cpf = 'CPF é obrigatório';
+    } else if (!validateCPF(formData.cpf)) {
+      newErrors.cpf = 'CPF deve ter 11 dígitos';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'E-mail é obrigatório';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'E-mail deve ter um formato válido';
+    }
+
+    if (!formData.whatsapp.trim()) {
+      newErrors.whatsapp = 'WhatsApp é obrigatório';
+    } else if (!validateWhatsApp(formData.whatsapp)) {
+      newErrors.whatsapp = 'WhatsApp deve ter 11 dígitos (DDD + número)';
+    }
+
+    if (!formData.endereco.trim()) {
+      newErrors.endereco = 'Endereço é obrigatório';
+    }
+
+    if (!formData.cidade.trim()) {
+      newErrors.cidade = 'Cidade é obrigatória';
+    }
+
+    if (!formData.data_nascimento) {
+      newErrors.data_nascimento = 'Data de nascimento é obrigatória';
+    }
+
+    if (!formData.tipo_evento) {
+      newErrors.tipo_evento = 'Tipo de evento é obrigatório';
+    }
+
+    if (!formData.event_type_id) {
+      newErrors.event_type_id = 'Tipo de evento é obrigatório';
+    }
+
+    if (!formData.package_id) {
+      newErrors.package_id = 'Pacote é obrigatório';
+    }
+
+    if (!formData.data_evento) {
+      newErrors.data_evento = 'Data do evento é obrigatória';
+    }
+
+    if (!formData.horario_evento) {
+      newErrors.horario_evento = 'Horário do evento é obrigatório';
+    }
+
+    if (!formData.local_festa.trim()) {
+      newErrors.local_festa = 'Local do evento é obrigatório';
+    }
+
+    if (formData.payment_method_id && !formData.preferred_payment_day) {
+      newErrors.preferred_payment_day = 'Dia do pagamento é obrigatório quando uma forma de pagamento é selecionada';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    let formattedValue = value;
+    if (name === 'cpf') {
+      formattedValue = formatCPF(value);
+    } else if (name === 'whatsapp') {
+      formattedValue = formatWhatsApp(value);
+    } else if (name === 'event_type_id') {
+      // When event type changes, also update the tipo_evento field for backward compatibility
+      const selectedEventType = eventTypes.find(et => et.id === value);
+      if (selectedEventType) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: formattedValue,
+          tipo_evento: selectedEventType.name
+        }));
+        return;
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: formattedValue
+    }));
+
+    // Clear error when user starts typing
+    if (errors[name as keyof ContractData]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
-      setSaveStatus('error');
       return;
     }
 
-    setSaving(true);
-    setSaveStatus('idle');
+    setIsSubmitting(true);
+    setSubmitStatus('idle');
 
     try {
-      // Prepare contract data
-      const contractData = {
-        nome_completo: formData.nome_completo.trim(),
-        cpf: formData.cpf.replace(/\D/g, ''),
-        email: formData.email.trim().toLowerCase(),
-        whatsapp: formData.whatsapp.replace(/\D/g, ''),
-        endereco: formData.endereco.trim(),
-        cidade: formData.cidade.trim(),
-        data_nascimento: formData.data_nascimento,
-        tipo_evento: formData.tipo_evento,
-        event_type_id: formData.event_type_id || null,
-        package_id: formData.package_id || null,
-        package_price: formData.package_price || 0,
-        payment_method_id: formData.payment_method_id || null,
-        final_price: formData.final_price || 0,
-        preferred_payment_day: formData.preferred_payment_day || 5,
-        data_evento: formData.data_evento || null,
-        horario_evento: formData.horario_evento || null,
-        local_pre_wedding: formData.local_pre_wedding?.trim() || null,
-        local_making_of: formData.local_making_of?.trim() || null,
-        local_cerimonia: formData.local_cerimonia?.trim() || null,
-        local_festa: formData.local_festa.trim(),
-        nome_noivos: formData.nome_noivos?.trim() || null,
-        nome_aniversariante: formData.nome_aniversariante?.trim() || null,
-        adjusted_price: formData.adjusted_price || formData.final_price || 0,
-        discount_percentage: formData.discount_percentage || 0,
-        custom_notes: formData.custom_notes?.trim() || null,
-        status: 'draft'
-      };
+      let photographerId;
+      
+      // Check if we're in client mode
+      if (isClientMode) {
+        // Em modo cliente, usar o primeiro fotógrafo disponível ou criar um padrão
+        console.log('Modo cliente detectado, buscando fotógrafo...');
+        
+        const { data: photographerData, error: photographerError } = await supabase
+          .from('photographers')
+          .select('id')
+          .limit(1)
+          .single();
 
-      console.log('Salvando contrato:', contractData);
+        if (photographerError || !photographerData) {
+          // Se não há fotógrafo, criar um padrão para modo cliente
+          console.log('Criando fotógrafo padrão para modo cliente...');
+          
+          // Primeiro criar um usuário padrão se não existir
+          const { data: defaultUser, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', 'cliente@sistema.com')
+            .single();
+
+          let defaultUserId;
+          if (userError || !defaultUser) {
+            // Criar usuário padrão
+            const { data: newUser, error: createUserError } = await supabase
+              .from('users')
+              .insert([{
+                email: 'cliente@sistema.com',
+                name: 'Sistema Cliente',
+                role: 'photographer'
+              }])
+              .select()
+              .single();
+
+            if (createUserError) {
+              console.error('Erro ao criar usuário padrão:', createUserError);
+              throw new Error('Erro interno do sistema. Tente novamente.');
+            }
+            defaultUserId = newUser.id;
+          } else {
+            defaultUserId = defaultUser.id;
+          }
+
+          // Criar fotógrafo padrão
+          const { data: newPhotographer, error: createPhotographerError } = await supabase
+            .from('photographers')
+            .insert([{
+              user_id: defaultUserId,
+              business_name: 'Sistema de Contratos',
+              phone: '(00) 00000-0000',
+              settings: {}
+            }])
+            .select()
+            .single();
+
+          if (createPhotographerError) {
+            console.error('Erro ao criar fotógrafo padrão:', createPhotographerError);
+            throw new Error('Erro interno do sistema. Tente novamente.');
+          }
+          
+          photographerId = newPhotographer.id;
+        } else {
+          photographerId = photographerData.id;
+        }
+      } else {
+        // Get photographer_id from URL parameter
+        photographerId = await getPhotographerId();
+        
+        if (!photographerId) {
+          throw new Error('ID do fotógrafo não encontrado no link. Verifique se o link está completo.');
+        }
+      }
+
+      // Debug: Log dos valores antes de salvar
+      console.log('Valores do formulário:', {
+        photographerId,
+        package_price: formData.package_price,
+        final_price: formData.final_price,
+        payment_method_id: formData.payment_method_id
+      });
+
+      // Validar campos obrigatórios antes de salvar
+      if (!formData.local_festa.trim()) {
+        throw new Error('Local do evento é obrigatório');
+      }
 
       const { data, error } = await supabase
         .from('contratos')
-        .insert([contractData])
-        .select()
-        .single();
+        .insert([{
+          photographer_id: photographerId,
+          nome_completo: formData.nome_completo,
+          cpf: formData.cpf.replace(/\D/g, ''),
+          email: formData.email,
+          whatsapp: formData.whatsapp.replace(/\D/g, ''),
+          endereco: formData.endereco,
+          cidade: formData.cidade,
+          data_nascimento: formData.data_nascimento,
+          tipo_evento: formData.tipo_evento || eventTypes.find(et => et.id === formData.event_type_id)?.name || '',
+          event_type_id: formData.event_type_id,
+          package_id: formData.package_id,
+          package_price: Number(formData.package_price),
+          payment_method_id: formData.payment_method_id || null,
+          final_price: Number(formData.final_price) || Number(formData.package_price),
+          preferred_payment_day: formData.preferred_payment_day ? parseInt(formData.preferred_payment_day) : null,
+          data_evento: formData.data_evento,
+          horario_evento: formData.horario_evento,
+          local_pre_wedding: formData.local_pre_wedding || null,
+          local_making_of: formData.local_making_of || null,
+          local_cerimonia: formData.local_cerimonia || null,
+          local_festa: formData.local_festa,
+          nome_noivos: formData.nome_noivos || null,
+          nome_aniversariante: formData.nome_aniversariante || null,
+          status: 'draft'
+        }]);
 
-      if (error) {
-        console.error('Erro ao salvar contrato:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('Contrato salvo com sucesso:', data);
-      setSaveStatus('success');
+      console.log('Contrato salvo:', data);
+      setSubmitStatus('success');
       
-      // Reset form after successful save
-      setTimeout(() => {
-        setFormData({
-          nome_completo: '',
-          cpf: '',
-          email: '',
-          whatsapp: '',
-          endereco: '',
-          cidade: '',
-          data_nascimento: '',
-          tipo_evento: '',
-          local_festa: '',
-          event_type_id: '',
-          package_id: '',
-          package_price: 0,
-          payment_method_id: '',
-          final_price: 0,
-          preferred_payment_day: 5,
-          data_evento: '',
-          horario_evento: '',
-          local_pre_wedding: '',
-          local_making_of: '',
-          local_cerimonia: '',
-          nome_noivos: '',
-          nome_aniversariante: '',
-          adjusted_price: 0,
-          discount_percentage: 0,
-          custom_notes: ''
-        });
-        setSaveStatus('idle');
-      }, 3000);
-
+      console.log('Contrato salvo com sucesso:', data);
+      
+      // If not in client mode, go back to list after 2 seconds
+      if (!isClientMode && onBackToList) {
+        setTimeout(() => {
+          onBackToList();
+        }, 2000);
+      } else if (isClientMode) {
+        // Em modo cliente, mostrar mensagem de sucesso por mais tempo
+        setTimeout(() => {
+          setSubmitStatus('idle');
+          // Limpar formulário após sucesso
+          setFormData({
+            nome_completo: '',
+            cpf: '',
+            email: '',
+            whatsapp: '',
+            endereco: '',
+            cidade: '',
+            data_nascimento: '',
+            tipo_evento: '',
+            data_evento: '',
+            horario_evento: '',
+            local_pre_wedding: '',
+            local_making_of: '',
+            local_cerimonia: '',
+            local_festa: '',
+            nome_noivos: '',
+            nome_aniversariante: '',
+            event_type_id: '',
+            package_id: '',
+            package_price: 0,
+            payment_method_id: '',
+            final_price: 0,
+            preferred_payment_day: '',
+          });
+        }, 5000);
+      }
     } catch (error) {
       console.error('Erro ao salvar contrato:', error);
-      setSaveStatus('error');
+      setSubmitStatus('error');
+      
+      // Mostrar erro específico para o usuário
+      if (error instanceof Error) {
+        console.log('Mensagem de erro:', error.message);
+      }
     } finally {
-      setSaving(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (loading) {
+  const selectedEventType = eventTypes.find(et => et.id === formData.event_type_id);
+  const selectedPackage = packages.find(pkg => pkg.id === formData.package_id);
+  
+  const isCasamento = selectedEventType?.name === 'Casamento';
+  const isAniversario = selectedEventType?.name?.includes('Aniversário');
+  const isEnsaio = selectedEventType?.name === 'Ensaio Fotográfico';
+
+  if (loadingData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Carregando formulário...</p>
@@ -339,496 +574,619 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Novo Contrato</h1>
-              <p className="text-gray-600 mt-1">Preencha os dados para criar um novo contrato</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 transition-colors duration-300">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-2xl w-full">
+        {/* Navigation Header */}
+        <div className="text-center mb-8">
+          {!isClientMode && onBackToList && (
+            <div className="flex justify-start mb-4">
+              <button
+                onClick={() => onBackToList()}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Voltar ao Dashboard</span>
+              </button>
             </div>
-            <button
-              onClick={onBackToList}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Voltar</span>
-            </button>
+          )}
+          
+          {/* Theme Toggle for client mode */}
+          {isClientMode && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={toggleTheme}
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                title={theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'}
+              >
+                {theme === 'light' ? (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          )}
+          
+          <div className="bg-blue-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <FileText className="h-8 w-8 text-blue-600" />
           </div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Dados para Contrato</h1>
+          <p className="text-gray-600 dark:text-gray-300">Preencha as informações necessárias para o seu evento</p>
         </div>
 
-        {/* Status Messages */}
-        {saveStatus === 'success' && (
+        {submitStatus === 'success' && (
           <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center">
             <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
-            <span className="text-green-700">Contrato salvo com sucesso!</span>
+            <span className="text-green-700">Dados salvos com sucesso!</span>
           </div>
         )}
 
-        {saveStatus === 'error' && (
+        {submitStatus === 'error' && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
             <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
-            <span className="text-red-700">Erro ao salvar contrato. Verifique os dados e tente novamente.</span>
+            <span className="text-red-700">Erro ao salvar dados. Tente novamente.</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Dados Pessoais */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <User className="h-5 w-5 mr-2" />
-              Dados Pessoais
-            </h2>
-            
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <User className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Dados Pessoais</h2>
+            </div>
+
+            <div>
+              <label htmlFor="nome_completo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Nome Completo *
+              </label>
+              <input
+                type="text"
+                id="nome_completo"
+                name="nome_completo"
+                value={formData.nome_completo}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.nome_completo ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                }`}
+                placeholder="Digite seu nome completo"
+              />
+              {errors.nome_completo && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.nome_completo}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="cpf" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                CPF *
+              </label>
+              <input
+                type="text"
+                id="cpf"
+                name="cpf"
+                value={formData.cpf}
+                onChange={handleInputChange}
+                maxLength={14}
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.cpf ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                }`}
+                placeholder="000.000.000-00"
+              />
+              {errors.cpf && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.cpf}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                E-mail *
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.email ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                }`}
+                placeholder="Digite seu e-mail"
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                WhatsApp *
+              </label>
+              <input
+                type="text"
+                id="whatsapp"
+                name="whatsapp"
+                value={formData.whatsapp}
+                onChange={handleInputChange}
+                maxLength={15}
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.whatsapp ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
+                }`}
+                placeholder="(11) 99999-9999"
+              />
+              {errors.whatsapp && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.whatsapp}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="data_nascimento" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Data de Nascimento *
+              </label>
+              <input
+                type="date"
+                id="data_nascimento"
+                name="data_nascimento"
+                value={formData.data_nascimento}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.data_nascimento ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
+                }`}
+              />
+              {errors.data_nascimento && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.data_nascimento}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Endereço */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <MapPin className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Endereço</h2>
+            </div>
+
+            <div>
+              <label htmlFor="endereco" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Endereço Completo *
+              </label>
+              <input
+                type="text"
+                id="endereco"
+                name="endereco"
+                value={formData.endereco}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.endereco ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
+                }`}
+                placeholder="Rua, número, bairro, CEP"
+              />
+              {errors.endereco && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.endereco}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="cidade" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Cidade *
+              </label>
+              <input
+                type="text"
+                id="cidade"
+                name="cidade"
+                value={formData.cidade}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.cidade ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
+                }`}
+                placeholder="Digite sua cidade"
+              />
+              {errors.cidade && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.cidade}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Tipo de Evento */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Camera className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Evento</h2>
+            </div>
+
+            <div>
+              <label htmlFor="event_type_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Tipo de Evento *
+              </label>
+              <select
+                id="event_type_id"
+                name="event_type_id"
+                value={formData.event_type_id}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  errors.event_type_id ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
+                }`}
+              >
+                <option value="">Selecione o tipo de evento</option>
+                {eventTypes.map((eventType) => (
+                  <option key={eventType.id} value={eventType.id}>
+                    {eventType.name}
+                  </option>
+                ))}
+              </select>
+              {errors.event_type_id && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.event_type_id}</p>
+              )}
+            </div>
+
+            {/* Seleção de Pacote */}
+            {formData.event_type_id && (
+              <div>
+                <label htmlFor="package_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Pacote *
+                </label>
+                <select
+                  id="package_id"
+                  name="package_id"
+                  value={formData.package_id}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.package_id ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  <option value="">Selecione um pacote</option>
+                  {availablePackages.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.name} - R$ {pkg.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </option>
+                  ))}
+                </select>
+                {errors.package_id && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.package_id}</p>
+                )}
+                
+                {/* Detalhes do Pacote Selecionado */}
+                {selectedPackage && (
+                  <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">{selectedPackage.name}</h4>
+                    <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">{selectedPackage.description}</p>
+                    <p className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                      R$ {selectedPackage.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    {selectedPackage.features.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">Inclui:</p>
+                        <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                          {selectedPackage.features.map((feature, index) => (
+                            <li key={index} className="flex items-center space-x-2">
+                              <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Seleção de Forma de Pagamento */}
+            {formData.package_id && (
+              <div>
+                <label htmlFor="payment_method_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Forma de Pagamento (Opcional)
+                </label>
+                
+                {availablePaymentMethods.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                    <CreditCard className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                    <p className="text-sm font-medium dark:text-gray-300">Carregando formas de pagamento...</p>
+                    <p className="text-xs mt-1 dark:text-gray-400">Aguarde enquanto criamos as opções para este pacote</p>
+                    <div className="mt-3">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 dark:border-gray-500 mx-auto"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                        ✅ {availablePaymentMethods.length} forma{availablePaymentMethods.length > 1 ? 's' : ''} de pagamento disponível{availablePaymentMethods.length > 1 ? 'eis' : ''}
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                        Selecione uma forma de pagamento para ver detalhes e cronograma
+                      </p>
+                    </div>
+                    <select
+                      id="payment_method_id"
+                      name="payment_method_id"
+                      value={formData.payment_method_id}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="">Selecione a forma de pagamento</option>
+                      {availablePaymentMethods.map((ppm) => (
+                        <option key={ppm.id} value={ppm.payment_method_id}>
+                          {ppm.payment_method?.name} - R$ {ppm.final_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
+                
+                {/* Detalhes da Forma de Pagamento Selecionada */}
+                {formData.payment_method_id && (
+                  (() => {
+                    const selectedPaymentMethod = availablePaymentMethods.find(ppm => ppm.payment_method_id === formData.payment_method_id);
+                    const paymentMethodDetails = selectedPaymentMethod?.payment_method;
+                    
+                    if (!paymentMethodDetails) return null;
+                    
+                    return (
+                      <div className="mt-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">{paymentMethodDetails.name}</h4>
+                        <p className="text-sm text-green-800 dark:text-green-200 mb-2">{paymentMethodDetails.description}</p>
+                        
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-green-800 dark:text-green-200">Preço original:</span>
+                          <span className="text-sm text-green-800 dark:text-green-200">R$ {formData.package_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        
+                        {paymentMethodDetails.discount_percentage !== 0 && (
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm text-green-800 dark:text-green-200">
+                              {paymentMethodDetails.discount_percentage > 0 ? 'Acréscimo' : 'Desconto'}:
+                            </span>
+                            <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                              {paymentMethodDetails.discount_percentage > 0 ? '+' : ''}{paymentMethodDetails.discount_percentage}%
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between items-center mb-3 pt-2 border-t border-green-200 dark:border-green-800">
+                          <span className="text-lg font-semibold text-green-900 dark:text-green-100">Preço final:</span>
+                          <span className="text-lg font-semibold text-green-900 dark:text-green-100">
+                            R$ {formData.final_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        
+                        {paymentMethodDetails.payment_schedule.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-green-900 dark:text-green-100 mb-2">Cronograma de pagamento:</p>
+                            <ul className="text-sm text-green-800 dark:text-green-200 space-y-1">
+                              {paymentMethodDetails.payment_schedule.map((schedule, index) => (
+                                <li key={index} className="flex items-center space-x-2">
+                                  <span className="w-1.5 h-1.5 bg-green-600 dark:bg-green-400 rounded-full"></span>
+                                  <span>
+                                    {schedule.percentage > 0 
+                                      ? `${schedule.percentage}% - ${schedule.description}`
+                                      : schedule.description
+                                    }
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                )}
+                
+                {/* Seleção do Dia de Pagamento */}
+                {formData.payment_method_id && (
+                  <div>
+                    <label htmlFor="preferred_payment_day" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Dia do Mês para Pagamento *
+                    </label>
+                    <select
+                      id="preferred_payment_day"
+                      name="preferred_payment_day"
+                      value={formData.preferred_payment_day}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="">Selecione o dia do mês</option>
+                      {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day}>
+                          Dia {day}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      Escolha o dia do mês em que você prefere fazer os pagamentos (limitado até o dia 28 para garantir que existe em todos os meses)
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Data e Horário do Evento */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome Completo *
-                </label>
-                <input
-                  type="text"
-                  value={formData.nome_completo}
-                  onChange={(e) => handleInputChange('nome_completo', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.nome_completo ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Digite o nome completo"
-                />
-                {errors.nome_completo && (
-                  <p className="mt-1 text-sm text-red-600">{errors.nome_completo}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CPF *
-                </label>
-                <input
-                  type="text"
-                  value={formatCPF(formData.cpf)}
-                  onChange={(e) => handleInputChange('cpf', e.target.value.replace(/\D/g, ''))}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.cpf ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="000.000.000-00"
-                  maxLength={14}
-                />
-                {errors.cpf && (
-                  <p className="mt-1 text-sm text-red-600">{errors.cpf}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  E-mail *
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.email ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="email@exemplo.com"
-                  />
-                </div>
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  WhatsApp *
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    type="text"
-                    value={formatWhatsApp(formData.whatsapp)}
-                    onChange={(e) => handleInputChange('whatsapp', e.target.value.replace(/\D/g, ''))}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.whatsapp ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
-                  />
-                </div>
-                {errors.whatsapp && (
-                  <p className="mt-1 text-sm text-red-600">{errors.whatsapp}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Data de Nascimento *
+                <label htmlFor="data_evento" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Data do Evento *
                 </label>
                 <input
                   type="date"
-                  value={formData.data_nascimento}
-                  onChange={(e) => handleInputChange('data_nascimento', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.data_nascimento ? 'border-red-300' : 'border-gray-300'
+                  id="data_evento"
+                  name="data_evento"
+                  value={formData.data_evento}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.data_evento ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
-                {errors.data_nascimento && (
-                  <p className="mt-1 text-sm text-red-600">{errors.data_nascimento}</p>
+                {errors.data_evento && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.data_evento}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cidade *
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    type="text"
-                    value={formData.cidade}
-                    onChange={(e) => handleInputChange('cidade', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.cidade ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Digite a cidade"
-                  />
-                </div>
-                {errors.cidade && (
-                  <p className="mt-1 text-sm text-red-600">{errors.cidade}</p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Endereço Completo *
+                <label htmlFor="horario_evento" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Horário do Evento *
                 </label>
                 <input
-                  type="text"
-                  value={formData.endereco}
-                  onChange={(e) => handleInputChange('endereco', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.endereco ? 'border-red-300' : 'border-gray-300'
+                  type="time"
+                  id="horario_evento"
+                  name="horario_evento"
+                  value={formData.horario_evento}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.horario_evento ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
                   }`}
-                  placeholder="Rua, número, bairro, CEP"
                 />
-                {errors.endereco && (
-                  <p className="mt-1 text-sm text-red-600">{errors.endereco}</p>
+                {errors.horario_evento && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.horario_evento}</p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Dados do Evento */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Calendar className="h-5 w-5 mr-2" />
-              Dados do Evento
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Evento *
-                </label>
-                <select
-                  value={formData.event_type_id}
-                  onChange={(e) => handleInputChange('event_type_id', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.tipo_evento ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Selecione o tipo de evento</option>
-                  {eventTypes.map(eventType => (
-                    <option key={eventType.id} value={eventType.id}>
-                      {eventType.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.tipo_evento && (
-                  <p className="mt-1 text-sm text-red-600">{errors.tipo_evento}</p>
-                )}
+          {/* Detalhes do Evento */}
+          {formData.event_type_id && (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2 mb-4">
+                <MapPin className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Detalhes do Evento</h2>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Data do Evento
-                </label>
-                <input
-                  type="date"
-                  value={formData.data_evento}
-                  onChange={(e) => handleInputChange('data_evento', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Horário do Evento
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              {/* Nome dos Noivos - apenas para casamentos */}
+              {isCasamento && (
+                <div>
+                  <label htmlFor="nome_noivos" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome dos Noivos
+                  </label>
                   <input
-                    type="time"
-                    value={formData.horario_evento}
-                    onChange={(e) => handleInputChange('horario_evento', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    type="text"
+                    id="nome_noivos"
+                    name="nome_noivos"
+                    value={formData.nome_noivos}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Ex: João Silva & Maria Santos"
                   />
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {formData.tipo_evento === 'Ensaio Fotográfico' ? 'Local do Ensaio *' : 'Local da Festa *'}
-                </label>
-                <input
-                  type="text"
-                  value={formData.local_festa}
-                  onChange={(e) => handleInputChange('local_festa', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.local_festa ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder={formData.tipo_evento === 'Ensaio Fotográfico' ? 'Local do ensaio' : 'Local da festa'}
-                />
-                {errors.local_festa && (
-                  <p className="mt-1 text-sm text-red-600">{errors.local_festa}</p>
-                )}
-              </div>
+              {/* Nome do Aniversariante - apenas para aniversários */}
+              {isAniversario && (
+                <div>
+                  <label htmlFor="nome_aniversariante" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome do(a) Aniversariante
+                  </label>
+                  <input
+                    type="text"
+                    id="nome_aniversariante"
+                    name="nome_aniversariante"
+                    value={formData.nome_aniversariante}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Digite o nome do(a) aniversariante"
+                  />
+                </div>
+              )}
 
-              {/* Campos específicos para casamento */}
-              {formData.tipo_evento === 'Casamento' && (
+              {/* Campos de Local - específicos para casamento */}
+              {isCasamento && (
                 <>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Heart className="inline h-4 w-4 mr-1" />
-                      Nome dos Noivos *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.nome_noivos}
-                      onChange={(e) => handleInputChange('nome_noivos', e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        errors.nome_noivos ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                      placeholder="Nome do noivo e da noiva"
-                    />
-                    {errors.nome_noivos && (
-                      <p className="mt-1 text-sm text-red-600">{errors.nome_noivos}</p>
-                    )}
-                  </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="local_pre_wedding" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Local do Pré-Wedding
                     </label>
                     <input
                       type="text"
+                      id="local_pre_wedding"
+                      name="local_pre_wedding"
                       value={formData.local_pre_wedding}
-                      onChange={(e) => handleInputChange('local_pre_wedding', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Local do pré-wedding (opcional)"
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Local onde será realizado o pré-wedding"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="local_making_of" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Local do Making Of
                     </label>
                     <input
                       type="text"
+                      id="local_making_of"
+                      name="local_making_of"
                       value={formData.local_making_of}
-                      onChange={(e) => handleInputChange('local_making_of', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Local do making of (opcional)"
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Local dos preparativos (making of)"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="local_cerimonia" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Local da Cerimônia
                     </label>
                     <input
                       type="text"
+                      id="local_cerimonia"
+                      name="local_cerimonia"
                       value={formData.local_cerimonia}
-                      onChange={(e) => handleInputChange('local_cerimonia', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Local da cerimônia (opcional)"
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Igreja, cartório ou local da cerimônia"
                     />
                   </div>
                 </>
               )}
 
-              {/* Campo específico para aniversário */}
-              {formData.tipo_evento === 'Aniversário' && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Gift className="inline h-4 w-4 mr-1" />
-                    Nome do(a) Aniversariante *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.nome_aniversariante}
-                    onChange={(e) => handleInputChange('nome_aniversariante', e.target.value)}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.nome_aniversariante ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Nome do aniversariante"
-                  />
-                  {errors.nome_aniversariante && (
-                    <p className="mt-1 text-sm text-red-600">{errors.nome_aniversariante}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Pacotes e Pagamento */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <DollarSign className="h-5 w-5 mr-2" />
-              Pacotes e Pagamento
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Local da Festa - obrigatório para todos */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pacote
-                </label>
-                <select
-                  value={formData.package_id}
-                  onChange={(e) => handleInputChange('package_id', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={!formData.event_type_id}
-                >
-                  <option value="">Selecione um pacote</option>
-                  {packages
-                    .filter(pkg => !formData.event_type_id || pkg.event_type_id === formData.event_type_id)
-                    .map(pkg => (
-                      <option key={pkg.id} value={pkg.id}>
-                        {pkg.name} - R$ {pkg.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Forma de Pagamento
-                </label>
-                <select
-                  value={formData.payment_method_id}
-                  onChange={(e) => handleInputChange('payment_method_id', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={!formData.package_id}
-                >
-                  <option value="">Selecione a forma de pagamento</option>
-                  {filteredPaymentMethods.map(ppm => (
-                    <option key={ppm.id} value={ppm.payment_method_id}>
-                      {ppm.payment_method?.name} - R$ {ppm.final_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Desconto (%)
+                <label htmlFor="local_festa" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {isEnsaio ? 'Local do Ensaio' : 'Local da Festa'}
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
                 <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={formData.discount_percentage}
-                  onChange={(e) => handleInputChange('discount_percentage', parseFloat(e.target.value) || 0)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="0"
+                  type="text"
+                  id="local_festa"
+                  name="local_festa"
+                  value={formData.local_festa}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.local_festa ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  placeholder={
+                    isCasamento 
+                      ? "Local da recepção/festa de casamento"
+                      : isAniversario 
+                      ? "Local da festa de aniversário"
+                      : isEnsaio
+                      ? "Local onde será realizado o ensaio fotográfico"
+                      : "Local onde será realizado o evento"
+                  }
+                  required
                 />
+                {errors.local_festa && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.local_festa}</p>
+                )}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Dia Preferido para Pagamento
-                </label>
-                <select
-                  value={formData.preferred_payment_day}
-                  onChange={(e) => handleInputChange('preferred_payment_day', parseInt(e.target.value))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
-                    <option key={day} value={day}>
-                      Dia {day}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {formData.final_price > 0 && (
-                <div className="md:col-span-2 bg-blue-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Preço do Pacote:</span>
-                    <span className="text-sm text-gray-600">
-                      R$ {(formData.package_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  {formData.discount_percentage > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">Desconto ({formData.discount_percentage}%):</span>
-                      <span className="text-sm text-red-600">
-                        -R$ {(((formData.final_price / (1 - formData.discount_percentage / 100)) - formData.final_price) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center border-t pt-2 mt-2">
-                    <span className="text-lg font-bold text-gray-900">Valor Final:</span>
-                    <span className="text-lg font-bold text-blue-600">
-                      R$ {formData.final_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
+          )}
 
-          {/* Observações */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <FileText className="h-5 w-5 mr-2" />
-              Observações
-            </h2>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Observações Personalizadas
-              </label>
-              <textarea
-                value={formData.custom_notes}
-                onChange={(e) => handleInputChange('custom_notes', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                rows={4}
-                placeholder="Observações adicionais que aparecerão no contrato..."
-              />
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 px-8 rounded-lg transition-colors flex items-center space-x-2"
-            >
-              {saving ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  <Save className="h-5 w-5" />
-                  <span>Salvar Contrato</span>
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
+          >
+            {isSubmitting ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            ) : (
+              <>
+                <Send className="h-5 w-5" />
+                <span>Salvar Dados do Contrato</span>
+              </>
+            )}
+          </button>
         </form>
       </div>
     </div>
