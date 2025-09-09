@@ -7,7 +7,6 @@ import ContractList from './components/ContractList';
 import FinancialDashboard from './components/FinancialDashboard';
 import SystemSettings from './components/SystemSettings';
 import UserProfile from './components/UserProfile';
-import ProjectChecker from './components/ProjectChecker';
 import { AlertCircle, Database, Settings } from 'lucide-react';
 
 function App() {
@@ -15,7 +14,6 @@ function App() {
   const [supabaseConfigured, setSupabaseConfigured] = useState(false);
   const [checkingConfig, setCheckingConfig] = useState(true);
   const [currentView, setCurrentView] = useState('dashboard');
-  const [showProjectChecker, setShowProjectChecker] = useState(false);
 
   // Check Supabase configuration
   useEffect(() => {
@@ -37,12 +35,6 @@ function App() {
   // Check URL parameters for client mode
   const urlParams = new URLSearchParams(window.location.search);
   const isClientMode = urlParams.get('client') === 'true';
-  const showChecker = urlParams.get('check') === 'true';
-
-  // Show project checker if requested
-  if (showChecker) {
-    return <ProjectChecker />;
-  }
 
   // Loading state
   if (checkingConfig || loading) {

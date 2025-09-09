@@ -20,6 +20,8 @@ interface ContractData {
   tipo_evento: string;
   data_evento: string;
   horario_evento: string;
+  data_evento: string;
+  horario_evento: string;
   local_pre_wedding: string;
   local_making_of: string;
   local_cerimonia: string;
@@ -398,50 +400,80 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
     setSubmitStatus('idle');
 
     try {
-      let photographerId: string;
-
+      let photographerId;
+      
+      // Check if we're in client mode
       if (isClientMode) {
-        // Client mode - get photographer_id from URL
-        const photographerIdParam = urlParams.get('photographer_id');
+        // Em modo cliente, usar o primeiro fotógrafo disponível ou criar um padrão
+        console.log('Modo cliente detectado, buscando fotógrafo...');
         
-        if (photographerIdParam) {
-          photographerId = photographerIdParam;
-          // Create a default photographer without user dependency
+        const { data: photographerData, error: photographerError } = await supabase
+          .from('photographers')
+          .select('id')
+          .limit(1)
+          .single();
+
+        if (photographerError || !photographerData) {
+          // Se não há fotógrafo, criar um padrão para modo cliente
           console.log('Criando fotógrafo padrão para modo cliente...');
-          const { data: newPhotographer, error: createError } = await supabase
+          
+          // Primeiro criar um usuário padrão se não existir
+          const { data: defaultUser, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', 'cliente@sistema.com')
+            .single();
+
+          let defaultUserId;
+          if (userError || !defaultUser) {
+            // Criar usuário padrão
+            const { data: newUser, error: createUserError } = await supabase
+              .from('users')
+              .insert([{
+                email: 'cliente@sistema.com',
+                name: 'Sistema Cliente',
+                role: 'photographer'
+              }])
+              .select()
+              .single();
+
+            if (createUserError) {
+              console.error('Erro ao criar usuário padrão:', createUserError);
+              throw new Error('Erro interno do sistema. Tente novamente.');
+            }
+            defaultUserId = newUser.id;
+          } else {
+            defaultUserId = defaultUser.id;
+          }
+
+          // Criar fotógrafo padrão
+          const { data: newPhotographer, error: createPhotographerError } = await supabase
             .from('photographers')
             .insert([{
-              business_name: 'Sistema Padrão',
-              phone: '00000000000',
+              user_id: defaultUserId,
+              business_name: 'Sistema de Contratos',
+              phone: '(00) 00000-0000',
               settings: {}
             }])
             .select()
             .single();
 
-          if (createError) {
-            console.error('Erro ao criar fotógrafo padrão:', createError);
-            throw new Error('Erro ao criar fotógrafo padrão');
+          if (createPhotographerError) {
+            console.error('Erro ao criar fotógrafo padrão:', createPhotographerError);
+            throw new Error('Erro interno do sistema. Tente novamente.');
           }
           
           photographerId = newPhotographer.id;
+        } else {
+          photographerId = photographerData.id;
         }
       } else {
-        // Normal mode - get photographer_id from authenticated user
-        if (!user) {
-          throw new Error('Usuário não autenticado');
-        }
-
-        const { data: photographers, error: photographerCheckError } = await supabase
-          .from('photographers')
-          .select('id')
-          .select('id, business_name, phone')
-          .single();
-        if (photographerCheckError) {
-          console.error('Erro ao verificar fotógrafos:', photographerCheckError);
-          throw new Error('Erro ao verificar fotógrafos do sistema');
-        }
+        // Get photographer_id from URL parameter
+        photographerId = await getPhotographerId();
         
-        photographerId = photographerData.id;
+        if (!photographerId) {
+          throw new Error('ID do fotógrafo não encontrado no link. Verifique se o link está completo.');
+        }
       }
 
       // Debug: Log dos valores antes de salvar
@@ -451,6 +483,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
         final_price: formData.final_price,
         payment_method_id: formData.payment_method_id
       });
+
       // Validar campos obrigatórios antes de salvar
       if (!formData.local_festa.trim()) {
         throw new Error('Local do evento é obrigatório');

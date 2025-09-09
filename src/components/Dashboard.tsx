@@ -447,11 +447,24 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
 
     try {
-      // Fetch all contracts (removed photographer dependency)
+      // Get photographer profile for current user
+      const { data: photographerData, error: photographerError } = await supabase
+        .from('photographers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (photographerError) {
+        console.error('Erro ao buscar fotógrafo:', photographerError);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch contracts for this photographer
       const { data: contracts, error: contractsError } = await supabase
         .from('contratos')
         .select('*')
-        .order('created_at', { ascending: false });
+        .eq('photographer_id', photographerData.id);
 
       if (contractsError) {
         console.error('Erro ao buscar contratos:', contractsError);
