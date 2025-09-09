@@ -36,35 +36,55 @@ export default function UserProfile({ onBack }: UserProfileProps) {
 
   const fetchUserData = async () => {
     try {
-      setLoading(true);
-      
-      // Buscar dados do usuário
-      const { data: userResponse, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user?.id)
-        .single();
 
-      if (userError) throw userError;
+      try {
+        // Fetch user data from users table
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('name, email, business_name, phone')
+          .eq('id', user.id)
+          .single();
 
-      setUserData(userResponse);
-
-      // Preencher formulário
-      setFormData({
-        name: userResponse?.name || '',
-        business_name: userResponse?.business_name || '',
-        phone: userResponse?.phone || '',
-        email: userResponse?.email || ''
-      });
-
-    } catch (error) {
-      console.error('Erro ao carregar dados do usuário:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
+        if (userError) {
+          if (userError.code === 'PGRST116') {
+            // No user record exists, use auth user data
+            setFormData({
+              name: '',
+              email: user.email || '',
+              business_name: '',
+              phone: ''
+            });
+          } else if (userError.code === 'PGRST205') {
+            // Table doesn't exist, use auth user data
+            console.info('Users table not found, using auth data only');
+            setFormData({
+              name: '',
+              email: user.email || '',
+              business_name: '',
+              phone: ''
+            });
+          } else {
+            console.error('Error fetching user data:', userError);
+            return;
+          }
+        } else if (userData) {
+          setFormData({
+            name: userData.name || '',
+            email: userData.email || user.email || '',
+            business_name: userData.business_name || '',
+            phone: userData.phone || ''
+          });
+        }
+      } catch (error) {
+        console.error('Error in fetchUserData:', error);
+        // Fallback to auth user data
+        setFormData({
+          name: '',
+          email: user.email || '',
+          business_name: '',
+          phone: ''
+        });
+      }
     setFormData(prev => ({
       ...prev,
       [field]: value
