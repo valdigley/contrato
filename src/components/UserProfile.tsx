@@ -59,24 +59,9 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         .from('photographers')
         .select('business_name, phone')
         .eq('user_id', user?.id)
-        .limit(1);
+        .maybeSingle();
 
-      let photographerData = null;
-      if (!photographerError && photographerResponse && photographerResponse.length > 0) {
-        photographerData = photographerResponse[0];
-      }
-
-      // Fetch photographer data (if exists)
-      const { data: photographerResponse2, error: photographerError2 } = await supabase
-        .from('photographers')
-        .select('business_name, phone')
-        .eq('user_id', user?.id)
-        .limit(1);
-
-      let photographerData2 = null;
-      if (!photographerError2 && photographerResponse2 && photographerResponse2.length > 0) {
-        photographerData2 = photographerResponse2[0];
-      }
+      const photographerData = photographerError ? null : photographerResponse;
 
       // Fill form with user data
       setFormData({
