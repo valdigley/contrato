@@ -103,31 +103,10 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
 
   const fetchContracts = async () => {
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      // Get photographer profile for current user
-      const { data: photographerData, error: photographerError } = await supabase
-        .from('photographers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (photographerError) {
-        setContracts([]);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch contracts for this photographer
+      // Fetch all contracts
       const contractsResponse = await supabase
         .from('contratos')
         .select('*')
-        .eq('photographer_id', photographerData.id)
         .order('created_at', { ascending: false });
       
       if (contractsResponse.error) {
