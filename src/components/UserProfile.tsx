@@ -109,26 +109,6 @@ export default function UserProfile({ onBack }: UserProfileProps) {
       setLoading(false);
     }
   };
-        setPhotographerData(null);
-      } else {
-        setPhotographerData(photographerResponse || null);
-      }
-
-
-      // Preencher formulário
-      setFormData({
-        name: userResponse?.name || user?.user_metadata?.name || '',
-        business_name: photographerResponse?.business_name || '',
-        phone: photographerResponse?.phone || '',
-        email: userResponse?.email || user?.email || ''
-      });
-
-    } catch (error) {
-      console.error('Erro ao carregar dados do usuário:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
