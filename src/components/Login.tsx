@@ -143,6 +143,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     fetchUserProfile();
     loadSystemData();
   }, [user]);
+  
   const fetchBusinessInfo = async () => {
     try {
       const { data, error } = await supabase
@@ -161,37 +162,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
     }
   };
 
-  fetchBusinessInfo();
-
-      if (error) {
-
-          let photographerError = null;
-          
-          if (existingPhotographer) {
-    } catch (error) {
-      console.error('Error loading business info:', error);
-    }
-
-                business_name: businessName,
-                phone: phone,
-                settings: {}
-              })
-              .eq('user_id', data.user.id);
-            photographerError = error;
-          } else {
-            // Criar novo perfil
-            const { error } = await supabase
-              .from('photographers')
-              .insert([
-                {
-                  user_id: data.user.id,
-                  business_name: businessName,
-                  phone: phone,
-                  settings: {}
-                }
-              ]);
-            photographerError = error;
-          }
   const fetchUserProfile = async () => {
     if (!user) return;
 
@@ -499,17 +469,17 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const fetchContracts = async () => {
     if (!user) return;
-      // Check if Supabase is properly configured
-      const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey || !supabaseUrl.includes('supabase.co') || supabaseKey.length < 20) {
-        console.log('Supabase não configurado corretamente');
-        setContracts([]);
-        setLoading(false);
-        return;
-      }
-
+    
+    // Check if Supabase is properly configured
+    const supabaseUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = localStorage.getItem('supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey || !supabaseUrl.includes('supabase.co') || supabaseKey.length < 20) {
+      console.log('Supabase não configurado corretamente');
+      setContracts([]);
+      setLoading(false);
+      return;
+    }
 
     try {
       // Fetch all contracts (no photographer filtering needed)
