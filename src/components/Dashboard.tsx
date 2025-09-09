@@ -447,32 +447,19 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
 
 
     try {
-      // Get photographer profile for current user
-      const { data: photographerData, error: photographerError } = await supabase
-        .from('photographers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (photographerError) {
-        console.error('Erro ao buscar fotógrafo:', photographerError);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch contracts for this photographer
-      const { data: contracts, error: contractsError } = await supabase
+      // Fetch all contracts (no photographer filtering needed)
+      const contractsResponse = await supabase
         .from('contratos')
         .select('*')
-        .eq('photographer_id', photographerData.id);
-
-      if (contractsError) {
-        console.error('Erro ao buscar contratos:', contractsError);
+        .order('created_at', { ascending: false });
+      
+      if (contractsResponse.error) {
+        console.error('Erro ao buscar contratos:', contractsResponse.error);
         setLoading(false);
         return;
       }
 
-      setContracts(contracts?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
+      setContracts(contractsResponse.data?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []);
 
     } catch (error) {
       console.error('Erro ao buscar contratos:', error);

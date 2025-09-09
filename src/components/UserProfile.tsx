@@ -12,22 +12,14 @@ interface UserData {
   email: string;
   name: string;
   role: string;
-  created_at: string;
-}
-
-interface PhotographerData {
-  id: string;
-  user_id: string;
-  business_name: string;
-  phone: string;
-  settings: any;
+  business_name?: string;
+  phone?: string;
   created_at: string;
 }
 
 export default function UserProfile({ onBack }: UserProfileProps) {
   const { user } = useAuth();
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [photographerData, setPhotographerData] = useState<PhotographerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -48,39 +40,30 @@ export default function UserProfile({ onBack }: UserProfileProps) {
     try {
       setLoading(true);
       
-      // Buscar dados do usuário
+      // Fetch user data
       const { data: userResponse, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', user?.id)
         .single();
 
-      if (userError) throw userError;
-
-      // Buscar dados do fotógrafo
-      const { data: photographerResponse, error: photographerError } = await supabase
-        .from('photographers')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (photographerError && photographerError.code !== 'PGRST116') {
-        console.error('Erro ao buscar dados do fotógrafo:', photographerError);
+      if (userError) {
+        console.error('Error fetching user data:', userError);
+        setUserData(null);
+      } else {
+        setUserData(userResponse);
       }
 
-      setUserData(userResponse);
-      setPhotographerData(photographerResponse || null);
-
-      // Preencher formulário
+      // Fill form with user data
       setFormData({
         name: userResponse?.name || '',
-        business_name: photographerResponse?.business_name || '',
-        phone: photographerResponse?.phone || '',
+        business_name: userResponse?.business_name || '',
+        phone: userResponse?.phone || '',
         email: userResponse?.email || ''
       });
 
     } catch (error) {
-      console.error('Erro ao carregar dados do usuário:', error);
+      console.error('Error loading user data:', error);
     } finally {
       setLoading(false);
     }
@@ -101,47 +84,23 @@ export default function UserProfile({ onBack }: UserProfileProps) {
     setSaveStatus('idle');
 
     try {
-      // Atualizar dados do usuário
+      // Update user data
       const { error: userError } = await supabase
         .from('users')
         .update({
-          name: formData.name
+          name: formData.name,
+          business_name: formData.business_name,
+          phone: formData.phone
         })
         .eq('id', user.id);
 
       if (userError) throw userError;
 
-      // Atualizar ou criar dados do fotógrafo
-      if (photographerData) {
-        // Atualizar
-        const { error: photographerError } = await supabase
-          .from('photographers')
-          .update({
-            business_name: formData.business_name,
-            phone: formData.phone
-          })
-          .eq('user_id', user.id);
-
-        if (photographerError) throw photographerError;
-      } else {
-        // Criar
-        const { error: photographerError } = await supabase
-          .from('photographers')
-          .insert([{
-            user_id: user.id,
-            business_name: formData.business_name,
-            phone: formData.phone,
-            settings: {}
-          }]);
-
-        if (photographerError) throw photographerError;
-      }
-
       setSaveStatus('success');
-      await fetchUserData(); // Recarregar dados
+      await fetchUserData(); // Reload data
 
     } catch (error) {
-      console.error('Erro ao salvar perfil:', error);
+      console.error('Error saving profile:', error);
       setSaveStatus('error');
     } finally {
       setSaving(false);
