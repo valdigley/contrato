@@ -48,52 +48,45 @@ export default function UserProfile({ onBack }: UserProfileProps) {
     try {
       setLoading(true);
       
-      // Try to fetch user data, handle missing table gracefully
-      const { data: userResponse, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user?.id)
-        .single();
-
-      if (userError) {
-        if (userError.code === 'PGRST205') {
-          console.info('Tabela users não encontrada. Sistema funcionando sem dados.');
-          setUserData(null);
-        } else {
-          throw userError;
+      // Helper function to safely query tables
+      const safeQuery = async (tableName: string, query: any) => {
+        try {
+          const result = await query;
+          if (result.error) {
+            if (result.error.code === 'PGRST205') {
+              console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
+            } else if (result.error.code === 'PGRST116') {
+              console.info(`Nenhum registro encontrado em ${tableName}`);
+            } else {
+              console.info(`Sistema funcionando sem dados de ${tableName}:`, result.error.message);
+            }
+            return { data: null, error: null };
+          }
+          return result;
+        } catch (error) {
+          console.info(`Sistema funcionando sem dados de ${tableName}:`, error);
+          return { data: null, error: null };
         }
-      } else {
-        setUserData(userResponse);
-      }
+      };
 
-      // Try to fetch photographer data, handle missing table gracefully
-      const { data: photographerResponse, error: photographerError } = await supabase
-        .from('photographers')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
+      // Fetch user data safely
+      const userResult = await safeQuery('users',
+        supabase.from('users').select('*').eq('id', user?.id).single()
+      );
+      setUserData(userResult.data);
 
-      if (photographerError) {
-        if (photographerError.code === 'PGRST205') {
-          console.info('Tabela photographers não encontrada. Sistema funcionando sem dados.');
-          setPhotographerData(null);
-        } else if (photographerError.code === 'PGRST116') {
-          // No rows returned - user doesn't have photographer profile yet
-          setPhotographerData(null);
-        } else {
-          console.info('Sistema funcionando sem dados de fotógrafo:', photographerError.message);
-          setPhotographerData(null);
-        }
-      } else {
-        setPhotographerData(photographerResponse || null);
-      }
+      // Fetch photographer data safely
+      const photographerResult = await safeQuery('photographers',
+        supabase.from('photographers').select('*').eq('user_id', user?.id).single()
+      );
+      setPhotographerData(photographerResult.data);
 
       // Fill form with available data
       setFormData({
-        name: userResponse?.name || user?.user_metadata?.name || '',
-        business_name: photographerResponse?.business_name || '',
-        phone: photographerResponse?.phone || '',
-        email: userResponse?.email || user?.email || ''
+        name: userResult.data?.name || user?.user_metadata?.name || '',
+        business_name: photographerResult.data?.business_name || '',
+        phone: photographerResult.data?.phone || '',
+        email: userResult.data?.email || user?.email || ''
       });
 
     } catch (error: any) {

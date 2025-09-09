@@ -68,61 +68,46 @@ export default function Login({ onLogin }: LoginProps) {
           // Inserir dados na tabela users e photographers
           setDebugInfo('Inserindo dados na tabela users...');
           
-          try {
-            const { data: userData, error: userError } = await supabase
-              .from('users')
-              .insert([
-                {
-                  id: data.user.id,
-                  email: data.user.email,
-                  name: name,
-                  role: 'photographer'
+          // Helper function to safely insert data
+          const safeInsert = async (tableName: string, data: any, debugMessage: string) => {
+            try {
+              const result = await supabase.from(tableName).insert([data]).select().single();
+              if (result.error) {
+                if (result.error.code === 'PGRST205') {
+                  console.info(`Tabela ${tableName} não encontrada - continuando sem dados`);
+                  setDebugInfo(`Tabela ${tableName} não encontrada, continuando...`);
+                } else {
+                  console.info(`Continuando sem dados de ${tableName}:`, result.error.message);
+                  setDebugInfo(`Continuando sem dados de ${tableName}...`);
                 }
-              ])
-              .select()
-              .single();
-
-            if (userError) {
-              if (userError.code === 'PGRST205') {
-                console.info('Tabela users não encontrada, continuando sem perfil de usuário');
-                setDebugInfo('Tabela users não encontrada, continuando...');
               } else {
-                console.info('Continuando sem perfil de usuário:', userError.message);
-                setDebugInfo('Continuando sem perfil de usuário...');
+                setDebugInfo(debugMessage);
               }
+              return result;
+            } catch (error) {
+              console.info(`Continuando sem dados de ${tableName}:`, error);
+              setDebugInfo(`Continuando sem dados de ${tableName}...`);
+              return { data: null, error: null };
             }
-          } catch (error) {
-            console.info('Continuando sem perfil de usuário:', error);
-            setDebugInfo('Continuando sem perfil de usuário...');
-          }
+          };
+
+          // Insert user data safely
+          await safeInsert('users', {
+            id: data.user.id,
+            email: data.user.email,
+            name: name,
+            role: 'photographer'
+          }, 'Perfil de usuário criado com sucesso!');
 
           setDebugInfo('Usuário criado, criando perfil de fotógrafo...');
           
-          try {
-            const { error: photographerError } = await supabase
-              .from('photographers')
-              .insert([
-                {
-                  user_id: data.user.id,
-                  business_name: businessName,
-                  phone: phone,
-                  settings: {}
-                }
-              ]);
-
-            if (photographerError) {
-              if (photographerError.code === 'PGRST205') {
-                console.info('Tabela photographers não encontrada, continuando sem perfil de fotógrafo');
-                setDebugInfo('Tabela photographers não encontrada, continuando...');
-              } else {
-                console.info('Continuando sem perfil de fotógrafo:', photographerError.message);
-                setDebugInfo('Continuando sem perfil de fotógrafo...');
-              }
-            }
-          } catch (error) {
-            console.info('Continuando sem perfil de fotógrafo:', error);
-            setDebugInfo('Continuando sem perfil de fotógrafo...');
-          }
+          // Insert photographer data safely
+          await safeInsert('photographers', {
+            user_id: data.user.id,
+            business_name: businessName,
+            phone: phone,
+            settings: {}
+          }, 'Perfil de fotógrafo criado com sucesso!');
 
           setDebugInfo('Cadastro concluído com sucesso!');
           setSuccess('Conta criada com sucesso! Você pode fazer login agora.');

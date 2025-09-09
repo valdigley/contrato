@@ -103,45 +103,41 @@ export default function ContractList({ onNewContract, onBackToDashboard }: Contr
 
   const fetchContracts = async () => {
     try {
-      // Try to fetch contracts, handle missing table gracefully
-      const { data: contracts, error } = await supabase
-        .from('contratos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        if (error.code === 'PGRST205') {
-          // Table doesn't exist - this is expected in a new project
-          console.info('Tabela contratos não encontrada. Sistema funcionando sem dados.');
-          setContracts([]);
-          setLoading(false);
-          return;
+      // Helper function to safely query tables
+      const safeQuery = async (tableName: string, query: any) => {
+        try {
+          const result = await query;
+          if (result.error) {
+            if (result.error.code === 'PGRST205') {
+              console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
+            } else {
+              console.info(`Sistema funcionando sem dados de ${tableName}:`, result.error.message);
+            }
+            return { data: [], error: null };
+          }
+          return result;
+        } catch (error) {
+          console.info(`Sistema funcionando sem dados de ${tableName}:`, error);
+          return { data: [], error: null };
         }
-        throw error;
-      }
+      };
 
-      setContracts(contracts || []);
+      // Fetch contracts safely
+      const contractsResult = await safeQuery('contratos', 
+        supabase.from('contratos').select('*').order('created_at', { ascending: false })
+      );
+      setContracts(contractsResult.data || []);
 
-      // Load templates and packages separately to not block the listing
-      const [templatesResponse, packagesResponse] = await Promise.all([
-        supabase.from('contract_templates').select('*').eq('is_active', true).limit(1),
-        supabase.from('packages').select('*').eq('is_active', true).limit(1)
-      ]);
+      // Fetch templates and packages safely
+      const templatesResult = await safeQuery('contract_templates',
+        supabase.from('contract_templates').select('*').eq('is_active', true)
+      );
+      setTemplates(templatesResult.data || []);
 
-      // Only load full data if tables exist
-      if (!templatesResponse.error || templatesResponse.error.code !== 'PGRST205') {
-        const fullTemplatesResponse = await supabase.from('contract_templates').select('*').eq('is_active', true);
-        if (!fullTemplatesResponse.error) setTemplates(fullTemplatesResponse.data || []);
-      } else {
-      }
-
-      if (!packagesResponse.error || packagesResponse.error.code !== 'PGRST205') {
-        const fullPackagesResponse = await supabase.from('packages').select('*').eq('is_active', true);
-        if (!fullPackagesResponse.error) setPackages(fullPackagesResponse.data || []);
-      } else {
-        console.info('Tabela packages não encontrada.');
-        setPackages([]);
-      }
+      const packagesResult = await safeQuery('packages',
+        supabase.from('packages').select('*').eq('is_active', true)
+      );
+      setPackages(packagesResult.data || []);
 
     } catch (error: any) {
       console.info('Sistema funcionando sem dados de contratos:', error.message);
