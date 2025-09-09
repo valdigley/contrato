@@ -9,7 +9,7 @@ interface UserProfileProps {
 
 interface BusinessData {
   id: string;
-  name: string;
+  nome_estudio: string;
   address?: string;
   whatsapp?: string;
   email: string;
@@ -29,7 +29,7 @@ export default function UserProfile({ onBack }: UserProfileProps) {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [formData, setFormData] = useState({
-    name: '',
+    nome_estudio: '',
     address: '',
     whatsapp: '',
     email: '',
@@ -66,7 +66,7 @@ export default function UserProfile({ onBack }: UserProfileProps) {
 
       // Fill form with business data
       setFormData({
-        name: businessResponse?.name || '',
+        nome_estudio: businessResponse?.nome_estudio || '',
         address: businessResponse?.address || '',
         whatsapp: businessResponse?.whatsapp || '',
         email: businessResponse?.email || '',
@@ -104,7 +104,7 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         const { error: updateError } = await supabase
           .from('business_info')
           .update({
-            name: formData.name,
+            nome_estudio: formData.nome_estudio,
             address: formData.address,
             whatsapp: formData.whatsapp,
             email: formData.email,
@@ -122,7 +122,7 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         const { error: insertError } = await supabase
           .from('business_info')
           .insert({
-            name: formData.name,
+            nome_estudio: formData.nome_estudio,
             address: formData.address,
             whatsapp: formData.whatsapp,
             email: formData.email,
@@ -209,18 +209,18 @@ export default function UserProfile({ onBack }: UserProfileProps) {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nome da Empresa
+                  <label htmlFor="nome_estudio" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome do Estúdio
                   </label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                     <input
                       type="text"
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      id="nome_estudio"
+                      value={formData.nome_estudio}
+                      onChange={(e) => handleInputChange('nome_estudio', e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Digite o nome da empresa"
+                      placeholder="Digite o nome do estúdio"
                     />
                   </div>
                 </div>
