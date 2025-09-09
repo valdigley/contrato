@@ -13,8 +13,6 @@ export default function Login({ onLogin }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [businessName, setBusinessName] = useState('');
-  const [phone, setPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -86,25 +84,6 @@ export default function Login({ onLogin }: LoginProps) {
             throw userError;
           }
 
-          setDebugInfo('Usuário criado, criando perfil de fotógrafo...');
-          // Criar perfil de fotógrafo
-          const { error: photographerError } = await supabase
-            .from('photographers')
-            .insert([
-              {
-                user_id: data.user.id,
-                business_name: businessName,
-                phone: phone,
-                settings: {}
-              }
-            ]);
-
-          if (photographerError) {
-            console.error('Erro ao criar perfil do fotógrafo:', photographerError);
-            setDebugInfo(`Erro na tabela photographers: ${photographerError.message}`);
-            // Não fazer throw aqui para não bloquear o cadastro
-          }
-
           setDebugInfo('Cadastro concluído com sucesso!');
           setSuccess('Conta criada com sucesso! Você pode fazer login agora.');
           setIsLogin(true);
@@ -113,8 +92,6 @@ export default function Login({ onLogin }: LoginProps) {
             setEmail('');
             setPassword('');
             setName('');
-            setBusinessName('');
-            setPhone('');
           }, 2000);
         }
       }
@@ -207,46 +184,6 @@ export default function Login({ onLogin }: LoginProps) {
             </div>
           )}
 
-          {!isLogin && (
-            <div>
-              <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nome do Negócio/Empresa
-              </label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  id="businessName"
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Ex: João Silva Fotografia"
-                  required={!isLogin}
-                />
-              </div>
-            </div>
-          )}
-
-          {!isLogin && (
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Telefone/WhatsApp
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="(11) 99999-9999"
-                  required={!isLogin}
-                />
-              </div>
-            </div>
-          )}
-
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               E-mail
@@ -321,8 +258,6 @@ export default function Login({ onLogin }: LoginProps) {
               setEmail('');
               setPassword('');
               setName('');
-              setBusinessName('');
-              setPhone('');
             }}
             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
           >

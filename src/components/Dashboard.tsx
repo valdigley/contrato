@@ -26,11 +26,6 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 
-interface DashboardProps {
-  user: any;
-  onNavigate: (view: string) => void;
-}
-
 interface Contract {
   id: string;
   nome_completo: string;
@@ -59,6 +54,11 @@ interface Contract {
   discount_percentage?: number;
   adjusted_price?: number;
   custom_notes?: string;
+}
+
+interface DashboardProps {
+  user: any;
+  onNavigate: (view: string) => void;
 }
 
 export default function Dashboard({ user, onNavigate }: DashboardProps) {

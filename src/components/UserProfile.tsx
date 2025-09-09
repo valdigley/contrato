@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Building2, Phone, Mail, Save, ArrowLeft, CheckCircle, AlertCircle, Settings, Camera } from 'lucide-react';
+import { User, Building2, Phone, Mail, Save, ArrowLeft, CheckCircle, AlertCircle, Settings } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -15,26 +15,14 @@ interface UserData {
   created_at: string;
 }
 
-interface PhotographerData {
-  id: string;
-  user_id: string;
-  business_name: string;
-  phone: string;
-  settings: any;
-  created_at: string;
-}
-
 export default function UserProfile({ onBack }: UserProfileProps) {
   const { user } = useAuth();
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [photographerData, setPhotographerData] = useState<PhotographerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [formData, setFormData] = useState({
     name: '',
-    business_name: '',
-    phone: '',
     email: ''
   });
 
@@ -57,25 +45,11 @@ export default function UserProfile({ onBack }: UserProfileProps) {
 
       if (userError) throw userError;
 
-      // Buscar dados do fotógrafo
-      const { data: photographerResponse, error: photographerError } = await supabase
-        .from('photographers')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (photographerError && photographerError.code !== 'PGRST116') {
-        console.error('Erro ao buscar dados do fotógrafo:', photographerError);
-      }
-
       setUserData(userResponse);
-      setPhotographerData(photographerResponse || null);
 
       // Preencher formulário
       setFormData({
         name: userResponse?.name || '',
-        business_name: photographerResponse?.business_name || '',
-        phone: photographerResponse?.phone || '',
         email: userResponse?.email || ''
       });
 
@@ -110,32 +84,6 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         .eq('id', user.id);
 
       if (userError) throw userError;
-
-      // Atualizar ou criar dados do fotógrafo
-      if (photographerData) {
-        // Atualizar
-        const { error: photographerError } = await supabase
-          .from('photographers')
-          .update({
-            business_name: formData.business_name,
-            phone: formData.phone
-          })
-          .eq('user_id', user.id);
-
-        if (photographerError) throw photographerError;
-      } else {
-        // Criar
-        const { error: photographerError } = await supabase
-          .from('photographers')
-          .insert([{
-            user_id: user.id,
-            business_name: formData.business_name,
-            phone: formData.phone,
-            settings: {}
-          }]);
-
-        if (photographerError) throw photographerError;
-      }
 
       setSaveStatus('success');
       await fetchUserData(); // Recarregar dados
@@ -199,125 +147,64 @@ export default function UserProfile({ onBack }: UserProfileProps) {
               <span className="text-red-700">Erro ao salvar perfil. Tente novamente.</span>
             </div>
           )}
-
+          
           <div className="space-y-6">
-            {/* Dados Pessoais */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <User className="h-5 w-5 mr-2 text-blue-600" />
-                Dados Pessoais
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nome Completo
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                      type="text"
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Digite seu nome completo"
-                    />
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome Completo
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <input
+                    type="text"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Digite seu nome completo"
+                  />
                 </div>
+              </div>
 
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    E-mail
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                      type="email"
-                      id="email"
-                      value={formData.email}
-                      disabled
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-                      placeholder="E-mail não pode ser alterado"
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">
-                    O e-mail não pode ser alterado após o cadastro
-                  </p>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  E-mail
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <input
+                    type="email"
+                    id="email"
+                    value={formData.email}
+                    disabled
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                    placeholder="E-mail não pode ser alterado"
+                  />
                 </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  O e-mail não pode ser alterado após o cadastro
+                </p>
               </div>
             </div>
 
-            {/* Dados Profissionais */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Camera className="h-5 w-5 mr-2 text-green-600" />
-                Dados Profissionais
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="business_name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nome do Negócio/Empresa
-                  </label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                      type="text"
-                      id="business_name"
-                      value={formData.business_name}
-                      onChange={(e) => handleInputChange('business_name', e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Ex: João Silva Fotografia"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                    Telefone/WhatsApp
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                      type="text"
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="(11) 99999-9999"
-                    />
-                  </div>
-                </div>
+            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-700">ID da Conta:</span>
+                <span className="text-sm text-gray-600 font-mono">{userData?.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-700">Tipo de Conta:</span>
+                <span className="text-sm text-gray-600 capitalize">{userData?.role}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-700">Membro desde:</span>
+                <span className="text-sm text-gray-600">
+                  {userData?.created_at ? new Date(userData.created_at).toLocaleDateString('pt-BR') : '-'}
+                </span>
               </div>
             </div>
 
-            {/* Informações da Conta */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Settings className="h-5 w-5 mr-2 text-purple-600" />
-                Informações da Conta
-              </h3>
-              
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-700">ID da Conta:</span>
-                  <span className="text-sm text-gray-600 font-mono">{userData?.id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-700">Tipo de Conta:</span>
-                  <span className="text-sm text-gray-600 capitalize">{userData?.role}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-700">Membro desde:</span>
-                  <span className="text-sm text-gray-600">
-                    {userData?.created_at ? new Date(userData.created_at).toLocaleDateString('pt-BR') : '-'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Save Button */}
             <div className="flex justify-end">
               <button
                 onClick={saveProfile}

@@ -39,7 +39,6 @@ interface ContractData {
 export default function ContractForm({ onBackToList }: ContractFormProps) {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [availablePackages, setAvailablePackages] = useState<Package[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -84,29 +83,7 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
   // Get photographer ID from current user if not in URL
   const getPhotographerId = async () => {
     const photographerIdParam = urlParams.get('photographer_id');
-    
-    if (photographerIdParam) {
-      return photographerIdParam;
-    }
-    
-    // If no photographer_id in URL, try to get from current user
-    if (user) {
-      const { data: photographerData, error } = await supabase
-        .from('photographers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-        
-      if (!error && photographerData) {
-        return photographerData.id;
-      }
-    }
-    
-    return null;
-  };
-
-  React.useEffect(() => {
-    fetchEventTypesAndPackages();
+  }, []);
   }, []);
 
   const fetchEventTypesAndPackages = async () => {
@@ -366,17 +343,9 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
       // When event type changes, also update the tipo_evento field for backward compatibility
       const selectedEventType = eventTypes.find(et => et.id === value);
       if (selectedEventType) {
-        setFormData(prev => ({
-          ...prev,
-          [name]: formattedValue,
-          tipo_evento: selectedEventType.name
-        }));
-        return;
-      }
     }
 
     setFormData(prev => ({
-      ...prev,
       [name]: formattedValue
     }));
 
