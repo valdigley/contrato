@@ -68,8 +68,12 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   };
 
   const validateSupabaseUrl = (url: string): boolean => {
-    const urlPattern = /^https:\/\/[a-zA-Z0-9-]+\.supabase\.co$/;
-    return urlPattern.test(url);
+    try {
+      const urlObj = new URL(url);
+      return urlObj.protocol === 'https:' && urlObj.hostname.endsWith('.supabase.co');
+    } catch {
+      return false;
+    }
   };
 
   const validateSupabaseKey = (key: string): boolean => {
@@ -86,11 +90,6 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
     setTestStatus('testing');
 
     try {
-      // Block the old project URL
-      if (supabaseConfig.url.includes('iisejjtimakkwjrbmzvj')) {
-        throw new Error('Este projeto Supabase não pode mais ser utilizado. Configure um novo projeto.');
-      }
-
       const response = await fetch(`${supabaseConfig.url}/rest/v1/`, {
         method: 'GET',
         headers: {
@@ -137,11 +136,6 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
     setTestStatus('testing');
 
     try {
-      // Block the old project URL
-      if (supabaseConfig.url.includes('iisejjtimakkwjrbmzvj')) {
-        throw new Error('Este projeto Supabase não pode mais ser utilizado. Configure um novo projeto.');
-      }
-      
       // Primeiro testar a conexão
       const response = await fetch(`${supabaseConfig.url}/rest/v1/`, {
         method: 'GET',
