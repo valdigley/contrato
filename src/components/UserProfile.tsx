@@ -67,15 +67,15 @@ export default function UserProfile({ onBack }: UserProfileProps) {
       }
 
       // Fetch photographer data (if exists)
-      const { data: photographerResponse, error: photographerError } = await supabase
+      const { data: photographerResponse2, error: photographerError2 } = await supabase
         .from('photographers')
         .select('business_name, phone')
         .eq('user_id', user?.id)
         .limit(1);
 
-      let photographerData = null;
-      if (!photographerError && photographerResponse && photographerResponse.length > 0) {
-        photographerData = photographerResponse[0];
+      let photographerData2 = null;
+      if (!photographerError2 && photographerResponse2 && photographerResponse2.length > 0) {
+        photographerData2 = photographerResponse2[0];
       }
 
       // Fill form with user data
@@ -113,6 +113,8 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         .from('users')
         .update({
           name: formData.name
+        })
+        .eq('id', user.id);
 
       if (userError) throw userError;
 
@@ -150,15 +152,15 @@ export default function UserProfile({ onBack }: UserProfileProps) {
       }
 
       // Check if photographer profile exists
-      const { data: existingPhotographer } = await supabase
+      const { data: existingPhotographer2 } = await supabase
         .from('photographers')
         .select('user_id')
         .eq('user_id', user.id)
         .limit(1);
 
-      if (existingPhotographer && existingPhotographer.length > 0) {
+      if (existingPhotographer2 && existingPhotographer2.length > 0) {
         // Update existing photographer profile
-        const { error: photographerError } = await supabase
+        const { error: photographerError2 } = await supabase
           .from('photographers')
           .update({
             business_name: formData.business_name,
@@ -166,11 +168,11 @@ export default function UserProfile({ onBack }: UserProfileProps) {
           })
           .eq('user_id', user.id);
 
-        if (photographerError) throw photographerError;
+        if (photographerError2) throw photographerError2;
       } else {
         // Create new photographer profile if business_name or phone is provided
         if (formData.business_name || formData.phone) {
-          const { error: photographerError } = await supabase
+          const { error: photographerError2 } = await supabase
             .from('photographers')
             .insert({
               user_id: user.id,
@@ -178,7 +180,7 @@ export default function UserProfile({ onBack }: UserProfileProps) {
               phone: formData.phone || ''
             });
 
-          if (photographerError) throw photographerError;
+          if (photographerError2) throw photographerError2;
         }
       }
 
