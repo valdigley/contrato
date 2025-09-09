@@ -406,22 +406,21 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
         
         if (photographerIdParam) {
           photographerId = photographerIdParam;
-        } else {
-          // Se não tem photographer_id na URL, criar um fotógrafo padrão
-          const { data: newPhotographer, error: createPhotographerError } = await supabase
+          // Create a default photographer without user dependency
+          console.log('Criando fotógrafo padrão para modo cliente...');
+          const { data: newPhotographer, error: createError } = await supabase
             .from('photographers')
             .insert([{
-              name: 'Fotógrafo Padrão',
-              email: 'default@photographer.com',
+              business_name: 'Sistema Padrão',
               phone: '00000000000',
-              is_active: true
+              settings: {}
             }])
             .select()
             .single();
 
-          if (createPhotographerError) {
-            console.error('Erro ao criar fotógrafo padrão:', createPhotographerError);
-            throw new Error('Erro interno do sistema. Tente novamente.');
+          if (createError) {
+            console.error('Erro ao criar fotógrafo padrão:', createError);
+            throw new Error('Erro ao criar fotógrafo padrão');
           }
           
           photographerId = newPhotographer.id;
@@ -432,14 +431,14 @@ export default function ContractForm({ onBackToList }: ContractFormProps) {
           throw new Error('Usuário não autenticado');
         }
 
-        const { data: photographerData, error: photographerError } = await supabase
+        const { data: photographers, error: photographerCheckError } = await supabase
           .from('photographers')
           .select('id')
-          .eq('user_id', user.id)
+          .select('id, business_name, phone')
           .single();
-
-        if (photographerError) {
-          throw new Error('Perfil de fotógrafo não encontrado. Crie seu perfil primeiro.');
+        if (photographerCheckError) {
+          console.error('Erro ao verificar fotógrafos:', photographerCheckError);
+          throw new Error('Erro ao verificar fotógrafos do sistema');
         }
         
         photographerId = photographerData.id;
