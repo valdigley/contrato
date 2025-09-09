@@ -51,22 +51,28 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
 
   const loadSystemData = async () => {
     try {
-      // Helper function to safely query tables
+      // Enhanced helper function to safely query tables with better error handling
       const safeQuery = async (tableName: string, setter: (data: any[]) => void) => {
         try {
           const { data, error } = await supabase.from(tableName).select('*').order('name');
           if (error) {
-            if (error.code === 'PGRST205') {
-              console.info(`Tabela ${tableName} não encontrada - sistema funcionando sem dados`);
+            // Handle specific error codes silently
+            if (error.code === 'PGRST205' || error.code === 'PGRST116') {
+              console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
             } else {
-              console.info(`Sistema funcionando sem dados de ${tableName}:`, error.message);
+              console.info(`Sistema funcionando com dados limitados de ${tableName}:`, error.message);
             }
             setter([]);
-          } else {
-            setter(data || []);
+            return;
           }
-        } catch (error) {
-          console.info(`Sistema funcionando sem dados de ${tableName}:`, error);
+          setter(data || []);
+        } catch (error: any) {
+          // Catch any network or parsing errors
+          if (error?.message?.includes('PGRST205') || error?.message?.includes('table')) {
+            console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
+          } else {
+            console.info(`Sistema funcionando com dados limitados de ${tableName}:`, error);
+          }
           setter([]);
         }
       };
