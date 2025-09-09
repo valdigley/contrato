@@ -261,6 +261,93 @@ export default function SystemSettings({ onBack }: SystemSettingsProps) {
   };
 
   const handleDelete = async (type: string, id: string) => {
+    // Check for dependencies before deletion
+    if (type === 'packages') {
+      try {
+        const { data: dependentContracts, error: checkError } = await supabase
+          .from('contratos')
+          .select('id, nome_completo')
+          .eq('package_id', id);
+
+        if (checkError) {
+          console.error('Erro ao verificar dependências:', checkError);
+          setSaveStatus('error');
+          setTimeout(() => setSaveStatus('idle'), 3000);
+          return;
+        }
+
+        if (dependentContracts && dependentContracts.length > 0) {
+          alert(`Não é possível excluir este pacote pois existem ${dependentContracts.length} contrato(s) vinculado(s) a ele. Primeiro remova ou altere o pacote destes contratos.`);
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar dependências:', error);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+        return;
+      }
+    }
+
+    // Check for dependencies for event types
+    if (type === 'event_types') {
+      try {
+        const { data: dependentPackages, error: packageError } = await supabase
+          .from('packages')
+          .select('id, name')
+          .eq('event_type_id', id);
+
+        const { data: dependentContracts, error: contractError } = await supabase
+          .from('contratos')
+          .select('id, nome_completo')
+          .eq('event_type_id', id);
+
+        if (packageError || contractError) {
+          console.error('Erro ao verificar dependências:', packageError || contractError);
+          setSaveStatus('error');
+          setTimeout(() => setSaveStatus('idle'), 3000);
+          return;
+        }
+
+        const totalDependencies = (dependentPackages?.length || 0) + (dependentContracts?.length || 0);
+        if (totalDependencies > 0) {
+          alert(`Não é possível excluir este tipo de evento pois existem ${dependentPackages?.length || 0} pacote(s) e ${dependentContracts?.length || 0} contrato(s) vinculado(s) a ele. Primeiro remova ou altere estes itens.`);
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar dependências:', error);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+        return;
+      }
+    }
+
+    // Check for dependencies for payment methods
+    if (type === 'payment_methods') {
+      try {
+        const { data: dependentContracts, error: checkError } = await supabase
+          .from('contratos')
+          .select('id, nome_completo')
+          .eq('payment_method_id', id);
+
+        if (checkError) {
+          console.error('Erro ao verificar dependências:', checkError);
+          setSaveStatus('error');
+          setTimeout(() => setSaveStatus('idle'), 3000);
+          return;
+        }
+
+        if (dependentContracts && dependentContracts.length > 0) {
+          alert(`Não é possível excluir esta forma de pagamento pois existem ${dependentContracts.length} contrato(s) vinculado(s) a ela. Primeiro remova ou altere a forma de pagamento destes contratos.`);
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar dependências:', error);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+        return;
+      }
+    }
+
     if (!confirm('Tem certeza que deseja excluir este item?')) {
       return;
     }
