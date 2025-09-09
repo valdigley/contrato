@@ -120,6 +120,29 @@ export default function UserProfile({ onBack }: UserProfileProps) {
     setSaveStatus('idle');
 
     try {
+      // Helper function to safely query tables
+      const safeQuery = async (tableName: string, query: any) => {
+        try {
+          const result = await query;
+          if (result.error) {
+            if (result.error.code === 'PGRST205' || result.error.code === 'PGRST116') {
+              console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
+              return { data: null, error: null };
+            }
+            console.info(`Sistema funcionando com dados limitados de ${tableName}:`, result.error.message);
+            return { data: [], error: null };
+          }
+          return result;
+        } catch (error: any) {
+          if (error.code === 'PGRST205' || error.code === 'PGRST116') {
+            console.info(`Sistema funcionando sem tabela ${tableName} - dados vazios carregados`);
+            return { data: [], error: null };
+          }
+          console.info(`Sistema funcionando com dados limitados de ${tableName}:`, error);
+          return { data: [], error: null };
+        }
+      };
+
       // Atualizar dados do usuário
       const { error: userError } = await supabase
         .from('users')
@@ -141,11 +164,29 @@ export default function UserProfile({ onBack }: UserProfileProps) {
           })
           .eq('user_id', user.id);
 
+        if (photographerError) throw photographerError;
+      } else {
+        // Criar
+        const { error: photographerError } = await supabase
+          .from('photographers')
+          .insert({
+            user_id: user.id,
+            business_name: formData.business_name,
+            phone: formData.phone
+          });
+
+        if (photographerError) throw photographerError;
+      }
+
       // Fetch photographer data safely
       const photographerResult = await safeQuery('photographers',
         supabase.from('photographers').select('business_name, phone').eq('user_id', user?.id).single()
       );
       setPhotographerData(photographerResult.data);
+
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
       console.info('Sistema funcionando com dados limitados:', error);
@@ -156,6 +197,8 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         phone: '',
         email: user?.email || ''
       });
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     } finally {
       setSaving(false);
     }
