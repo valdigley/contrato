@@ -74,7 +74,9 @@ export default function Login({ onLogin }: LoginProps) {
                 id: data.user.id,
                 email: data.user.email,
                 name: name,
-                role: 'photographer'
+                role: 'photographer',
+                business_name: businessName,
+                phone: phone
               }
             ])
             .select()
@@ -84,28 +86,6 @@ export default function Login({ onLogin }: LoginProps) {
             console.error('Erro ao criar perfil do usuário:', userError);
             setDebugInfo(`Erro na tabela users: ${userError.message}`);
             throw userError;
-          }
-
-          setDebugInfo('Usuário criado, criando perfil de fotógrafo...');
-          // Criar perfil de fotógrafo
-          try {
-            const { error: photographerError } = await supabase
-              .from('photographers')
-              .insert([
-                {
-                  user_id: data.user.id,
-                  business_name: businessName,
-                  phone: phone,
-                  settings: {}
-                }
-              ]);
-
-            if (photographerError && photographerError.code !== 'PGRST205') {
-              console.error('Erro ao criar perfil do fotógrafo:', photographerError);
-              setDebugInfo(`Erro na tabela photographers: ${photographerError.message}`);
-            }
-          } catch (err) {
-            console.info('Tabela photographers não encontrada, continuando sem criar perfil de fotógrafo');
           }
 
           setDebugInfo('Cadastro concluído com sucesso!');
