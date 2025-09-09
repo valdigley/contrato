@@ -872,4 +872,33 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {contract.tipo
+                          {contract.tipo_evento}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {contract.nome_completo}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {contract.data_evento ? formatDate(contract.data_evento) : 'Não definida'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {contract.cidade}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {contract.adjusted_price 
+                            ? formatCurrency(contract.adjusted_price)
+                            : formatCurrency(contract.final_price || contract.package_price || 0)
+                          }
+                        </div>
+                        {contract.discount_percentage && (
+                          <div className="text-xs text-green-600 dark:text-green-400">
+                            {contract.discount_percentage}% desconto
+                          </div>
+                        )}
+                      </td>
+                    </tr>
