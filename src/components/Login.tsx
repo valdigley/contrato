@@ -82,16 +82,17 @@ export default function Login({ onLogin }: LoginProps) {
               .select()
               .single();
 
-            if (userError && userError.code === 'PGRST205') {
-              console.warn('Tabela users não encontrada, pulando criação de perfil');
-              setDebugInfo('Tabela users não encontrada, continuando sem perfil...');
-            } else if (userError) {
-              console.error('Erro ao criar perfil do usuário:', userError);
-              setDebugInfo(`Erro na tabela users: ${userError.message}`);
-              // Don't throw error, continue without user profile
+            if (userError) {
+              if (userError.code === 'PGRST205') {
+                console.info('Tabela users não encontrada, continuando sem perfil de usuário');
+                setDebugInfo('Tabela users não encontrada, continuando...');
+              } else {
+                console.info('Continuando sem perfil de usuário:', userError.message);
+                setDebugInfo('Continuando sem perfil de usuário...');
+              }
             }
           } catch (error) {
-            console.warn('Erro ao criar perfil de usuário:', error);
+            console.info('Continuando sem perfil de usuário:', error);
             setDebugInfo('Continuando sem perfil de usuário...');
           }
 
@@ -109,15 +110,17 @@ export default function Login({ onLogin }: LoginProps) {
                 }
               ]);
 
-            if (photographerError && photographerError.code === 'PGRST205') {
-              console.warn('Tabela photographers não encontrada, pulando criação de perfil');
-              setDebugInfo('Tabela photographers não encontrada, continuando...');
-            } else if (photographerError) {
-              console.error('Erro ao criar perfil do fotógrafo:', photographerError);
-              setDebugInfo(`Erro na tabela photographers: ${photographerError.message}`);
+            if (photographerError) {
+              if (photographerError.code === 'PGRST205') {
+                console.info('Tabela photographers não encontrada, continuando sem perfil de fotógrafo');
+                setDebugInfo('Tabela photographers não encontrada, continuando...');
+              } else {
+                console.info('Continuando sem perfil de fotógrafo:', photographerError.message);
+                setDebugInfo('Continuando sem perfil de fotógrafo...');
+              }
             }
           } catch (error) {
-            console.warn('Erro ao criar perfil de fotógrafo:', error);
+            console.info('Continuando sem perfil de fotógrafo:', error);
             setDebugInfo('Continuando sem perfil de fotógrafo...');
           }
 

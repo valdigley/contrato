@@ -48,7 +48,7 @@ export default function UserProfile({ onBack }: UserProfileProps) {
     try {
       setLoading(true);
       
-      // Buscar dados do usuário
+      // Try to fetch user data, handle missing table gracefully
       const { data: userResponse, error: userError } = await supabase
         .from('users')
         .select('*')
@@ -57,7 +57,7 @@ export default function UserProfile({ onBack }: UserProfileProps) {
 
       if (userError) {
         if (userError.code === 'PGRST205') {
-          console.warn('Tabela users não encontrada');
+          console.info('Tabela users não encontrada. Sistema funcionando sem dados.');
           setUserData(null);
         } else {
           throw userError;
@@ -66,17 +66,49 @@ export default function UserProfile({ onBack }: UserProfileProps) {
         setUserData(userResponse);
       }
 
-      // Buscar dados do fotógrafo
+      // Try to fetch photographer data, handle missing table gracefully
       const { data: photographerResponse, error: photographerError } = await supabase
         .from('photographers')
         .select('*')
         .eq('user_id', user?.id)
         .single();
 
-      if (photographerError && photographerError.code !== 'PGRST116' && photographerError.code !== 'PGRST205') {
-        console.error('Erro ao buscar dados do fotógrafo:', photographerError);
-      } else if (photographerError && photographerError.code === 'PGRST205') {
-        console.warn('Tabela photographers não encontrada');
+      if (photographerError) {
+        if (photographerError.code === 'PGRST205') {
+          console.info('Tabela photographers não encontrada. Sistema funcionando sem dados.');
+          setPhotographerData(null);
+        } else if (photographerError.code === 'PGRST116') {
+          // No rows returned - user doesn't have photographer profile yet
+          setPhotographerData(null);
+        } else {
+          console.info('Sistema funcionando sem dados de fotógrafo:', photographerError.message);
+          setPhotographerData(null);
+        }
+      } else {
+        setPhotographerData(photographerResponse || null);
+      }
+
+      // Fill form with available data
+      setFormData({
+        name: userResponse?.name || user?.user_metadata?.name || '',
+        business_name: photographerResponse?.business_name || '',
+        phone: photographerResponse?.phone || '',
+        email: userResponse?.email || user?.email || ''
+      });
+
+    } catch (error: any) {
+      console.info('Sistema funcionando com dados limitados:', error.message);
+      // Fill form with basic user data from auth
+      setFormData({
+        name: user?.user_metadata?.name || '',
+        business_name: '',
+        phone: '',
+        email: user?.email || ''
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
         setPhotographerData(null);
       } else {
         setPhotographerData(photographerResponse || null);
